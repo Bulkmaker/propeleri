@@ -111,16 +111,18 @@ export default function GameStatsEntryPage() {
 
   return (
     <div>
-      <Link
-        href="/admin/games"
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
-      >
-        <ChevronLeft className="h-4 w-4 mr-1" />
-        {tc("back")}
-      </Link>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
+        <Link
+          href="/admin/games"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          {tc("back")}
+        </Link>
+        <h1 className="text-2xl font-bold">Unos statistike za utakmicu</h1>
+      </div>
 
-      <h1 className="text-2xl font-bold mb-6">Unos statistike za utakmicu</h1>
-
+      <div className="p-6">
       {rows.length === 0 ? (
         <Card className="border-border/40">
           <CardContent className="p-6 text-center text-muted-foreground">
@@ -229,6 +231,7 @@ export default function GameStatsEntryPage() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

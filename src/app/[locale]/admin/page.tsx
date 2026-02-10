@@ -44,8 +44,11 @@ export default async function AdminDashboardPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">{t("dashboard")}</h1>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
+        <h1 className="text-2xl font-bold">{t("dashboard")}</h1>
+      </div>
 
+      <div className="p-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Card className="border-border/40">
@@ -147,6 +150,7 @@ export default async function AdminDashboardPage({
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

@@ -4,9 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Swords, Users } from "lucide-react";
+import { CalendarDays, Dumbbell, Swords } from "lucide-react";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import type { GameResult } from "@/types/database";
+import Image from "next/image";
 
 export default async function SchedulePage({
   params,
@@ -19,6 +20,7 @@ export default async function SchedulePage({
   const t = await getTranslations("schedule");
   const tg = await getTranslations("game");
   const tc = await getTranslations("common");
+  const ts = await getTranslations("training");
 
   const supabase = await createClient();
 
@@ -61,7 +63,7 @@ export default async function SchedulePage({
       id: t.id,
       type: "training" as const,
       date: t.session_date,
-      title: t.title || "Trening",
+      title: t.title || ts("session"),
       location: t.location,
       href: `/training/${t.id}`,
     })),
@@ -107,7 +109,7 @@ export default async function SchedulePage({
             <div>
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-muted-foreground">
                 <span className="h-1 w-6 bg-muted-foreground/30 rounded-full" />
-                Prosli dogadjaji
+                {t("pastEvents")}
               </h2>
               <div className="space-y-2 opacity-70">
                 {past.slice(0, 10).map((item) => (
@@ -131,19 +133,15 @@ function ScheduleCard({ item }: { item: any }) {
       <Card className="border-border/40 card-hover bg-card cursor-pointer">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div
-              className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                item.type === "game"
-                  ? "bg-primary/10 text-primary"
-                  : "bg-blue-500/10 text-blue-400"
-              }`}
-            >
-              {item.type === "game" ? (
-                <Swords className="h-5 w-5" />
-              ) : (
-                <Users className="h-5 w-5" />
-              )}
-            </div>
+            {item.type === "game" ? (
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-primary/10">
+                <Image src="/logo.png" alt="HC Propeleri" width={28} height={28} />
+              </div>
+            ) : (
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400">
+                <Dumbbell className="h-5 w-5" />
+              </div>
+            )}
             <div>
               <p className="font-semibold text-sm">{item.title}</p>
               <p className="text-xs text-muted-foreground">

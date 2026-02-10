@@ -1,4 +1,4 @@
-import type { PlayerPosition, PlayerRole, GameResult, TrainingTeam } from "@/types/database";
+import type { PlayerPosition, PlayerRole, GameResult, TrainingTeam, SlotPosition } from "@/types/database";
 
 export const POSITIONS: PlayerPosition[] = ["forward", "defense", "goalie"];
 
@@ -23,6 +23,18 @@ export const POSITION_COLORS_HEX: Record<PlayerPosition, string> = {
   defense: "#2563eb",
   goalie: "#9ca3af",
 };
+
+export const SLOT_TO_POSITION: Record<SlotPosition, PlayerPosition> = {
+  LW: "forward",
+  C: "forward",
+  RW: "forward",
+  LD: "defense",
+  RD: "defense",
+  GK: "goalie",
+};
+
+export const LINE_SLOTS: SlotPosition[] = ["LW", "C", "RW", "LD", "RD"];
+export const GOALIE_SLOTS: SlotPosition[] = ["GK"];
 
 export const RESULT_COLORS: Record<GameResult, string> = {
   win: "bg-green-600 text-white",

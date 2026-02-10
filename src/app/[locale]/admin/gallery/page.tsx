@@ -120,7 +120,7 @@ export default function AdminGalleryPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("manageGallery")}</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -177,7 +177,7 @@ export default function AdminGalleryPage() {
         </Dialog>
       </div>
 
-      <div className="space-y-2">
+      <div className="p-6 space-y-2">
         {albums.map((album) => (
           <Card key={album.id} className="border-border/40">
             <CardContent className="p-4 flex items-center justify-between">

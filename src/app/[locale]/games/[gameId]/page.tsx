@@ -147,36 +147,7 @@ export default async function GameDetailPage({
           </CardHeader>
           <CardContent>
             {lineup && lineup.length > 0 ? (
-              <div className="space-y-2">
-                {lineup.map((entry: any) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between py-2 px-3 rounded-md bg-secondary/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-primary font-bold text-sm">
-                        #{entry.player?.jersey_number ?? "-"}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {entry.player?.first_name} {entry.player?.last_name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${POSITION_COLORS[entry.position_played as PlayerPosition]}`}
-                      >
-                        {tp(entry.position_played)}
-                      </Badge>
-                      {entry.designation !== "player" && (
-                        <Badge variant="outline" className="text-xs border-primary/30 text-primary">
-                          {entry.designation === "captain" ? "C" : "A"}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <LineupByLines lineup={lineup as any[]} t={t} tp={tp} />
             ) : (
               <p className="text-muted-foreground text-sm text-center py-6">
                 {t("noLineup")}
@@ -232,6 +203,107 @@ export default async function GameDetailPage({
             )}
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function LineupByLines({
+  lineup,
+  t,
+  tp,
+}: {
+  lineup: any[];
+  t: Awaited<ReturnType<typeof getTranslations>>;
+  tp: Awaited<ReturnType<typeof getTranslations>>;
+}) {
+  // Group by line_number
+  const hasLines = lineup.some((e) => e.line_number !== null && e.slot_position);
+  if (!hasLines) {
+    // Legacy flat list
+    return (
+      <div className="space-y-2">
+        {lineup.map((entry: any) => (
+          <LineupPlayerRow key={entry.id} entry={entry} tp={tp} />
+        ))}
+      </div>
+    );
+  }
+
+  const goalies = lineup.filter((e) => e.slot_position === "GK");
+  const lineGroups = new Map<number, any[]>();
+  for (const entry of lineup) {
+    if (entry.slot_position === "GK") continue;
+    const lineNum = entry.line_number ?? 1;
+    if (!lineGroups.has(lineNum)) lineGroups.set(lineNum, []);
+    lineGroups.get(lineNum)!.push(entry);
+  }
+  const sortedLineNums = [...lineGroups.keys()].sort((a, b) => a - b);
+
+  return (
+    <div className="space-y-4">
+      {goalies.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            {t("goalies")}
+          </p>
+          <div className="space-y-1">
+            {goalies.map((entry: any) => (
+              <LineupPlayerRow key={entry.id} entry={entry} tp={tp} />
+            ))}
+          </div>
+        </div>
+      )}
+      {sortedLineNums.map((lineNum) => (
+        <div key={lineNum}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            {t("line")} {lineNum}
+          </p>
+          <div className="space-y-1">
+            {lineGroups.get(lineNum)!.map((entry: any) => (
+              <LineupPlayerRow key={entry.id} entry={entry} tp={tp} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LineupPlayerRow({
+  entry,
+  tp,
+}: {
+  entry: any;
+  tp: Awaited<ReturnType<typeof getTranslations>>;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2 px-3 rounded-md bg-secondary/50">
+      <div className="flex items-center gap-3">
+        <span className="text-primary font-bold text-sm">
+          #{entry.player?.jersey_number ?? "-"}
+        </span>
+        <span className="text-sm font-medium">
+          {entry.player?.first_name} {entry.player?.last_name}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {entry.slot_position && (
+          <Badge variant="outline" className="text-[10px] font-mono">
+            {entry.slot_position}
+          </Badge>
+        )}
+        <Badge
+          variant="secondary"
+          className={`text-xs ${POSITION_COLORS[entry.position_played as PlayerPosition]}`}
+        >
+          {tp(entry.position_played)}
+        </Badge>
+        {entry.designation !== "player" && (
+          <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+            {entry.designation === "captain" ? "C" : "A"}
+          </Badge>
+        )}
       </div>
     </div>
   );

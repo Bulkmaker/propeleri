@@ -137,29 +137,31 @@ export default function TrainingStatsEntryPage() {
 
   return (
     <div>
-      <Link
-        href="/admin/training"
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
-      >
-        <ChevronLeft className="h-4 w-4 mr-1" />
-        {tc("back")}
-      </Link>
-
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">
-          {tt("attendance")} & {ts("title")}
-        </h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={autoAssignTeams}
-          className="border-primary/30 text-primary"
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
+        <Link
+          href="/admin/training"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
         >
-          <Wand2 className="h-4 w-4 mr-2" />
-          {tt("autoAssign")}
-        </Button>
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          {tc("back")}
+        </Link>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">
+            {tt("attendance")} & {ts("title")}
+          </h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={autoAssignTeams}
+            className="border-primary/30 text-primary"
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            {tt("autoAssign")}
+          </Button>
+        </div>
       </div>
 
+      <div className="p-6">
       <Card className="border-border/40">
         <CardContent className="p-4">
           <div className="overflow-x-auto">
@@ -283,6 +285,7 @@ export default function TrainingStatsEntryPage() {
           </Button>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

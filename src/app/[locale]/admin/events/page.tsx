@@ -23,13 +23,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Megaphone, Plus, Loader2, Eye, EyeOff } from "lucide-react";
-import type { TeamEvent, EventType } from "@/types/database";
+import type { TeamEvent, EventType, Tournament } from "@/types/database";
 
 export default function AdminEventsPage() {
   const t = useTranslations("admin");
+  const tt = useTranslations("tournament");
   const tc = useTranslations("common");
 
   const [events, setEvents] = useState<TeamEvent[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,6 +46,7 @@ export default function AdminEventsPage() {
     event_type: "social" as EventType,
     event_date: "",
     location: "",
+    tournament_id: "",
     is_published: true,
   });
 
@@ -54,20 +57,23 @@ export default function AdminEventsPage() {
   }, []);
 
   async function loadData() {
-    const { data } = await supabase
-      .from("events")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setEvents(data ?? []);
+    const [eventsRes, tournamentsRes] = await Promise.all([
+      supabase.from("events").select("*").order("created_at", { ascending: false }),
+      supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
+    ]);
+    setEvents(eventsRes.data ?? []);
+    setTournaments(tournamentsRes.data ?? []);
     setLoading(false);
   }
 
   async function handleSave() {
     setSaving(true);
+    const { tournament_id, ...rest } = form;
     await supabase.from("events").insert({
-      ...form,
+      ...rest,
       event_date: form.event_date || null,
       location: form.location || null,
+      tournament_id: tournament_id || null,
     });
     setDialogOpen(false);
     setSaving(false);
@@ -81,6 +87,7 @@ export default function AdminEventsPage() {
       event_type: "social",
       event_date: "",
       location: "",
+      tournament_id: "",
       is_published: true,
     });
     loadData();
@@ -104,7 +111,7 @@ export default function AdminEventsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("manageEvents")}</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -164,7 +171,11 @@ export default function AdminEventsPage() {
                   <Select
                     value={form.event_type}
                     onValueChange={(v) =>
-                      setForm({ ...form, event_type: v as EventType })
+                      setForm({
+                        ...form,
+                        event_type: v as EventType,
+                        tournament_id: v === "tournament" ? form.tournament_id : "",
+                      })
                     }
                   >
                     <SelectTrigger>
@@ -190,6 +201,29 @@ export default function AdminEventsPage() {
                   />
                 </div>
               </div>
+              {form.event_type === "tournament" && (
+                <div className="space-y-2">
+                  <Label>{tt("linkTournament")}</Label>
+                  <Select
+                    value={form.tournament_id || "__none__"}
+                    onValueChange={(v) =>
+                      setForm({ ...form, tournament_id: v === "__none__" ? "" : v })
+                    }
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">{tt("none")}</SelectItem>
+                      {tournaments.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name} ({t.start_date} — {t.end_date})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Lokacija</Label>
                 <Input
@@ -213,7 +247,7 @@ export default function AdminEventsPage() {
         </Dialog>
       </div>
 
-      <div className="space-y-2">
+      <div className="p-6 space-y-2">
         {events.map((event) => (
           <Card key={event.id} className="border-border/40">
             <CardContent className="p-4 flex items-center justify-between">

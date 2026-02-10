@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Swords, MapPin, CalendarDays } from "lucide-react";
-import type { Game, GameResult } from "@/types/database";
+import { Swords, MapPin, Award } from "lucide-react";
+import type { Game, GameResult, Tournament } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 
 export default async function GamesPage({
@@ -18,14 +18,50 @@ export default async function GamesPage({
 
   const t = await getTranslations("game");
   const tc = await getTranslations("common");
+  const tt = await getTranslations("tournament");
 
   const supabase = await createClient();
-  const { data: games } = await supabase
-    .from("games")
-    .select("*")
-    .order("game_date", { ascending: false });
+  const [gamesRes, tournamentsRes] = await Promise.all([
+    supabase.from("games").select("*").order("game_date", { ascending: false }),
+    supabase
+      .from("tournaments")
+      .select("*")
+      .order("start_date", { ascending: false }),
+  ]);
 
-  const allGames = (games ?? []) as Game[];
+  const allGames = (gamesRes.data ?? []) as Game[];
+  const allTournaments = (tournamentsRes.data ?? []) as Tournament[];
+
+  // Group games by tournament
+  const tournamentMap = new Map<
+    string,
+    { tournament: Tournament; games: Game[] }
+  >();
+  const standaloneGames: Game[] = [];
+
+  for (const game of allGames) {
+    if (game.tournament_id) {
+      if (!tournamentMap.has(game.tournament_id)) {
+        const tournament = allTournaments.find(
+          (t) => t.id === game.tournament_id
+        );
+        if (tournament) {
+          tournamentMap.set(game.tournament_id, { tournament, games: [] });
+        }
+      }
+      tournamentMap.get(game.tournament_id)?.games.push(game);
+    } else {
+      standaloneGames.push(game);
+    }
+  }
+
+  const tournamentGroups = Array.from(tournamentMap.values()).sort(
+    (a, b) =>
+      new Date(b.games[0].game_date).getTime() -
+      new Date(a.games[0].game_date).getTime()
+  );
+
+  const hasTournaments = tournamentGroups.length > 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -42,10 +78,46 @@ export default async function GamesPage({
           <p>{tc("noData")}</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {allGames.map((game) => (
-            <GameCard key={game.id} game={game} />
+        <div className="space-y-6">
+          {/* Tournament groups */}
+          {tournamentGroups.map(({ tournament, games }) => (
+            <div key={tournament.id} className="space-y-2">
+              <Link href={`/tournaments/${tournament.id}`}>
+                <div className="flex items-center gap-3 px-3 py-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/10 transition-colors">
+                  <Award className="h-5 w-5 text-yellow-400 shrink-0" />
+                  <div className="min-w-0">
+                    <h2 className="font-semibold text-sm">{tournament.name}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {tournament.location && `${tournament.location} | `}
+                      {tournament.start_date} — {tournament.end_date}
+                    </p>
+                  </div>
+                  <Badge className="ml-auto bg-yellow-500/20 text-yellow-400 text-xs shrink-0">
+                    {games.length} {tt("games").toLowerCase()}
+                  </Badge>
+                </div>
+              </Link>
+              <div className="space-y-2 ml-4 border-l-2 border-yellow-500/20 pl-4">
+                {games.map((game) => (
+                  <GameCard key={game.id} game={game} />
+                ))}
+              </div>
+            </div>
           ))}
+
+          {/* Standalone games */}
+          {standaloneGames.length > 0 && (
+            <div className="space-y-3">
+              {hasTournaments && (
+                <h2 className="text-sm font-semibold text-muted-foreground px-2 pt-2">
+                  {tt("standalone")}
+                </h2>
+              )}
+              {standaloneGames.map((game) => (
+                <GameCard key={game.id} game={game} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

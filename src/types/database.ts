@@ -4,7 +4,10 @@ export type AppRole = "admin" | "player";
 export type EventType = "game" | "training" | "tournament" | "social";
 export type LineupDesignation = "captain" | "assistant_captain" | "player";
 export type GameResult = "win" | "loss" | "draw" | "pending";
+export type TournamentFormat = "cup" | "placement" | "round_robin" | "custom";
+export type TournamentMatchStage = "group" | "playoff";
 export type TrainingTeam = "team_a" | "team_b";
+export type SlotPosition = "LW" | "C" | "RW" | "LD" | "RD" | "GK";
 
 export interface Profile {
   id: string;
@@ -59,6 +62,8 @@ export interface GameLineup {
   player_id: string;
   designation: LineupDesignation;
   position_played: PlayerPosition;
+  line_number: number;
+  slot_position: SlotPosition | null;
   created_at: string;
   player?: Profile;
 }
@@ -103,11 +108,79 @@ export interface Tournament {
   id: string;
   season_id: string;
   name: string;
+  format: TournamentFormat;
   location: string | null;
   start_date: string;
   end_date: string;
   description: string | null;
   created_at: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  city: string | null;
+  country: string | null;
+  logo_url: string | null;
+  is_propeleri: boolean;
+  created_at: string;
+}
+
+export interface TournamentTeam {
+  id: string;
+  tournament_id: string;
+  team_id: string;
+  sort_order: number;
+  created_at: string;
+  team?: Team;
+}
+
+export interface TournamentGroup {
+  id: string;
+  tournament_id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TournamentGroupTeam {
+  id: string;
+  group_id: string;
+  team_id: string;
+  created_at: string;
+}
+
+export interface TournamentMatch {
+  id: string;
+  tournament_id: string;
+  group_id: string | null;
+  team_a_id: string;
+  team_b_id: string;
+  score_a: number;
+  score_b: number;
+  match_date: string | null;
+  is_completed: boolean;
+  stage: TournamentMatchStage;
+  bracket_round: number | null;
+  bracket_position: number | null;
+  bracket_label: string | null;
+  game_id: string | null;
+  created_at: string;
+  updated_at: string;
+  team_a?: Team;
+  team_b?: Team;
+}
+
+export interface GroupStandingRow {
+  team: Team;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goals_for: number;
+  goals_against: number;
+  goal_diff: number;
+  points: number;
 }
 
 export interface TeamEvent {
@@ -122,6 +195,7 @@ export interface TeamEvent {
   event_date: string | null;
   location: string | null;
   cover_image_url: string | null;
+  tournament_id: string | null;
   is_published: boolean;
   created_by: string | null;
   created_at: string;

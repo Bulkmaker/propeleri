@@ -11,6 +11,7 @@ import {
   Camera,
   Megaphone,
   LayoutDashboard,
+  Award,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -20,6 +21,7 @@ const adminLinks = [
   { href: "/admin/games", icon: Swords, key: "manageGames" },
   { href: "/admin/training", icon: CalendarDays, key: "manageTraining" },
   { href: "/admin/seasons", icon: Trophy, key: "manageSeasons" },
+  { href: "/admin/tournaments", icon: Award, key: "manageTournaments" },
   { href: "/admin/events", icon: Megaphone, key: "manageEvents" },
   { href: "/admin/gallery", icon: Camera, key: "manageGallery" },
 ] as const;
@@ -68,9 +70,9 @@ function AdminShell({
   const t = useTranslations("admin");
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)]">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-border/40 bg-card/50 hidden md:block">
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* Sidebar — fixed, does not scroll with content */}
+      <aside className="w-64 shrink-0 border-r border-border/40 bg-card/50 hidden md:block overflow-y-auto">
         <div className="p-4">
           <div className="flex items-center gap-2 mb-6 px-2">
             <Image src="/logo.png" alt="HC Propeleri" width={24} height={24} />
@@ -100,8 +102,8 @@ function AdminShell({
         </div>
       </aside>
 
-      {/* Content */}
-      <div className="flex-1 p-6">{children}</div>
+      {/* Content — scrolls independently */}
+      <div className="flex-1 overflow-y-auto">{children}</div>
     </div>
   );
 }

@@ -24,16 +24,18 @@ import {
 } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
 import { Swords, Plus, Loader2, Pencil } from "lucide-react";
-import type { Game, Season, GameResult } from "@/types/database";
+import type { Game, Season, GameResult, Tournament } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 
 export default function AdminGamesPage() {
   const t = useTranslations("admin");
   const tg = useTranslations("game");
+  const tt = useTranslations("tournament");
   const tc = useTranslations("common");
 
   const [games, setGames] = useState<Game[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,6 +44,7 @@ export default function AdminGamesPage() {
   // Form state
   const [form, setForm] = useState({
     season_id: "",
+    tournament_id: "",
     opponent: "",
     location: "",
     game_date: "",
@@ -59,12 +62,14 @@ export default function AdminGamesPage() {
   }, []);
 
   async function loadData() {
-    const [gamesRes, seasonsRes] = await Promise.all([
+    const [gamesRes, seasonsRes, tournamentsRes] = await Promise.all([
       supabase.from("games").select("*").order("game_date", { ascending: false }),
       supabase.from("seasons").select("*").order("start_date", { ascending: false }),
+      supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
     ]);
     setGames(gamesRes.data ?? []);
     setSeasons(seasonsRes.data ?? []);
+    setTournaments(tournamentsRes.data ?? []);
     if (seasonsRes.data?.[0]) {
       setForm((f) => ({ ...f, season_id: seasonsRes.data![0].id }));
     }
@@ -76,6 +81,7 @@ export default function AdminGamesPage() {
     setError("");
     setForm({
       season_id: seasons[0]?.id ?? "",
+      tournament_id: "",
       opponent: "",
       location: "",
       game_date: "",
@@ -92,6 +98,7 @@ export default function AdminGamesPage() {
     setError("");
     setForm({
       season_id: game.season_id,
+      tournament_id: game.tournament_id ?? "",
       opponent: game.opponent,
       location: game.location ?? "",
       game_date: game.game_date.slice(0, 16),
@@ -110,6 +117,7 @@ export default function AdminGamesPage() {
     const payload = editingId
       ? {
           season_id: form.season_id,
+          tournament_id: form.tournament_id || null,
           opponent: form.opponent,
           location: form.location || null,
           game_date: form.game_date,
@@ -120,6 +128,7 @@ export default function AdminGamesPage() {
         }
       : {
           season_id: form.season_id,
+          tournament_id: form.tournament_id || null,
           opponent: form.opponent,
           location: form.location || null,
           game_date: form.game_date,
@@ -151,7 +160,7 @@ export default function AdminGamesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("manageGames")}</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -171,7 +180,7 @@ export default function AdminGamesPage() {
                 <Label>Sezona</Label>
                 <Select
                   value={form.season_id}
-                  onValueChange={(v) => setForm({ ...form, season_id: v })}
+                  onValueChange={(v) => setForm({ ...form, season_id: v, tournament_id: "" })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -182,6 +191,29 @@ export default function AdminGamesPage() {
                         {s.name}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("selectTournament")}</Label>
+                <Select
+                  value={form.tournament_id || "__none__"}
+                  onValueChange={(v) =>
+                    setForm({ ...form, tournament_id: v === "__none__" ? "" : v })
+                  }
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{tt("none")}</SelectItem>
+                    {tournaments
+                      .filter((t) => t.season_id === form.season_id)
+                      .map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -287,7 +319,7 @@ export default function AdminGamesPage() {
         </Dialog>
       </div>
 
-      <div className="space-y-2">
+      <div className="p-6 space-y-2">
         {games.map((game) => (
           <Card key={game.id} className="border-border/40">
             <CardContent className="p-4 flex items-center justify-between">
@@ -302,6 +334,11 @@ export default function AdminGamesPage() {
                 <Badge className={`text-xs ${RESULT_COLORS[game.result as GameResult]}`}>
                   {tg(`result.${game.result}`)}
                 </Badge>
+                {game.tournament_id && (
+                  <Badge className="text-xs bg-yellow-500/20 text-yellow-400">
+                    {tournaments.find((t) => t.id === game.tournament_id)?.name}
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">
