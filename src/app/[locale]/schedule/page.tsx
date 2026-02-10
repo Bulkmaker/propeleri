@@ -135,7 +135,7 @@ function ScheduleCard({ item }: { item: any }) {
           <div className="flex items-center gap-4">
             {item.type === "game" ? (
               <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-primary/10">
-                <Image src="/logo.png" alt="HC Propeleri" width={28} height={28} />
+                <Image src="/logo.svg" alt="HC Propeleri" width={28} height={28} />
               </div>
             ) : (
               <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400">

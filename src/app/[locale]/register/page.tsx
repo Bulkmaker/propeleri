@@ -86,7 +86,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md border-border/40 bg-card">
         <CardHeader className="text-center">
           <Image
-            src="/logo.png"
+            src="/logo.svg"
             alt="HC Propeleri"
             width={56}
             height={56}

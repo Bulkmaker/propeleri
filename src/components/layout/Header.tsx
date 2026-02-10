@@ -52,7 +52,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <Image
-            src="/logo.png"
+            src="/logo.svg"
             alt="HC Propeleri"
             width={40}
             height={40}

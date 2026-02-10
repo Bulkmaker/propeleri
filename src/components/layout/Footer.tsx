@@ -10,7 +10,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="HC Propeleri" width={32} height={32} />
+            <Image src="/logo.svg" alt="HC Propeleri" width={32} height={32} />
             <div>
               <p className="font-semibold text-sm">{t("club")}</p>
               <p className="text-xs text-muted-foreground">{t("description")}</p>

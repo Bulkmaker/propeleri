@@ -75,7 +75,7 @@ function AdminShell({
       <aside className="w-64 shrink-0 border-r border-border/40 bg-card/50 hidden md:block overflow-y-auto">
         <div className="p-4">
           <div className="flex items-center gap-2 mb-6 px-2">
-            <Image src="/logo.png" alt="HC Propeleri" width={24} height={24} />
+            <Image src="/logo.svg" alt="HC Propeleri" width={24} height={24} />
             <span className="font-bold text-sm">{t("dashboard")}</span>
           </div>
           <nav className="space-y-1">
