@@ -8,6 +8,7 @@ import { PlacementView } from "@/components/tournament/PlacementView";
 import { BracketView } from "@/components/tournament/BracketView";
 import { computeGroupStandings } from "@/lib/utils/tournament";
 import type {
+  Team,
   TournamentTeam,
   TournamentGroup,
   TournamentGroupTeam,
@@ -33,7 +34,7 @@ export default async function TournamentDetailPage({
   const supabase = await createClient();
   const tt = await getTranslations("tournament");
 
-  const [tournamentRes, teamsRes, groupsRes, gtRes, matchesRes] =
+  const [tournamentRes, junctionsRes, allTeamsRes, groupsRes, gtRes, matchesRes] =
     await Promise.all([
       supabase.from("tournaments").select("*").eq("id", id).single(),
       supabase
@@ -41,6 +42,7 @@ export default async function TournamentDetailPage({
         .select("*")
         .eq("tournament_id", id)
         .order("sort_order"),
+      supabase.from("teams").select("*").order("name"),
       supabase
         .from("tournament_groups")
         .select("*")
@@ -63,7 +65,11 @@ export default async function TournamentDetailPage({
     );
   }
 
-  const teams: TournamentTeam[] = teamsRes.data ?? [];
+  const junctions: TournamentTeam[] = junctionsRes.data ?? [];
+  const allTeamsList: Team[] = allTeamsRes.data ?? [];
+  const teamIdsInTournament = new Set(junctions.map((j) => j.team_id));
+  const teams: Team[] = allTeamsList.filter((t) => teamIdsInTournament.has(t.id));
+
   const groups: TournamentGroup[] = groupsRes.data ?? [];
   const allGroupTeams: TournamentGroupTeam[] = gtRes.data ?? [];
   const matches: TournamentMatch[] = matchesRes.data ?? [];

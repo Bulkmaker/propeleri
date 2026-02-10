@@ -33,9 +33,12 @@ import {
   Layers,
   Swords,
   Check,
+  MapPin,
+  Globe,
 } from "lucide-react";
 import type {
   Tournament,
+  Team,
   TournamentTeam,
   TournamentGroup,
   TournamentGroupTeam,
@@ -53,7 +56,13 @@ export default function AdminTournamentDetailPage() {
   const supabase = createClient();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [teams, setTeams] = useState<TournamentTeam[]>([]);
+  // Teams in this tournament (resolved from junction)
+  const [teams, setTeams] = useState<Team[]>([]);
+  // All global teams (for "add existing" select)
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
+  const [tournamentTeamJunctions, setTournamentTeamJunctions] = useState<
+    TournamentTeam[]
+  >([]);
   const [groups, setGroups] = useState<TournamentGroup[]>([]);
   const [groupTeams, setGroupTeams] = useState<TournamentGroupTeam[]>([]);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
@@ -62,7 +71,14 @@ export default function AdminTournamentDetailPage() {
 
   // Team dialog
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
-  const [teamForm, setTeamForm] = useState({ name: "", is_propeleri: false });
+  const [teamMode, setTeamMode] = useState<"new" | "existing">("existing");
+  const [teamForm, setTeamForm] = useState({
+    name: "",
+    city: "",
+    country: "Serbia",
+    is_propeleri: false,
+  });
+  const [selectedExistingTeamId, setSelectedExistingTeamId] = useState("");
 
   // Group dialog
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
@@ -85,7 +101,7 @@ export default function AdminTournamentDetailPage() {
   }, []);
 
   async function loadAll() {
-    const [tRes, teamsRes, groupsRes, gtRes, matchesRes, gamesRes] =
+    const [tRes, ttRes, allTeamsRes, groupsRes, gtRes, matchesRes, gamesRes] =
       await Promise.all([
         supabase
           .from("tournaments")
@@ -97,6 +113,7 @@ export default function AdminTournamentDetailPage() {
           .select("*")
           .eq("tournament_id", tournamentId)
           .order("sort_order"),
+        supabase.from("teams").select("*").order("name"),
         supabase
           .from("tournament_groups")
           .select("*")
@@ -116,10 +133,19 @@ export default function AdminTournamentDetailPage() {
       ]);
 
     setTournament(tRes.data);
-    setTeams(teamsRes.data ?? []);
+
+    const junctions: TournamentTeam[] = ttRes.data ?? [];
+    setTournamentTeamJunctions(junctions);
+
+    const global: Team[] = allTeamsRes.data ?? [];
+    setAllTeams(global);
+
+    // Resolve tournament teams from junctions
+    const teamIds = new Set(junctions.map((j) => j.team_id));
+    setTeams(global.filter((t) => teamIds.has(t.id)));
+
     setGroups(groupsRes.data ?? []);
 
-    // Filter group_teams to only those belonging to this tournament's groups
     const groupIds = new Set((groupsRes.data ?? []).map((g) => g.id));
     setGroupTeams(
       (gtRes.data ?? []).filter((gt) => groupIds.has(gt.group_id))
@@ -133,20 +159,55 @@ export default function AdminTournamentDetailPage() {
   // --- TEAMS ---
   async function addTeam() {
     setSaving(true);
+
+    let teamId: string;
+
+    if (teamMode === "existing" && selectedExistingTeamId) {
+      teamId = selectedExistingTeamId;
+    } else {
+      // Create new team in global teams table
+      const { data } = await supabase
+        .from("teams")
+        .insert({
+          name: teamForm.name,
+          city: teamForm.city || null,
+          country: teamForm.country || null,
+          is_propeleri: teamForm.is_propeleri,
+        })
+        .select("id")
+        .single();
+
+      if (!data) {
+        setSaving(false);
+        return;
+      }
+      teamId = data.id;
+    }
+
+    // Link to tournament
     await supabase.from("tournament_teams").insert({
       tournament_id: tournamentId,
-      name: teamForm.name,
-      is_propeleri: teamForm.is_propeleri,
+      team_id: teamId,
       sort_order: teams.length,
     });
+
     setTeamDialogOpen(false);
-    setTeamForm({ name: "", is_propeleri: false });
+    setTeamForm({ name: "", city: "", country: "Serbia", is_propeleri: false });
+    setSelectedExistingTeamId("");
     setSaving(false);
     loadAll();
   }
 
-  async function deleteTeam(id: string) {
-    await supabase.from("tournament_teams").delete().eq("id", id);
+  async function removeTeamFromTournament(teamId: string) {
+    const junction = tournamentTeamJunctions.find(
+      (j) => j.team_id === teamId
+    );
+    if (junction) {
+      await supabase
+        .from("tournament_teams")
+        .delete()
+        .eq("id", junction.id);
+    }
     loadAll();
   }
 
@@ -288,6 +349,12 @@ export default function AdminTournamentDetailPage() {
     );
   }
 
+  // Teams not yet in this tournament (for "add existing" select)
+  const teamIdsInTournament = new Set(teams.map((t) => t.id));
+  const availableTeams = allTeams.filter(
+    (t) => !teamIdsInTournament.has(t.id)
+  );
+
   const groupMatches = matches.filter((m) => m.stage === "group");
   const playoffMatches = matches.filter((m) => m.stage === "playoff");
 
@@ -332,7 +399,10 @@ export default function AdminTournamentDetailPage() {
               <h2 className="text-lg font-semibold">{tt("teams")}</h2>
               <Button
                 size="sm"
-                onClick={() => setTeamDialogOpen(true)}
+                onClick={() => {
+                  setTeamMode(availableTeams.length > 0 ? "existing" : "new");
+                  setTeamDialogOpen(true);
+                }}
                 className="bg-primary"
               >
                 <Plus className="h-4 w-4 mr-1" />
@@ -350,6 +420,13 @@ export default function AdminTournamentDetailPage() {
                   <Card key={team.id} className="border-border/40">
                     <CardContent className="p-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        {team.logo_url && (
+                          <img
+                            src={team.logo_url}
+                            alt={team.name}
+                            className="h-6 w-6 rounded object-contain"
+                          />
+                        )}
                         <span className="font-medium text-sm">
                           {team.name}
                         </span>
@@ -358,12 +435,20 @@ export default function AdminTournamentDetailPage() {
                             {tt("propeleri")}
                           </Badge>
                         )}
+                        {(team.city || team.country) && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {[team.city, team.country]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </span>
+                        )}
                       </div>
                       <Button
                         size="icon"
                         variant="ghost"
                         className="text-red-400 hover:text-red-300 h-8 w-8"
-                        onClick={() => deleteTeam(team.id)}
+                        onClick={() => removeTeamFromTournament(team.id)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -379,32 +464,120 @@ export default function AdminTournamentDetailPage() {
                   <DialogTitle>{tt("addTeam")}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>{tt("teamName")}</Label>
-                    <Input
-                      value={teamForm.name}
-                      onChange={(e) =>
-                        setTeamForm({ ...teamForm, name: e.target.value })
-                      }
-                      className="bg-background"
-                    />
+                  {/* Toggle existing / new */}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={teamMode === "existing" ? "default" : "outline"}
+                      onClick={() => setTeamMode("existing")}
+                      disabled={availableTeams.length === 0}
+                    >
+                      Existing
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={teamMode === "new" ? "default" : "outline"}
+                      onClick={() => setTeamMode("new")}
+                    >
+                      New
+                    </Button>
                   </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={teamForm.is_propeleri}
-                      onChange={(e) =>
-                        setTeamForm({
-                          ...teamForm,
-                          is_propeleri: e.target.checked,
-                        })
-                      }
-                    />
-                    {tt("propeleri")}
-                  </label>
+
+                  {teamMode === "existing" ? (
+                    <div className="space-y-2">
+                      <Label>{tt("teamName")}</Label>
+                      <Select
+                        value={selectedExistingTeamId || "__none__"}
+                        onValueChange={(v) =>
+                          setSelectedExistingTeamId(
+                            v === "__none__" ? "" : v
+                          )
+                        }
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">—</SelectItem>
+                          {availableTeams.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                              {t.city && ` (${t.city})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label>{tt("teamName")}</Label>
+                        <Input
+                          value={teamForm.name}
+                          onChange={(e) =>
+                            setTeamForm({ ...teamForm, name: e.target.value })
+                          }
+                          className="bg-background"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            City
+                          </Label>
+                          <Input
+                            value={teamForm.city}
+                            onChange={(e) =>
+                              setTeamForm({
+                                ...teamForm,
+                                city: e.target.value,
+                              })
+                            }
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-1">
+                            <Globe className="h-3 w-3" />
+                            Country
+                          </Label>
+                          <Input
+                            value={teamForm.country}
+                            onChange={(e) =>
+                              setTeamForm({
+                                ...teamForm,
+                                country: e.target.value,
+                              })
+                            }
+                            className="bg-background"
+                          />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={teamForm.is_propeleri}
+                          onChange={(e) =>
+                            setTeamForm({
+                              ...teamForm,
+                              is_propeleri: e.target.checked,
+                            })
+                          }
+                        />
+                        {tt("propeleri")}
+                      </label>
+                    </>
+                  )}
+
                   <Button
                     onClick={addTeam}
-                    disabled={saving || !teamForm.name}
+                    disabled={
+                      saving ||
+                      (teamMode === "new"
+                        ? !teamForm.name
+                        : !selectedExistingTeamId)
+                    }
                     className="w-full bg-primary"
                   >
                     {saving && (
@@ -537,7 +710,6 @@ export default function AdminTournamentDetailPage() {
               </p>
             ) : (
               <div className="space-y-6">
-                {/* Group stage */}
                 {groupMatches.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2">
@@ -563,7 +735,6 @@ export default function AdminTournamentDetailPage() {
                   </div>
                 )}
 
-                {/* Playoff */}
                 {playoffMatches.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2">
