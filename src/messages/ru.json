@@ -1,0 +1,177 @@
+{
+  "common": {
+    "home": "Главная",
+    "roster": "Команда",
+    "schedule": "Расписание",
+    "games": "Игры",
+    "training": "Тренировки",
+    "stats": "Статистика",
+    "gallery": "Галерея",
+    "events": "События",
+    "login": "Войти",
+    "register": "Регистрация",
+    "logout": "Выйти",
+    "admin": "Админ",
+    "profile": "Профиль",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Изменить",
+    "create": "Создать",
+    "loading": "Загрузка...",
+    "noData": "Нет данных",
+    "back": "Назад",
+    "viewAll": "Смотреть все",
+    "search": "Поиск",
+    "filters": "Фильтры",
+    "all": "Все"
+  },
+  "positions": {
+    "forward": "Нападающий",
+    "defense": "Защитник",
+    "goalie": "Вратарь"
+  },
+  "roles": {
+    "captain": "Капитан",
+    "assistantCaptain": "Помощник капитана",
+    "player": "Игрок"
+  },
+  "home": {
+    "hero": {
+      "title": "HC Propeleri",
+      "subtitle": "Хоккейный клуб Нови Сад",
+      "cta": "Смотреть расписание"
+    },
+    "nextGame": "Следующая игра",
+    "recentResults": "Последние результаты",
+    "topScorers": "Лучшие бомбардиры",
+    "upcoming": "Предстоящие события",
+    "teamStats": "Статистика команды",
+    "noUpcoming": "Нет предстоящих игр"
+  },
+  "roster": {
+    "title": "Состав команды",
+    "allPositions": "Все позиции",
+    "gamesPlayed": "Игры",
+    "goals": "Голы",
+    "assists": "Передачи",
+    "points": "Очки",
+    "number": "Номер"
+  },
+  "player": {
+    "stats": "Статистика игрока",
+    "bio": "Биография",
+    "seasonStats": "Статистика по сезонам",
+    "trainingStats": "Статистика тренировок",
+    "gamesPlayed": "Сыгранные игры",
+    "attendance": "Посещаемость тренировок"
+  },
+  "game": {
+    "vs": "vs",
+    "home": "Дома",
+    "away": "На выезде",
+    "lineup": "Состав",
+    "selectLineup": "Выбрать состав",
+    "score": "Счёт",
+    "details": "Детали игры",
+    "playerStats": "Статистика игроков",
+    "noLineup": "Состав ещё не определён",
+    "result": {
+      "win": "Победа",
+      "loss": "Поражение",
+      "draw": "Ничья",
+      "pending": "Предстоит"
+    }
+  },
+  "training": {
+    "title": "Тренировки",
+    "session": "Тренировка",
+    "attendance": "Посещаемость",
+    "enterStats": "Ввести статистику",
+    "attended": "Присутствовал",
+    "absent": "Отсутствовал"
+  },
+  "stats": {
+    "title": "Статистика",
+    "season": "Сезон",
+    "allTime": "За всё время",
+    "leaderboard": "Таблица лидеров",
+    "gamesPlayed": "И",
+    "goals": "Г",
+    "assists": "П",
+    "points": "О",
+    "penaltyMinutes": "ШМ",
+    "plusMinus": "+/-",
+    "topGoalScorers": "Лучшие бомбардиры",
+    "topAssists": "Лучшие ассистенты",
+    "topPoints": "Лучшие по очкам"
+  },
+  "gallery": {
+    "title": "Галерея",
+    "albums": "Альбомы",
+    "photos": "Фотографии",
+    "uploadPhotos": "Добавить фото"
+  },
+  "events": {
+    "title": "События и объявления",
+    "upcoming": "Предстоящие",
+    "past": "Прошедшие",
+    "noEvents": "Нет событий"
+  },
+  "auth": {
+    "loginTitle": "Вход",
+    "registerTitle": "Регистрация",
+    "email": "Email",
+    "password": "Пароль",
+    "confirmPassword": "Подтвердите пароль",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "loginButton": "Войти",
+    "registerButton": "Зарегистрироваться",
+    "noAccount": "Нет аккаунта?",
+    "hasAccount": "Уже есть аккаунт?",
+    "forgotPassword": "Забыли пароль?",
+    "awaitingApproval": "Ваш аккаунт ожидает подтверждения администратором.",
+    "approvalMessage": "Вы будете уведомлены, когда аккаунт будет одобрен."
+  },
+  "profile": {
+    "title": "Мой профиль",
+    "editProfile": "Редактировать профиль",
+    "changeAvatar": "Изменить фото",
+    "jerseyNumber": "Номер",
+    "position": "Позиция",
+    "bio": "О себе",
+    "phone": "Телефон",
+    "dateOfBirth": "Дата рождения",
+    "saved": "Профиль сохранён!"
+  },
+  "admin": {
+    "dashboard": "Панель управления",
+    "managePlayers": "Управление игроками",
+    "manageGames": "Управление играми",
+    "manageTraining": "Управление тренировками",
+    "manageSeasons": "Сезоны",
+    "manageTournaments": "Турниры",
+    "manageEvents": "События",
+    "manageGallery": "Галерея",
+    "pendingApprovals": "Ожидают подтверждения",
+    "approve": "Одобрить",
+    "reject": "Отклонить",
+    "activePlayers": "Активные игроки",
+    "totalGames": "Всего игр",
+    "totalTrainings": "Всего тренировок"
+  },
+  "schedule": {
+    "title": "Расписание",
+    "calendarView": "Календарь",
+    "listView": "Список",
+    "thisWeek": "На этой неделе",
+    "thisMonth": "В этом месяце",
+    "noEvents": "Нет запланированных событий"
+  },
+  "footer": {
+    "club": "HC Propeleri Нови Сад",
+    "description": "Любительский хоккейный клуб из Нови Сада",
+    "rights": "Все права защищены"
+  }
+}

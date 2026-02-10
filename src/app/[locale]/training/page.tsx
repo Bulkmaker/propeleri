@@ -1,0 +1,77 @@
+import { useTranslations } from "next-intl";
+import { createClient } from "@/lib/supabase/server";
+import { Link } from "@/i18n/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { CalendarDays, MapPin, Users } from "lucide-react";
+import type { TrainingSession } from "@/types/database";
+
+export default async function TrainingPage() {
+  const t = useTranslations("training");
+  const tc = useTranslations("common");
+
+  const supabase = await createClient();
+  const { data: sessions } = await supabase
+    .from("training_sessions")
+    .select("*")
+    .order("session_date", { ascending: false });
+
+  const allSessions = (sessions ?? []) as TrainingSession[];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-10 w-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+          <Users className="h-5 w-5 text-blue-400" />
+        </div>
+        <h1 className="text-3xl font-bold">{t("title")}</h1>
+      </div>
+
+      {allSessions.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground">
+          <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
+          <p>{tc("noData")}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {allSessions.map((session) => (
+            <Link key={session.id} href={`/training/${session.id}`}>
+              <Card className="border-border/40 card-hover bg-card cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <CalendarDays className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {session.title || t("session")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(session.session_date).toLocaleDateString(
+                            "sr-Latn",
+                            {
+                              weekday: "long",
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {session.location && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {session.location}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

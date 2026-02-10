@@ -1,0 +1,212 @@
+import { notFound } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { createClient } from "@/lib/supabase/server";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Link } from "@/i18n/navigation";
+import { ChevronLeft, MapPin, CalendarDays, Swords } from "lucide-react";
+import { RESULT_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
+import type { Game, GameResult, PlayerPosition } from "@/types/database";
+
+export default async function GameDetailPage({
+  params,
+}: {
+  params: Promise<{ gameId: string }>;
+}) {
+  const { gameId } = await params;
+  const t = useTranslations("game");
+  const ts = useTranslations("stats");
+  const tp = useTranslations("positions");
+  const tc = useTranslations("common");
+
+  const supabase = await createClient();
+
+  const { data: game } = await supabase
+    .from("games")
+    .select("*")
+    .eq("id", gameId)
+    .single();
+
+  if (!game) notFound();
+
+  const { data: lineup } = await supabase
+    .from("game_lineups")
+    .select("*, player:profiles(*)")
+    .eq("game_id", gameId);
+
+  const { data: stats } = await supabase
+    .from("game_stats")
+    .select("*, player:profiles(*)")
+    .eq("game_id", gameId)
+    .order("goals", { ascending: false });
+
+  const date = new Date(game.game_date);
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <Link
+        href="/games"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+      >
+        <ChevronLeft className="h-4 w-4 mr-1" />
+        {tc("back")}
+      </Link>
+
+      {/* Score Header */}
+      <Card className="border-primary/20 orange-glow mb-8">
+        <CardContent className="p-8">
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+              <CalendarDays className="h-4 w-4" />
+              {date.toLocaleDateString("sr-Latn", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+              {game.location && (
+                <>
+                  <span className="mx-2">|</span>
+                  <MapPin className="h-4 w-4" />
+                  {game.location}
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-8">
+              <div className="text-center">
+                <p className="text-xl font-bold">Propeleri</p>
+                <Badge variant="outline" className="mt-1 text-xs">
+                  {game.is_home ? t("home") : t("away")}
+                </Badge>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-5xl font-black">
+                  {game.is_home ? game.home_score : game.away_score}
+                </span>
+                <span className="text-2xl text-muted-foreground">:</span>
+                <span className="text-5xl font-black">
+                  {game.is_home ? game.away_score : game.home_score}
+                </span>
+              </div>
+
+              <div className="text-center">
+                <p className="text-xl font-bold">{game.opponent}</p>
+                <Badge className={`mt-1 text-xs ${RESULT_COLORS[game.result as GameResult]}`}>
+                  {t(`result.${game.result}`)}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Lineup */}
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Swords className="h-5 w-5 text-primary" />
+              {t("lineup")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {lineup && lineup.length > 0 ? (
+              <div className="space-y-2">
+                {lineup.map((entry: any) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between py-2 px-3 rounded-md bg-secondary/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-primary font-bold text-sm">
+                        #{entry.player?.jersey_number ?? "-"}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {entry.player?.first_name} {entry.player?.last_name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className={`text-xs ${POSITION_COLORS[entry.position_played as PlayerPosition]}`}
+                      >
+                        {tp(entry.position_played)}
+                      </Badge>
+                      {entry.designation !== "player" && (
+                        <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                          {entry.designation === "captain" ? "C" : "A"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm text-center py-6">
+                {t("noLineup")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Player Stats */}
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Swords className="h-5 w-5 text-green-500" />
+              {t("playerStats")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats && stats.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>Player</TableHead>
+                    <TableHead className="text-center">{ts("goals")}</TableHead>
+                    <TableHead className="text-center">{ts("assists")}</TableHead>
+                    <TableHead className="text-center">{ts("points")}</TableHead>
+                    <TableHead className="text-center">{ts("penaltyMinutes")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.map((s: any) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="text-primary font-bold">
+                        {s.player?.jersey_number ?? "-"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {s.player?.first_name} {s.player?.last_name}
+                      </TableCell>
+                      <TableCell className="text-center">{s.goals}</TableCell>
+                      <TableCell className="text-center">{s.assists}</TableCell>
+                      <TableCell className="text-center font-bold text-primary">
+                        {s.goals + s.assists}
+                      </TableCell>
+                      <TableCell className="text-center">{s.penalty_minutes}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-sm text-center py-6">
+                {tc("noData")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

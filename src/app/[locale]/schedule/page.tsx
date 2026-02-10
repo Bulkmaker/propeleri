@@ -1,0 +1,164 @@
+import { useTranslations } from "next-intl";
+import { createClient } from "@/lib/supabase/server";
+import { Link } from "@/i18n/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CalendarDays, Swords, Users } from "lucide-react";
+import { RESULT_COLORS } from "@/lib/utils/constants";
+import type { GameResult } from "@/types/database";
+
+export default async function SchedulePage() {
+  const t = useTranslations("schedule");
+  const tg = useTranslations("game");
+  const tc = useTranslations("common");
+
+  const supabase = await createClient();
+
+  // Get upcoming games
+  const { data: games } = await supabase
+    .from("games")
+    .select("*")
+    .order("game_date", { ascending: true });
+
+  // Get upcoming training sessions
+  const { data: trainings } = await supabase
+    .from("training_sessions")
+    .select("*")
+    .order("session_date", { ascending: true });
+
+  // Merge and sort all events
+  type ScheduleItem = {
+    id: string;
+    type: "game" | "training";
+    date: string;
+    title: string;
+    subtitle?: string;
+    result?: string;
+    location?: string;
+    href: string;
+  };
+
+  const items: ScheduleItem[] = [
+    ...(games ?? []).map((g: any) => ({
+      id: g.id,
+      type: "game" as const,
+      date: g.game_date,
+      title: `Propeleri vs ${g.opponent}`,
+      subtitle: g.is_home ? tg("home") : tg("away"),
+      result: g.result,
+      location: g.location,
+      href: `/games/${g.id}`,
+    })),
+    ...(trainings ?? []).map((t: any) => ({
+      id: t.id,
+      type: "training" as const,
+      date: t.session_date,
+      title: t.title || "Trening",
+      location: t.location,
+      href: `/training/${t.id}`,
+    })),
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const now = new Date();
+  const upcoming = items.filter((i) => new Date(i.date) >= now);
+  const past = items.filter((i) => new Date(i.date) < now).reverse();
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+          <CalendarDays className="h-5 w-5 text-primary" />
+        </div>
+        <h1 className="text-3xl font-bold">{t("title")}</h1>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground">
+          <CalendarDays className="h-12 w-12 mx-auto mb-4 opacity-30" />
+          <p>{t("noEvents")}</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* Upcoming */}
+          {upcoming.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span className="h-1 w-6 bg-primary rounded-full" />
+                {t("thisMonth")}
+              </h2>
+              <div className="space-y-2">
+                {upcoming.map((item) => (
+                  <ScheduleCard key={item.id} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Past */}
+          {past.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-muted-foreground">
+                <span className="h-1 w-6 bg-muted-foreground/30 rounded-full" />
+                Prosli dogadjaji
+              </h2>
+              <div className="space-y-2 opacity-70">
+                {past.slice(0, 10).map((item) => (
+                  <ScheduleCard key={item.id} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScheduleCard({ item }: { item: any }) {
+  const tg = useTranslations("game");
+  const date = new Date(item.date);
+
+  return (
+    <Link href={item.href}>
+      <Card className="border-border/40 card-hover bg-card cursor-pointer">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div
+              className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                item.type === "game"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-blue-500/10 text-blue-400"
+              }`}
+            >
+              {item.type === "game" ? (
+                <Swords className="h-5 w-5" />
+              ) : (
+                <Users className="h-5 w-5" />
+              )}
+            </div>
+            <div>
+              <p className="font-semibold text-sm">{item.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {date.toLocaleDateString("sr-Latn", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                })}{" "}
+                {date.toLocaleTimeString("sr-Latn", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                {item.location && ` — ${item.location}`}
+              </p>
+            </div>
+          </div>
+          {item.result && (
+            <Badge className={`text-xs ${RESULT_COLORS[item.result as GameResult]}`}>
+              {tg(`result.${item.result}`)}
+            </Badge>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}

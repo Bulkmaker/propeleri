@@ -1,0 +1,177 @@
+{
+  "common": {
+    "home": "Home",
+    "roster": "Roster",
+    "schedule": "Schedule",
+    "games": "Games",
+    "training": "Training",
+    "stats": "Stats",
+    "gallery": "Gallery",
+    "events": "Events",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "admin": "Admin",
+    "profile": "Profile",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "loading": "Loading...",
+    "noData": "No data",
+    "back": "Back",
+    "viewAll": "View all",
+    "search": "Search",
+    "filters": "Filters",
+    "all": "All"
+  },
+  "positions": {
+    "forward": "Forward",
+    "defense": "Defense",
+    "goalie": "Goalie"
+  },
+  "roles": {
+    "captain": "Captain",
+    "assistantCaptain": "Assistant Captain",
+    "player": "Player"
+  },
+  "home": {
+    "hero": {
+      "title": "HC Propeleri",
+      "subtitle": "Ice Hockey Club Novi Sad",
+      "cta": "View Schedule"
+    },
+    "nextGame": "Next Game",
+    "recentResults": "Recent Results",
+    "topScorers": "Top Scorers",
+    "upcoming": "Upcoming Events",
+    "teamStats": "Team Stats",
+    "noUpcoming": "No upcoming games"
+  },
+  "roster": {
+    "title": "Team Roster",
+    "allPositions": "All Positions",
+    "gamesPlayed": "Games",
+    "goals": "Goals",
+    "assists": "Assists",
+    "points": "Points",
+    "number": "Number"
+  },
+  "player": {
+    "stats": "Player Stats",
+    "bio": "Biography",
+    "seasonStats": "Season Stats",
+    "trainingStats": "Training Stats",
+    "gamesPlayed": "Games Played",
+    "attendance": "Training Attendance"
+  },
+  "game": {
+    "vs": "vs",
+    "home": "Home",
+    "away": "Away",
+    "lineup": "Lineup",
+    "selectLineup": "Select Lineup",
+    "score": "Score",
+    "details": "Game Details",
+    "playerStats": "Player Stats",
+    "noLineup": "Lineup not yet determined",
+    "result": {
+      "win": "Win",
+      "loss": "Loss",
+      "draw": "Draw",
+      "pending": "Upcoming"
+    }
+  },
+  "training": {
+    "title": "Training Sessions",
+    "session": "Training",
+    "attendance": "Attendance",
+    "enterStats": "Enter Stats",
+    "attended": "Attended",
+    "absent": "Absent"
+  },
+  "stats": {
+    "title": "Statistics",
+    "season": "Season",
+    "allTime": "All Time",
+    "leaderboard": "Leaderboard",
+    "gamesPlayed": "GP",
+    "goals": "G",
+    "assists": "A",
+    "points": "P",
+    "penaltyMinutes": "PIM",
+    "plusMinus": "+/-",
+    "topGoalScorers": "Top Goal Scorers",
+    "topAssists": "Most Assists",
+    "topPoints": "Most Points"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "albums": "Albums",
+    "photos": "Photos",
+    "uploadPhotos": "Upload Photos"
+  },
+  "events": {
+    "title": "Events & Announcements",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "noEvents": "No events"
+  },
+  "auth": {
+    "loginTitle": "Sign In",
+    "registerTitle": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "loginButton": "Sign In",
+    "registerButton": "Sign Up",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "forgotPassword": "Forgot password?",
+    "awaitingApproval": "Your account is awaiting admin approval.",
+    "approvalMessage": "You will be notified when your account is approved."
+  },
+  "profile": {
+    "title": "My Profile",
+    "editProfile": "Edit Profile",
+    "changeAvatar": "Change Photo",
+    "jerseyNumber": "Jersey Number",
+    "position": "Position",
+    "bio": "About",
+    "phone": "Phone",
+    "dateOfBirth": "Date of Birth",
+    "saved": "Profile saved!"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "managePlayers": "Manage Players",
+    "manageGames": "Manage Games",
+    "manageTraining": "Manage Training",
+    "manageSeasons": "Seasons",
+    "manageTournaments": "Tournaments",
+    "manageEvents": "Events",
+    "manageGallery": "Gallery",
+    "pendingApprovals": "Pending Approvals",
+    "approve": "Approve",
+    "reject": "Reject",
+    "activePlayers": "Active Players",
+    "totalGames": "Total Games",
+    "totalTrainings": "Total Trainings"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "calendarView": "Calendar",
+    "listView": "List",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "noEvents": "No scheduled events"
+  },
+  "footer": {
+    "club": "HC Propeleri Novi Sad",
+    "description": "Amateur ice hockey club from Novi Sad",
+    "rights": "All rights reserved"
+  }
+}

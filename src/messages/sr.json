@@ -1,0 +1,177 @@
+{
+  "common": {
+    "home": "Pocetna",
+    "roster": "Tim",
+    "schedule": "Raspored",
+    "games": "Utakmice",
+    "training": "Treninzi",
+    "stats": "Statistika",
+    "gallery": "Galerija",
+    "events": "Dogadjaji",
+    "login": "Prijava",
+    "register": "Registracija",
+    "logout": "Odjava",
+    "admin": "Admin",
+    "profile": "Profil",
+    "save": "Sacuvaj",
+    "cancel": "Otkazi",
+    "delete": "Obrisi",
+    "edit": "Izmeni",
+    "create": "Kreiraj",
+    "loading": "Ucitavanje...",
+    "noData": "Nema podataka",
+    "back": "Nazad",
+    "viewAll": "Pogledaj sve",
+    "search": "Pretraga",
+    "filters": "Filteri",
+    "all": "Sve"
+  },
+  "positions": {
+    "forward": "Napadac",
+    "defense": "Odbrambeni",
+    "goalie": "Golman"
+  },
+  "roles": {
+    "captain": "Kapiten",
+    "assistantCaptain": "Pomocni kapiten",
+    "player": "Igrac"
+  },
+  "home": {
+    "hero": {
+      "title": "HC Propeleri",
+      "subtitle": "Hokejaski klub Novi Sad",
+      "cta": "Pogledaj raspored"
+    },
+    "nextGame": "Sledeca utakmica",
+    "recentResults": "Poslednji rezultati",
+    "topScorers": "Najbolji strelci",
+    "upcoming": "Predstojecci dogadjaji",
+    "teamStats": "Statistika tima",
+    "noUpcoming": "Nema predstojeccih utakmica"
+  },
+  "roster": {
+    "title": "Sastav tima",
+    "allPositions": "Sve pozicije",
+    "gamesPlayed": "Utakmice",
+    "goals": "Golovi",
+    "assists": "Asistencije",
+    "points": "Poeni",
+    "number": "Broj"
+  },
+  "player": {
+    "stats": "Statistika igraca",
+    "bio": "Biografija",
+    "seasonStats": "Statistika po sezonama",
+    "trainingStats": "Statistika treninga",
+    "gamesPlayed": "Odigrane utakmice",
+    "attendance": "Poseccenost treninga"
+  },
+  "game": {
+    "vs": "vs",
+    "home": "Kod kuce",
+    "away": "Gostovanje",
+    "lineup": "Postava",
+    "selectLineup": "Izaberi postavu",
+    "score": "Rezultat",
+    "details": "Detalji utakmice",
+    "playerStats": "Statistika igraca",
+    "noLineup": "Postava jos nije odredjena",
+    "result": {
+      "win": "Pobeda",
+      "loss": "Poraz",
+      "draw": "Nereseno",
+      "pending": "Predstojecci"
+    }
+  },
+  "training": {
+    "title": "Treninzi",
+    "session": "Trening",
+    "attendance": "Prisutnost",
+    "enterStats": "Unesi statistiku",
+    "attended": "Prisustan",
+    "absent": "Odsutan"
+  },
+  "stats": {
+    "title": "Statistika",
+    "season": "Sezona",
+    "allTime": "Svih vremena",
+    "leaderboard": "Tabela lidera",
+    "gamesPlayed": "U",
+    "goals": "G",
+    "assists": "A",
+    "points": "B",
+    "penaltyMinutes": "KM",
+    "plusMinus": "+/-",
+    "topGoalScorers": "Najbolji strelci",
+    "topAssists": "Najvise asistencija",
+    "topPoints": "Najvise bodova"
+  },
+  "gallery": {
+    "title": "Galerija",
+    "albums": "Albumi",
+    "photos": "Fotografije",
+    "uploadPhotos": "Dodaj fotografije"
+  },
+  "events": {
+    "title": "Dogadjaji i obavestenja",
+    "upcoming": "Predstojecci",
+    "past": "Prosli",
+    "noEvents": "Nema dogadjaja"
+  },
+  "auth": {
+    "loginTitle": "Prijavi se",
+    "registerTitle": "Registruj se",
+    "email": "Email",
+    "password": "Lozinka",
+    "confirmPassword": "Potvrdi lozinku",
+    "firstName": "Ime",
+    "lastName": "Prezime",
+    "loginButton": "Prijavi se",
+    "registerButton": "Registruj se",
+    "noAccount": "Nemas nalog?",
+    "hasAccount": "Vec imas nalog?",
+    "forgotPassword": "Zaboravljena lozinka?",
+    "awaitingApproval": "Tvoj nalog ceka odobrenje od administratora.",
+    "approvalMessage": "Bices obavesten kada tvoj nalog bude odobren."
+  },
+  "profile": {
+    "title": "Moj profil",
+    "editProfile": "Izmeni profil",
+    "changeAvatar": "Promeni fotografiju",
+    "jerseyNumber": "Broj dresa",
+    "position": "Pozicija",
+    "bio": "O meni",
+    "phone": "Telefon",
+    "dateOfBirth": "Datum rodjenja",
+    "saved": "Profil sacuvan!"
+  },
+  "admin": {
+    "dashboard": "Kontrolna tabla",
+    "managePlayers": "Upravljanje igracima",
+    "manageGames": "Upravljanje utakmicama",
+    "manageTraining": "Upravljanje treninzima",
+    "manageSeasons": "Sezone",
+    "manageTournaments": "Turniri",
+    "manageEvents": "Dogadjaji",
+    "manageGallery": "Galerija",
+    "pendingApprovals": "Cekaju odobrenje",
+    "approve": "Odobri",
+    "reject": "Odbij",
+    "activePlayers": "Aktivni igraci",
+    "totalGames": "Ukupno utakmica",
+    "totalTrainings": "Ukupno treninga"
+  },
+  "schedule": {
+    "title": "Raspored",
+    "calendarView": "Kalendar",
+    "listView": "Lista",
+    "thisWeek": "Ove nedelje",
+    "thisMonth": "Ovog meseca",
+    "noEvents": "Nema zakazanih dogadjaja"
+  },
+  "footer": {
+    "club": "HC Propeleri Novi Sad",
+    "description": "Amaterski hokejaski klub iz Novog Sada",
+    "rights": "Sva prava zadrzana"
+  }
+}

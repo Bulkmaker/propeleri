@@ -1,0 +1,79 @@
+import { useTranslations } from "next-intl";
+import { getLocale } from "next-intl/server";
+import { createClient } from "@/lib/supabase/server";
+import { Link } from "@/i18n/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Camera, ImageIcon } from "lucide-react";
+import type { GalleryAlbum } from "@/types/database";
+
+function getLocalizedField(
+  item: Record<string, any>,
+  locale: string,
+  field: string = "title"
+): string {
+  if (locale === "ru" && item[`${field}_ru`]) return item[`${field}_ru`];
+  if (locale === "en" && item[`${field}_en`]) return item[`${field}_en`];
+  return item[field];
+}
+
+export default async function GalleryPage() {
+  const t = useTranslations("gallery");
+  const tc = useTranslations("common");
+  const locale = await getLocale();
+
+  const supabase = await createClient();
+  const { data: albums } = await supabase
+    .from("gallery_albums")
+    .select("*, photos:gallery_photos(count)")
+    .order("created_at", { ascending: false });
+
+  const allAlbums = (albums ?? []) as (GalleryAlbum & { photos: [{ count: number }] })[];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-10 w-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+          <Camera className="h-5 w-5 text-purple-400" />
+        </div>
+        <h1 className="text-3xl font-bold">{t("title")}</h1>
+      </div>
+
+      {allAlbums.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground">
+          <Camera className="h-12 w-12 mx-auto mb-4 opacity-30" />
+          <p>{tc("noData")}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {allAlbums.map((album) => (
+            <Link key={album.id} href={`/gallery/${album.id}`}>
+              <Card className="border-border/40 card-hover bg-card cursor-pointer overflow-hidden group">
+                <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
+                  {album.cover_image_url ? (
+                    <img
+                      src={album.cover_image_url}
+                      alt={getLocalizedField(album, locale)}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground/20" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                    <p className="text-white font-semibold text-sm">
+                      {getLocalizedField(album, locale)}
+                    </p>
+                    <p className="text-white/70 text-xs">
+                      {album.photos?.[0]?.count ?? 0} {t("photos").toLowerCase()}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
