@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -13,6 +14,8 @@ import {
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle } from "lucide-react";
+import { POSITION_COLORS } from "@/lib/utils/constants";
+import type { PlayerPosition } from "@/types/database";
 
 export default async function TrainingDetailPage({
   params,
@@ -25,6 +28,7 @@ export default async function TrainingDetailPage({
   const t = await getTranslations("training");
   const ts = await getTranslations("stats");
   const tc = await getTranslations("common");
+  const tp = await getTranslations("positions");
 
   const supabase = await createClient();
 
@@ -43,6 +47,11 @@ export default async function TrainingDetailPage({
     .order("goals", { ascending: false });
 
   const date = new Date(session.session_date);
+
+  const hasTeams = stats?.some((s: any) => s.training_team);
+  const teamA = stats?.filter((s: any) => s.training_team === "team_a") ?? [];
+  const teamB = stats?.filter((s: any) => s.training_team === "team_b") ?? [];
+  const noTeam = stats?.filter((s: any) => !s.training_team) ?? [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -78,52 +87,148 @@ export default async function TrainingDetailPage({
         </div>
       </div>
 
-      {/* Stats Table */}
-      <Card className="border-border/40">
-        <CardHeader>
-          <CardTitle>{t("attendance")} & {ts("title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stats && stats.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>#</TableHead>
-                  <TableHead>Player</TableHead>
-                  <TableHead className="text-center">{t("attendance")}</TableHead>
-                  <TableHead className="text-center">{ts("goals")}</TableHead>
-                  <TableHead className="text-center">{ts("assists")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stats.map((s: any) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="text-primary font-bold">
-                      {s.player?.jersey_number ?? "-"}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {s.player?.first_name} {s.player?.last_name}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {s.attended ? (
-                        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-500 mx-auto" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">{s.goals}</TableCell>
-                    <TableCell className="text-center">{s.assists}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-muted-foreground text-sm text-center py-6">
-              {tc("noData")}
-            </p>
+      {/* Teams Display */}
+      {hasTeams && (teamA.length > 0 || teamB.length > 0) ? (
+        <div className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Team A - White */}
+            <Card className="border-border/40">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="h-4 w-4 rounded-full bg-white border border-border" />
+                  {t("teamA")}
+                  <Badge variant="outline" className="ml-auto">{teamA.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {teamA.map((s: any) => (
+                    <TeamPlayerCard key={s.id} stat={s} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Team B - Dark */}
+            <Card className="border-border/40">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="h-4 w-4 rounded-full bg-gray-600" />
+                  {t("teamB")}
+                  <Badge variant="outline" className="ml-auto">{teamB.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {teamB.map((s: any) => (
+                    <TeamPlayerCard key={s.id} stat={s} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* No team assigned */}
+          {noTeam.length > 0 && (
+            <Card className="border-border/40">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">{t("noTeam")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-2">
+                  {noTeam.map((s: any) => (
+                    <TeamPlayerCard key={s.id} stat={s} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        /* Fallback: single table */
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle>{t("attendance")} & {ts("title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats && stats.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>Player</TableHead>
+                    <TableHead className="text-center">{t("attendance")}</TableHead>
+                    <TableHead className="text-center">{ts("goals")}</TableHead>
+                    <TableHead className="text-center">{ts("assists")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.map((s: any) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="text-primary font-bold">
+                        {s.player?.jersey_number ?? "-"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {s.player?.first_name} {s.player?.last_name}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {s.attended ? (
+                          <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">{s.goals}</TableCell>
+                      <TableCell className="text-center">{s.assists}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-sm text-center py-6">
+                {tc("noData")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function TeamPlayerCard({ stat }: { stat: any }) {
+  const player = stat.player;
+  if (!player) return null;
+  const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
+
+  return (
+    <div className="flex items-center gap-3 py-2 px-3 rounded-md bg-secondary/30">
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={player.avatar_url ?? undefined} />
+        <AvatarFallback className="bg-secondary text-xs font-bold">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">
+          {player.jersey_number != null && (
+            <span className="text-primary mr-1">#{player.jersey_number}</span>
+          )}
+          {player.first_name} {player.last_name}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        {stat.attended ? (
+          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+        ) : (
+          <XCircle className="h-3.5 w-3.5 text-red-500" />
+        )}
+        {stat.goals > 0 && <span className="text-primary font-bold">{stat.goals}G</span>}
+        {stat.assists > 0 && <span>{stat.assists}A</span>}
+      </div>
+      <Badge className={`text-[10px] ${POSITION_COLORS[player.position as PlayerPosition]}`}>
+        {player.position === "forward" ? "FW" : player.position === "defense" ? "DF" : "GK"}
+      </Badge>
     </div>
   );
 }

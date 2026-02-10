@@ -80,6 +80,8 @@ export default function ProfilePage() {
         bio: profile.bio,
         phone: profile.phone,
         date_of_birth: profile.date_of_birth,
+        height: profile.height,
+        weight: profile.weight,
       })
       .eq("id", profile.id);
 
@@ -290,6 +292,37 @@ export default function ProfilePage() {
                     setProfile({
                       ...profile,
                       date_of_birth: e.target.value || null,
+                    })
+                  }
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t("height")}</Label>
+                <Input
+                  type="number"
+                  value={profile.height ?? ""}
+                  onChange={(e) =>
+                    setProfile({
+                      ...profile,
+                      height: e.target.value ? parseInt(e.target.value) : null,
+                    })
+                  }
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("weight")}</Label>
+                <Input
+                  type="number"
+                  value={profile.weight ?? ""}
+                  onChange={(e) =>
+                    setProfile({
+                      ...profile,
+                      weight: e.target.value ? parseInt(e.target.value) : null,
                     })
                   }
                   className="bg-background"

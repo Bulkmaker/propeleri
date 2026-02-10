@@ -18,6 +18,7 @@ import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Loader2, Save, UserPlus, X } from "lucide-react";
 import type { Profile, PlayerPosition, LineupDesignation } from "@/types/database";
 import { POSITION_COLORS } from "@/lib/utils/constants";
+import HockeyRink from "@/components/games/HockeyRink";
 
 interface LineupEntry {
   player_id: string;
@@ -150,6 +151,18 @@ export default function LineupPage() {
       </Link>
 
       <h1 className="text-2xl font-bold mb-6">{t("selectLineup")}</h1>
+
+      {/* Rink Preview */}
+      {lineup.length > 0 && (
+        <Card className="border-border/40 mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">{t("rinkView")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HockeyRink lineup={lineup} interactive />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Current Lineup */}

@@ -64,7 +64,10 @@
     "seasonStats": "Season Stats",
     "trainingStats": "Training Stats",
     "gamesPlayed": "Games Played",
-    "attendance": "Training Attendance"
+    "attendance": "Training Attendance",
+    "height": "Height",
+    "weight": "Weight",
+    "physicalInfo": "Physical Info"
   },
   "game": {
     "vs": "vs",
@@ -76,6 +79,8 @@
     "details": "Game Details",
     "playerStats": "Player Stats",
     "noLineup": "Lineup not yet determined",
+    "rinkView": "Rink View",
+    "bench": "Bench",
     "result": {
       "win": "Win",
       "loss": "Loss",
@@ -89,7 +94,12 @@
     "attendance": "Attendance",
     "enterStats": "Enter Stats",
     "attended": "Attended",
-    "absent": "Absent"
+    "absent": "Absent",
+    "teamA": "Team White",
+    "teamB": "Team Dark",
+    "teams": "Teams",
+    "autoAssign": "Auto-assign",
+    "noTeam": "No team"
   },
   "stats": {
     "title": "Statistics",
@@ -143,6 +153,8 @@
     "bio": "About",
     "phone": "Phone",
     "dateOfBirth": "Date of Birth",
+    "height": "Height (cm)",
+    "weight": "Weight (kg)",
     "saved": "Profile saved!"
   },
   "admin": {
@@ -159,7 +171,9 @@
     "reject": "Reject",
     "activePlayers": "Active Players",
     "totalGames": "Total Games",
-    "totalTrainings": "Total Trainings"
+    "totalTrainings": "Total Trainings",
+    "editPlayer": "Edit Player",
+    "defaultTeam": "Default Team"
   },
   "schedule": {
     "title": "Schedule",

@@ -4,6 +4,7 @@ export type AppRole = "admin" | "player";
 export type EventType = "game" | "training" | "tournament" | "social";
 export type LineupDesignation = "captain" | "assistant_captain" | "player";
 export type GameResult = "win" | "loss" | "draw" | "pending";
+export type TrainingTeam = "team_a" | "team_b";
 
 export interface Profile {
   id: string;
@@ -18,6 +19,9 @@ export interface Profile {
   bio: string | null;
   date_of_birth: string | null;
   phone: string | null;
+  height: number | null;
+  weight: number | null;
+  default_training_team: TrainingTeam | null;
   is_active: boolean;
   is_approved: boolean;
   created_at: string;
@@ -89,6 +93,7 @@ export interface TrainingStats {
   attended: boolean;
   goals: number;
   assists: number;
+  training_team: TrainingTeam | null;
   notes: string | null;
   created_at: string;
   player?: Profile;

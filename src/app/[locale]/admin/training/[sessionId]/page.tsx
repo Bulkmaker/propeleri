@@ -8,17 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, Loader2, Save, CheckCircle, XCircle } from "lucide-react";
-import type { Profile } from "@/types/database";
+import { ChevronLeft, Loader2, Save, CheckCircle, XCircle, Wand2 } from "lucide-react";
+import type { Profile, TrainingTeam } from "@/types/database";
 
 interface TrainingRow {
   player_id: string;
   first_name: string;
   last_name: string;
   jersey_number: number | null;
+  default_training_team: TrainingTeam | null;
   attended: boolean;
   goals: number;
   assists: number;
+  training_team: TrainingTeam | null;
 }
 
 export default function TrainingStatsEntryPage() {
@@ -37,7 +39,6 @@ export default function TrainingStatsEntryPage() {
 
   useEffect(() => {
     async function load() {
-      // All active players
       const { data: players } = await supabase
         .from("profiles")
         .select("*")
@@ -45,7 +46,6 @@ export default function TrainingStatsEntryPage() {
         .eq("is_approved", true)
         .order("jersey_number");
 
-      // Existing stats
       const { data: existing } = await supabase
         .from("training_stats")
         .select("*")
@@ -62,9 +62,11 @@ export default function TrainingStatsEntryPage() {
           first_name: p.first_name,
           last_name: p.last_name,
           jersey_number: p.jersey_number,
+          default_training_team: p.default_training_team,
           attended: e?.attended ?? false,
           goals: e?.goals ?? 0,
           assists: e?.assists ?? 0,
+          training_team: e?.training_team ?? null,
         };
       });
 
@@ -88,6 +90,21 @@ export default function TrainingStatsEntryPage() {
     );
   }
 
+  function setTeam(idx: number, team: TrainingTeam | null) {
+    setRows((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, training_team: team } : row))
+    );
+  }
+
+  function autoAssignTeams() {
+    setRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        training_team: row.default_training_team,
+      }))
+    );
+  }
+
   async function handleSave() {
     setSaving(true);
     setMessage("");
@@ -100,6 +117,7 @@ export default function TrainingStatsEntryPage() {
           attended: row.attended,
           goals: row.goals,
           assists: row.assists,
+          training_team: row.training_team,
         },
         { onConflict: "session_id,player_id" }
       );
@@ -127,9 +145,20 @@ export default function TrainingStatsEntryPage() {
         {tc("back")}
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">
-        {tt("attendance")} & {ts("title")}
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">
+          {tt("attendance")} & {ts("title")}
+        </h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={autoAssignTeams}
+          className="border-primary/30 text-primary"
+        >
+          <Wand2 className="h-4 w-4 mr-2" />
+          {tt("autoAssign")}
+        </Button>
+      </div>
 
       <Card className="border-border/40">
         <CardContent className="p-4">
@@ -139,6 +168,7 @@ export default function TrainingStatsEntryPage() {
                 <tr className="border-b border-border">
                   <th className="text-left py-2 px-2">#</th>
                   <th className="text-left py-2 px-2">Igrac</th>
+                  <th className="text-center py-2 px-2">{tt("teams")}</th>
                   <th className="text-center py-2 px-2">{tt("attendance")}</th>
                   <th className="text-center py-2 px-2">{ts("goals")}</th>
                   <th className="text-center py-2 px-2">{ts("assists")}</th>
@@ -152,6 +182,38 @@ export default function TrainingStatsEntryPage() {
                     </td>
                     <td className="py-2 px-2 font-medium">
                       {row.first_name} {row.last_name}
+                    </td>
+                    <td className="py-2 px-2">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          size="sm"
+                          variant={row.training_team === "team_a" ? "default" : "ghost"}
+                          className={`h-7 w-7 p-0 text-xs font-bold ${
+                            row.training_team === "team_a"
+                              ? "bg-white text-black hover:bg-white/90"
+                              : "text-muted-foreground"
+                          }`}
+                          onClick={() =>
+                            setTeam(idx, row.training_team === "team_a" ? null : "team_a")
+                          }
+                        >
+                          A
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={row.training_team === "team_b" ? "default" : "ghost"}
+                          className={`h-7 w-7 p-0 text-xs font-bold ${
+                            row.training_team === "team_b"
+                              ? "bg-gray-700 text-white hover:bg-gray-600"
+                              : "text-muted-foreground"
+                          }`}
+                          onClick={() =>
+                            setTeam(idx, row.training_team === "team_b" ? null : "team_b")
+                          }
+                        >
+                          B
+                        </Button>
+                      </div>
                     </td>
                     <td className="py-2 px-2 text-center">
                       <Button

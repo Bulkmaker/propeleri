@@ -15,6 +15,8 @@ import { Link } from "@/i18n/navigation";
 import { ChevronLeft, MapPin, CalendarDays, Swords } from "lucide-react";
 import { RESULT_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
 import type { Game, GameResult, PlayerPosition } from "@/types/database";
+import HockeyRink from "@/components/games/HockeyRink";
+import type { RinkPlayer } from "@/components/games/HockeyRink";
 
 export default async function GameDetailPage({
   params,
@@ -112,8 +114,30 @@ export default async function GameDetailPage({
         </CardContent>
       </Card>
 
+      {/* Hockey Rink Visualization */}
+      {lineup && lineup.length > 0 && (
+        <Card className="border-border/40 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Swords className="h-5 w-5 text-primary" />
+              {t("rinkView")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HockeyRink
+              lineup={(lineup as any[]).map((entry: any) => ({
+                player_id: entry.player_id,
+                designation: entry.designation,
+                position_played: entry.position_played,
+                player: entry.player,
+              })) as RinkPlayer[]}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Lineup */}
+        {/* Lineup List */}
         <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

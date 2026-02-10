@@ -102,6 +102,12 @@ export default async function PlayerProfilePage({
               </Badge>
             )}
           </div>
+          {(player.height || player.weight) && (
+            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+              {player.height && <span>{t("height")}: {player.height} cm</span>}
+              {player.weight && <span>{t("weight")}: {player.weight} kg</span>}
+            </div>
+          )}
           {player.bio && (
             <p className="text-muted-foreground mt-3 max-w-md">{player.bio}</p>
           )}

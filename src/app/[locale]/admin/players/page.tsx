@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,6 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -21,18 +29,57 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, XCircle, Users, Loader2 } from "lucide-react";
-import type { Profile, PlayerRole, AppRole, PlayerPosition } from "@/types/database";
-import { POSITION_COLORS } from "@/lib/utils/constants";
+import { CheckCircle, XCircle, Users, Loader2, Pencil } from "lucide-react";
+import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
+import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
+
+interface PlayerForm {
+  first_name: string;
+  last_name: string;
+  jersey_number: string;
+  position: PlayerPosition;
+  team_role: PlayerRole;
+  app_role: AppRole;
+  height: string;
+  weight: string;
+  date_of_birth: string;
+  phone: string;
+  bio: string;
+  default_training_team: string;
+  is_active: boolean;
+  is_approved: boolean;
+}
 
 export default function AdminPlayersPage() {
   const t = useTranslations("admin");
   const tp = useTranslations("positions");
   const tr = useTranslations("roles");
   const tc = useTranslations("common");
+  const tt = useTranslations("training");
 
   const [players, setPlayers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [editingPlayer, setEditingPlayer] = useState<Profile | null>(null);
+  const [form, setForm] = useState<PlayerForm>({
+    first_name: "",
+    last_name: "",
+    jersey_number: "",
+    position: "forward",
+    team_role: "player",
+    app_role: "player",
+    height: "",
+    weight: "",
+    date_of_birth: "",
+    phone: "",
+    bio: "",
+    default_training_team: "none",
+    is_active: true,
+    is_approved: true,
+  });
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -54,19 +101,66 @@ export default function AdminPlayersPage() {
     loadPlayers();
   }
 
-  async function updateRole(id: string, field: string, value: string) {
-    await supabase
+  function openEdit(player: Profile) {
+    setEditingPlayer(player);
+    setError("");
+    setForm({
+      first_name: player.first_name,
+      last_name: player.last_name,
+      jersey_number: player.jersey_number?.toString() ?? "",
+      position: player.position,
+      team_role: player.team_role,
+      app_role: player.app_role,
+      height: player.height?.toString() ?? "",
+      weight: player.weight?.toString() ?? "",
+      date_of_birth: player.date_of_birth ?? "",
+      phone: player.phone ?? "",
+      bio: player.bio ?? "",
+      default_training_team: player.default_training_team ?? "none",
+      is_active: player.is_active,
+      is_approved: player.is_approved,
+    });
+    setDialogOpen(true);
+  }
+
+  async function handleSave() {
+    if (!editingPlayer) return;
+    setSaving(true);
+    setError("");
+
+    const { error: err } = await supabase
       .from("profiles")
-      .update({ [field]: value })
-      .eq("id", id);
+      .update({
+        first_name: form.first_name,
+        last_name: form.last_name,
+        jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
+        position: form.position,
+        team_role: form.team_role,
+        app_role: form.app_role,
+        height: form.height ? parseInt(form.height) : null,
+        weight: form.weight ? parseInt(form.weight) : null,
+        date_of_birth: form.date_of_birth || null,
+        phone: form.phone || null,
+        bio: form.bio || null,
+        default_training_team: form.default_training_team === "none" ? null : form.default_training_team,
+        is_active: form.is_active,
+        is_approved: form.is_approved,
+      })
+      .eq("id", editingPlayer.id);
+
+    if (err) {
+      setError(err.message);
+      setSaving(false);
+      return;
+    }
+
+    setDialogOpen(false);
+    setSaving(false);
     loadPlayers();
   }
 
-  async function toggleActive(id: string, isActive: boolean) {
-    await supabase
-      .from("profiles")
-      .update({ is_active: !isActive })
-      .eq("id", id);
+  async function handlePositionChange(playerId: string, position: PlayerPosition) {
+    await supabase.from("profiles").update({ position }).eq("id", playerId);
     loadPlayers();
   }
 
@@ -84,6 +178,199 @@ export default function AdminPlayersPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">{t("managePlayers")}</h1>
+
+      {/* Edit Player Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {t("editPlayer")} — {editingPlayer?.first_name} {editingPlayer?.last_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ime</Label>
+                <Input
+                  value={form.first_name}
+                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Prezime</Label>
+                <Input
+                  value={form.last_name}
+                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Broj dresa</Label>
+                <Input
+                  type="number"
+                  value={form.jersey_number}
+                  onChange={(e) => setForm({ ...form, jersey_number: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Pozicija</Label>
+                <Select
+                  value={form.position}
+                  onValueChange={(v) => setForm({ ...form, position: v as PlayerPosition })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POSITIONS.map((pos) => (
+                      <SelectItem key={pos} value={pos}>
+                        {tp(pos)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Datum rodjenja</Label>
+                <Input
+                  type="date"
+                  value={form.date_of_birth}
+                  onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Visina (cm)</Label>
+                <Input
+                  type="number"
+                  value={form.height}
+                  onChange={(e) => setForm({ ...form, height: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tezina (kg)</Label>
+                <Input
+                  type="number"
+                  value={form.weight}
+                  onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefon</Label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bio</Label>
+              <Input
+                value={form.bio}
+                onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                className="bg-background"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Team Role</Label>
+                <Select
+                  value={form.team_role}
+                  onValueChange={(v) => setForm({ ...form, team_role: v as PlayerRole })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="player">{tr("player")}</SelectItem>
+                    <SelectItem value="captain">{tr("captain")}</SelectItem>
+                    <SelectItem value="assistant_captain">{tr("assistantCaptain")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>App Role</Label>
+                <Select
+                  value={form.app_role}
+                  onValueChange={(v) => setForm({ ...form, app_role: v as AppRole })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="player">Player</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("defaultTeam")}</Label>
+                <Select
+                  value={form.default_training_team}
+                  onValueChange={(v) => setForm({ ...form, default_training_team: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{tt("noTeam")}</SelectItem>
+                    <SelectItem value="team_a">{tt("teamA")}</SelectItem>
+                    <SelectItem value="team_b">{tt("teamB")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                  className="rounded border-border"
+                />
+                <span className="text-sm">Active</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_approved}
+                  onChange={(e) => setForm({ ...form, is_approved: e.target.checked })}
+                  className="rounded border-border"
+                />
+                <span className="text-sm">Approved</span>
+              </label>
+            </div>
+
+            {error && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                {error}
+              </p>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={saving || !form.first_name || !form.last_name}
+              className="w-full bg-primary"
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tc("save")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pending Approvals */}
       {pending.length > 0 && (
@@ -114,6 +401,13 @@ export default function AdminPlayersPage() {
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
+                      variant="ghost"
+                      onClick={() => openEdit(player)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
                       onClick={() => approvePlayer(player.id)}
                       className="bg-green-600 hover:bg-green-700"
                     >
@@ -140,13 +434,12 @@ export default function AdminPlayersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>#</TableHead>
+                <TableHead className="w-[50px]">#</TableHead>
                 <TableHead>Player</TableHead>
                 <TableHead>Position</TableHead>
                 <TableHead>Team Role</TableHead>
-                <TableHead>App Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead></TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -163,44 +456,36 @@ export default function AdminPlayersPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
-                      {tp(player.position)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
                     <Select
-                      value={player.team_role}
+                      value={player.position}
                       onValueChange={(v) =>
-                        updateRole(player.id, "team_role", v)
+                        handlePositionChange(player.id, v as PlayerPosition)
                       }
                     >
-                      <SelectTrigger className="w-[160px] h-8">
-                        <SelectValue />
+                      <SelectTrigger className="w-[130px] h-8">
+                        <SelectValue>
+                          <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
+                            {tp(player.position)}
+                          </Badge>
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="player">{tr("player")}</SelectItem>
-                        <SelectItem value="captain">{tr("captain")}</SelectItem>
-                        <SelectItem value="assistant_captain">
-                          {tr("assistantCaptain")}
-                        </SelectItem>
+                        {POSITIONS.map((pos) => (
+                          <SelectItem key={pos} value={pos}>
+                            {tp(pos)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={player.app_role}
-                      onValueChange={(v) =>
-                        updateRole(player.id, "app_role", v)
-                      }
-                    >
-                      <SelectTrigger className="w-[120px] h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="player">Player</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <span className="text-sm text-muted-foreground">
+                      {player.team_role === "captain"
+                        ? tr("captain")
+                        : player.team_role === "assistant_captain"
+                          ? tr("assistantCaptain")
+                          : tr("player")}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {player.is_active ? (
@@ -213,15 +498,9 @@ export default function AdminPlayersPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() =>
-                        toggleActive(player.id, player.is_active)
-                      }
+                      onClick={() => openEdit(player)}
                     >
-                      {player.is_active ? (
-                        <XCircle className="h-4 w-4 text-red-400" />
-                      ) : (
-                        <CheckCircle className="h-4 w-4 text-green-400" />
-                      )}
+                      <Pencil className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

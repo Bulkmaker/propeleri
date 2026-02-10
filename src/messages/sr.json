@@ -64,7 +64,10 @@
     "seasonStats": "Statistika po sezonama",
     "trainingStats": "Statistika treninga",
     "gamesPlayed": "Odigrane utakmice",
-    "attendance": "Poseccenost treninga"
+    "attendance": "Poseccenost treninga",
+    "height": "Visina",
+    "weight": "Tezina",
+    "physicalInfo": "Fizicki podaci"
   },
   "game": {
     "vs": "vs",
@@ -76,6 +79,8 @@
     "details": "Detalji utakmice",
     "playerStats": "Statistika igraca",
     "noLineup": "Postava jos nije odredjena",
+    "rinkView": "Prikaz na terenu",
+    "bench": "Klupa",
     "result": {
       "win": "Pobeda",
       "loss": "Poraz",
@@ -89,7 +94,12 @@
     "attendance": "Prisutnost",
     "enterStats": "Unesi statistiku",
     "attended": "Prisustan",
-    "absent": "Odsutan"
+    "absent": "Odsutan",
+    "teamA": "Tim Beli",
+    "teamB": "Tim Tamni",
+    "teams": "Timovi",
+    "autoAssign": "Automatski",
+    "noTeam": "Bez tima"
   },
   "stats": {
     "title": "Statistika",
@@ -143,6 +153,8 @@
     "bio": "O meni",
     "phone": "Telefon",
     "dateOfBirth": "Datum rodjenja",
+    "height": "Visina (cm)",
+    "weight": "Tezina (kg)",
     "saved": "Profil sacuvan!"
   },
   "admin": {
@@ -159,7 +171,9 @@
     "reject": "Odbij",
     "activePlayers": "Aktivni igraci",
     "totalGames": "Ukupno utakmica",
-    "totalTrainings": "Ukupno treninga"
+    "totalTrainings": "Ukupno treninga",
+    "editPlayer": "Izmeni igraca",
+    "defaultTeam": "Podrazumevani tim"
   },
   "schedule": {
     "title": "Raspored",

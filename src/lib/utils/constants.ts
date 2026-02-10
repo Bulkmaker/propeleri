@@ -1,4 +1,4 @@
-import type { PlayerPosition, PlayerRole, GameResult } from "@/types/database";
+import type { PlayerPosition, PlayerRole, GameResult, TrainingTeam } from "@/types/database";
 
 export const POSITIONS: PlayerPosition[] = ["forward", "defense", "goalie"];
 
@@ -10,10 +10,18 @@ export const ROLES: PlayerRole[] = [
 
 export const GAME_RESULTS: GameResult[] = ["win", "loss", "draw", "pending"];
 
+export const TRAINING_TEAMS: TrainingTeam[] = ["team_a", "team_b"];
+
 export const POSITION_COLORS: Record<PlayerPosition, string> = {
   forward: "bg-team-orange text-white",
   defense: "bg-blue-600 text-white",
   goalie: "bg-team-silver text-white",
+};
+
+export const POSITION_COLORS_HEX: Record<PlayerPosition, string> = {
+  forward: "#e8732a",
+  defense: "#2563eb",
+  goalie: "#9ca3af",
 };
 
 export const RESULT_COLORS: Record<GameResult, string> = {
