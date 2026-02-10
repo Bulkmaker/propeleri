@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,9 +8,16 @@ import { Swords, MapPin, CalendarDays } from "lucide-react";
 import type { Game, GameResult } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 
-export default async function GamesPage() {
-  const t = useTranslations("game");
-  const tc = useTranslations("common");
+export default async function GamesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("game");
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
   const { data: games } = await supabase

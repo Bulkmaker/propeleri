@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,10 +15,17 @@ import { Trophy, Target, TrendingUp } from "lucide-react";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import type { PlayerPosition } from "@/types/database";
 
-export default async function StatsPage() {
-  const t = useTranslations("stats");
-  const tp = useTranslations("positions");
-  const tc = useTranslations("common");
+export default async function StatsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("stats");
+  const tp = await getTranslations("positions");
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
 

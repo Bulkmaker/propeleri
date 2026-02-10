@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { getLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
@@ -19,11 +18,12 @@ function getLocalizedField(
 export default async function EventDetailPage({
   params,
 }: {
-  params: Promise<{ eventId: string }>;
+  params: Promise<{ locale: string; eventId: string }>;
 }) {
-  const { eventId } = await params;
-  const tc = useTranslations("common");
-  const locale = await getLocale();
+  const { locale, eventId } = await params;
+  setRequestLocale(locale);
+
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
   const { data: event } = await supabase

@@ -37,6 +37,7 @@ export default function AdminGamesPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -72,6 +73,7 @@ export default function AdminGamesPage() {
 
   function openCreateDialog() {
     setEditingId(null);
+    setError("");
     setForm({
       season_id: seasons[0]?.id ?? "",
       opponent: "",
@@ -87,6 +89,7 @@ export default function AdminGamesPage() {
 
   function openEditDialog(game: Game) {
     setEditingId(game.id);
+    setError("");
     setForm({
       season_id: game.season_id,
       opponent: game.opponent,
@@ -102,15 +105,35 @@ export default function AdminGamesPage() {
 
   async function handleSave() {
     setSaving(true);
-    const data = {
-      ...form,
-      location: form.location || null,
-    };
+    setError("");
 
-    if (editingId) {
-      await supabase.from("games").update(data).eq("id", editingId);
-    } else {
-      await supabase.from("games").insert(data);
+    const payload = editingId
+      ? {
+          season_id: form.season_id,
+          opponent: form.opponent,
+          location: form.location || null,
+          game_date: form.game_date,
+          is_home: form.is_home,
+          home_score: form.home_score,
+          away_score: form.away_score,
+          result: form.result,
+        }
+      : {
+          season_id: form.season_id,
+          opponent: form.opponent,
+          location: form.location || null,
+          game_date: form.game_date,
+          is_home: form.is_home,
+        };
+
+    const res = editingId
+      ? await supabase.from("games").update(payload).eq("id", editingId)
+      : await supabase.from("games").insert(payload);
+
+    if (res.error) {
+      setError(res.error.message);
+      setSaving(false);
+      return;
     }
 
     setDialogOpen(false);
@@ -195,55 +218,62 @@ export default function AdminGamesPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Domaci gol</Label>
-                  <Input
-                    type="number"
-                    value={form.home_score}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        home_score: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="bg-background"
-                  />
+              {editingId && (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Domaci gol</Label>
+                    <Input
+                      type="number"
+                      value={form.home_score}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          home_score: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gosti gol</Label>
+                    <Input
+                      type="number"
+                      value={form.away_score}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          away_score: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Rezultat</Label>
+                    <Select
+                      value={form.result}
+                      onValueChange={(v) =>
+                        setForm({ ...form, result: v as GameResult })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">{tg("result.pending")}</SelectItem>
+                        <SelectItem value="win">{tg("result.win")}</SelectItem>
+                        <SelectItem value="loss">{tg("result.loss")}</SelectItem>
+                        <SelectItem value="draw">{tg("result.draw")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Gosti gol</Label>
-                  <Input
-                    type="number"
-                    value={form.away_score}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        away_score: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Rezultat</Label>
-                  <Select
-                    value={form.result}
-                    onValueChange={(v) =>
-                      setForm({ ...form, result: v as GameResult })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">{tg("result.pending")}</SelectItem>
-                      <SelectItem value="win">{tg("result.win")}</SelectItem>
-                      <SelectItem value="loss">{tg("result.loss")}</SelectItem>
-                      <SelectItem value="draw">{tg("result.draw")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              )}
+              {error && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                  {error}
+                </p>
+              )}
               <Button
                 onClick={handleSave}
                 disabled={saving || !form.opponent || !form.game_date}

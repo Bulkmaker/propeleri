@@ -40,6 +40,15 @@ yarn-error.log*
 .playwright-mcp/
 homepage-full.png
 
+# mcp
+.mcp.json
+
+# screenshots
+current-error.png
+
+# credentials
+players-credentials.txt
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

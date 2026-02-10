@@ -2,11 +2,21 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LocaleSwitcher } from "./LocaleSwitcher";
-import { Menu, X } from "lucide-react";
+import { useUser } from "@/hooks/use-user";
+import { createClient } from "@/lib/supabase/client";
+import { Menu, User, Shield, LogOut } from "lucide-react";
 
 const navLinks = [
   { href: "/roster", key: "roster" },
@@ -20,7 +30,20 @@ const navLinks = [
 export function Header() {
   const t = useTranslations("common");
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { user, profile, loading, isAdmin, isTeamLeader } = useUser();
+
+  const initials = profile
+    ? `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`
+    : "";
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
@@ -59,11 +82,56 @@ export function Header() {
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
 
-          <Link href="/login" className="hidden md:block">
-            <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10 hover:text-primary">
-              {t("login")}
-            </Button>
-          </Link>
+          {/* Desktop auth */}
+          <div className="hidden md:block">
+            {loading ? null : user && profile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2 hover:bg-accent">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={profile.avatar_url ?? undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium max-w-30 truncate">
+                      {profile.first_name}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      {t("profile")}
+                    </Link>
+                  </DropdownMenuItem>
+                  {(isAdmin || isTeamLeader) && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="flex items-center gap-2 cursor-pointer">
+                        <Shield className="h-4 w-4" />
+                        {t("admin")}
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t("logout")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login">
+                <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10 hover:text-primary">
+                  {t("login")}
+                </Button>
+              </Link>
+            )}
+          </div>
 
           {/* Mobile menu */}
           <Sheet open={open} onOpenChange={setOpen}>
@@ -92,13 +160,46 @@ export function Header() {
                   );
                 })}
                 <div className="border-t border-border my-2" />
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10 rounded-md"
-                >
-                  {t("login")}
-                </Link>
+                {user && profile ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      onClick={() => setOpen(false)}
+                      className="px-4 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-md flex items-center gap-2"
+                    >
+                      <User className="h-4 w-4" />
+                      {t("profile")}
+                    </Link>
+                    {(isAdmin || isTeamLeader) && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setOpen(false)}
+                        className="px-4 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-md flex items-center gap-2"
+                      >
+                        <Shield className="h-4 w-4" />
+                        {t("admin")}
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setOpen(false);
+                      }}
+                      className="px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-md text-left flex items-center gap-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {t("logout")}
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10 rounded-md"
+                  >
+                    {t("login")}
+                  </Link>
+                )}
               </nav>
             </SheetContent>
           </Sheet>

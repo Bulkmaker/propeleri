@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,9 +10,16 @@ import type { Profile } from "@/types/database";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import type { PlayerPosition } from "@/types/database";
 
-export default async function RosterPage() {
-  const t = useTranslations("roster");
-  const tp = useTranslations("positions");
+export default async function RosterPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("roster");
+  const tp = await getTranslations("positions");
 
   const supabase = await createClient();
   const { data: players } = await supabase

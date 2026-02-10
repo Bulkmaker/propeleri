@@ -1,13 +1,20 @@
-import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import type { TrainingSession } from "@/types/database";
 
-export default async function TrainingPage() {
-  const t = useTranslations("training");
-  const tc = useTranslations("common");
+export default async function TrainingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("training");
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
   const { data: sessions } = await supabase

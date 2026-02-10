@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,12 +17,14 @@ import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle } from "lucide-
 export default async function TrainingDetailPage({
   params,
 }: {
-  params: Promise<{ sessionId: string }>;
+  params: Promise<{ locale: string; sessionId: string }>;
 }) {
-  const { sessionId } = await params;
-  const t = useTranslations("training");
-  const ts = useTranslations("stats");
-  const tc = useTranslations("common");
+  const { locale, sessionId } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("training");
+  const ts = await getTranslations("stats");
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
 

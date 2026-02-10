@@ -1,5 +1,4 @@
-import { useTranslations } from "next-intl";
-import { getLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,10 +23,16 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   social: "bg-purple-500/20 text-purple-400",
 };
 
-export default async function EventsPage() {
-  const t = useTranslations("events");
-  const tc = useTranslations("common");
-  const locale = await getLocale();
+export default async function EventsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("events");
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
   const { data: events } = await supabase

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,13 +19,15 @@ import type { Game, GameResult, PlayerPosition } from "@/types/database";
 export default async function GameDetailPage({
   params,
 }: {
-  params: Promise<{ gameId: string }>;
+  params: Promise<{ locale: string; gameId: string }>;
 }) {
-  const { gameId } = await params;
-  const t = useTranslations("game");
-  const ts = useTranslations("stats");
-  const tp = useTranslations("positions");
-  const tc = useTranslations("common");
+  const { locale, gameId } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("game");
+  const ts = await getTranslations("stats");
+  const tp = await getTranslations("positions");
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
 

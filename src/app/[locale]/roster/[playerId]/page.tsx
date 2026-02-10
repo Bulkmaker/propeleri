@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -20,14 +20,16 @@ import { ChevronLeft, Trophy, TrendingUp } from "lucide-react";
 export default async function PlayerProfilePage({
   params,
 }: {
-  params: Promise<{ playerId: string }>;
+  params: Promise<{ locale: string; playerId: string }>;
 }) {
-  const { playerId } = await params;
-  const t = useTranslations("player");
-  const ts = useTranslations("stats");
-  const tp = useTranslations("positions");
-  const tr = useTranslations("roles");
-  const tc = useTranslations("common");
+  const { locale, playerId } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("player");
+  const ts = await getTranslations("stats");
+  const tp = await getTranslations("positions");
+  const tr = await getTranslations("roles");
+  const tc = await getTranslations("common");
 
   const supabase = await createClient();
 

@@ -35,6 +35,7 @@ export default function AdminTrainingPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     season_id: "",
@@ -68,6 +69,7 @@ export default function AdminTrainingPage() {
 
   function openCreate() {
     setEditingId(null);
+    setError("");
     setForm({
       season_id: seasons[0]?.id ?? "",
       title: "",
@@ -79,6 +81,7 @@ export default function AdminTrainingPage() {
 
   function openEdit(session: TrainingSession) {
     setEditingId(session.id);
+    setError("");
     setForm({
       season_id: session.season_id,
       title: session.title ?? "",
@@ -90,16 +93,21 @@ export default function AdminTrainingPage() {
 
   async function handleSave() {
     setSaving(true);
+    setError("");
     const data = {
       ...form,
       title: form.title || null,
       location: form.location || null,
     };
 
-    if (editingId) {
-      await supabase.from("training_sessions").update(data).eq("id", editingId);
-    } else {
-      await supabase.from("training_sessions").insert(data);
+    const res = editingId
+      ? await supabase.from("training_sessions").update(data).eq("id", editingId)
+      : await supabase.from("training_sessions").insert(data);
+
+    if (res.error) {
+      setError(res.error.message);
+      setSaving(false);
+      return;
     }
 
     setDialogOpen(false);
@@ -185,6 +193,11 @@ export default function AdminTrainingPage() {
                   />
                 </div>
               </div>
+              {error && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                  {error}
+                </p>
+              )}
               <Button
                 onClick={handleSave}
                 disabled={saving || !form.session_date}

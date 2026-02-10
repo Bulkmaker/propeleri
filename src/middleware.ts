@@ -2,6 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { routing } from "@/i18n/routing";
+import type { CookieOptions } from "@supabase/ssr";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -10,12 +11,11 @@ export default async function middleware(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   let user = null;
-  let supabaseCookies: { name: string; value: string }[] = [];
+  const supabaseCookies: { name: string; value: string; options: CookieOptions }[] = [];
 
   // 1. Refresh Supabase session (skip if not configured)
   if (supabaseUrl && supabaseKey && !supabaseUrl.includes("your-project")) {
     try {
-      const response = NextResponse.next({ request });
       const supabase = createServerClient(supabaseUrl, supabaseKey, {
         cookies: {
           getAll() {
@@ -26,14 +26,13 @@ export default async function middleware(request: NextRequest) {
               request.cookies.set(name, value)
             );
             cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options)
+              supabaseCookies.push({ name, value, options })
             );
           },
         },
       });
       const { data } = await supabase.auth.getUser();
       user = data.user;
-      supabaseCookies = response.cookies.getAll();
     } catch {
       // Supabase not available, continue without auth
     }
@@ -47,15 +46,19 @@ export default async function middleware(request: NextRequest) {
   if (isProtectedRoute && !user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    supabaseCookies.forEach(({ name, value, options }) => {
+      redirectResponse.cookies.set(name, value, options);
+    });
+    return redirectResponse;
   }
 
   // 3. Run next-intl middleware for locale handling
   const intlResponse = intlMiddleware(request);
 
-  // Copy Supabase cookies to the intl response
-  supabaseCookies.forEach((cookie) => {
-    intlResponse.cookies.set(cookie.name, cookie.value);
+  // Copy Supabase cookies with full options to the intl response
+  supabaseCookies.forEach(({ name, value, options }) => {
+    intlResponse.cookies.set(name, value, options);
   });
 
   return intlResponse;
