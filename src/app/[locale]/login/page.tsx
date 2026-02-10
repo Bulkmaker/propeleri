@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Swords, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -43,9 +44,13 @@ export default function LoginPage() {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <Card className="w-full max-w-md border-border/40 bg-card">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <Swords className="h-6 w-6 text-primary" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="HC Propeleri"
+            width={56}
+            height={56}
+            className="mx-auto mb-2"
+          />
           <CardTitle className="text-2xl font-bold">{t("loginTitle")}</CardTitle>
         </CardHeader>
         <CardContent>

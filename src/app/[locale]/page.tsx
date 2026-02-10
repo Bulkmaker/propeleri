@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Swords,
 } from "lucide-react";
+import Image from "next/image";
 
 export default function HomePage() {
   const t = useTranslations("home");
@@ -33,11 +34,15 @@ export default function HomePage() {
 
         <div className="container mx-auto px-4 py-20 md:py-32 relative">
           <div className="max-w-3xl mx-auto text-center">
-            {/* Team badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm font-medium mb-6">
-              <Swords className="h-4 w-4" />
-              Hokejaski klub
-            </div>
+            {/* Team logo */}
+            <Image
+              src="/logo.png"
+              alt="HC Propeleri"
+              width={120}
+              height={120}
+              className="mx-auto mb-6 drop-shadow-[0_0_30px_rgba(232,115,42,0.3)]"
+              priority
+            />
 
             <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-4">
               {t("hero.title").split("Propeleri")[0]}

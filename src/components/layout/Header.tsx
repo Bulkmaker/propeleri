@@ -17,6 +17,7 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/lib/supabase/client";
 import { Menu, User, Shield, LogOut } from "lucide-react";
+import Image from "next/image";
 
 const navLinks = [
   { href: "/roster", key: "roster" },
@@ -50,9 +51,13 @@ export function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg group-hover:bg-primary/20 transition-colors">
-            P
-          </div>
+          <Image
+            src="/logo.png"
+            alt="HC Propeleri"
+            width={40}
+            height={40}
+            className="group-hover:scale-105 transition-transform"
+          />
           <span className="text-lg font-bold hidden sm:block">
             HC <span className="text-primary">Propeleri</span>
           </span>

@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -9,9 +10,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-              P
-            </div>
+            <Image src="/logo.png" alt="HC Propeleri" width={32} height={32} />
             <div>
               <p className="font-semibold text-sm">{t("club")}</p>
               <p className="text-xs text-muted-foreground">{t("description")}</p>

@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   description:
     "Amaterski hokejaski klub Propeleri iz Novog Sada. Raspored utakmica, statistika igraca, galerija i vesti.",
   keywords: ["hokej", "hockey", "Novi Sad", "Propeleri", "amaterski hokej"],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
