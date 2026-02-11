@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/navigation";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import { GameLineupEditor } from "@/components/games/GameLineupEditor";
+import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ import {
 import type {
   Game,
   LineupDesignation,
+  Opponent,
   Profile,
   SlotPosition,
   Team,
@@ -125,6 +127,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   const [match, setMatch] = useState<TournamentMatch | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [groups, setGroups] = useState<TournamentGroup[]>([]);
   const [groupTeams, setGroupTeams] = useState<TournamentGroupTeam[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
@@ -193,7 +196,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
     // Если нет tournamentMatch, загружаем только базовые данные
     if (!matchData) {
-      const [playersRes] = await Promise.all([
+      const [playersRes, opponentsRes, teamsRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("*")
@@ -201,9 +204,13 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
           .eq("is_approved", true)
           .eq("is_guest", false)
           .order("jersey_number", { ascending: true }),
+        supabase.from("opponents").select("*").order("name"),
+        supabase.from("teams").select("*").order("name"),
       ]);
 
       setPlayers((playersRes.data ?? []) as Profile[]);
+      setOpponents((opponentsRes.data ?? []) as Opponent[]);
+      setTeams((teamsRes.data ?? []) as Team[]);
       setLoading(false);
       return;
     }
@@ -217,6 +224,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       groupTeamsRes,
       playersRes,
       registrationsRes,
+      opponentsRes,
     ] = await Promise.all([
       supabase.from("tournaments").select("*").eq("id", matchData.tournament_id).maybeSingle(),
       supabase
@@ -242,6 +250,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         .from("tournament_player_registrations")
         .select("player_id")
         .eq("tournament_id", matchData.tournament_id),
+      supabase.from("opponents").select("*").order("name"),
     ]);
 
     const loadedTournament = (tournamentRes.data ?? null) as Tournament | null;
@@ -268,6 +277,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     setGroupTeams(loadedGroupTeams);
     setPlayers(loadedPlayers);
     setRegisteredPlayerIds(loadedRegistrations);
+    setOpponents((opponentsRes.data ?? []) as Opponent[]);
 
     setForm({
       team_a_id: matchData.team_a_id ?? "",
@@ -370,6 +380,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       .from("games")
       .update({
         opponent: game.opponent,
+        opponent_id: game.opponent_id,
         location: game.location,
         game_date: game.game_date,
         home_score: game.home_score,
@@ -585,11 +596,24 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         </p>
       )}
 
+      <GameMatchCard
+        game={game}
+        opponent={opponents.find(o => o.name === game.opponent) || null}
+        team={teams.find(t => t.is_propeleri) || null}
+        tournament={tournament}
+        variant="compact"
+        showDetails={false}
+      />
+
       <Tabs defaultValue="match" className="w-full">
         <TabsList className="mb-4 flex h-auto flex-wrap gap-1">
           <TabsTrigger value="match">{tt("matchAndTime")}</TabsTrigger>
-          <TabsTrigger value="opponent">{tt("opponent")}</TabsTrigger>
-          <TabsTrigger value="roster">{tt("roster")}</TabsTrigger>
+          {isTournamentMatch && (
+            <>
+              <TabsTrigger value="opponent">{tt("opponent")}</TabsTrigger>
+              <TabsTrigger value="roster">{tt("roster")}</TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="lineup">{tt("lineup")}</TabsTrigger>
           <TabsTrigger value="stats">{tt("statistics")}</TabsTrigger>
         </TabsList>
@@ -603,10 +627,31 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Соперник</Label>
-                      <Input
-                        value={game.opponent}
-                        onChange={(e) => setGame({ ...game, opponent: e.target.value })}
-                      />
+                      <Select
+                        value={game.opponent_id || "__none__"}
+                        onValueChange={(value) => {
+                          if (value === "__none__") {
+                            setGame({ ...game, opponent_id: null, opponent: "" });
+                          } else {
+                            const opponent = opponents.find(o => o.id === value);
+                            if (opponent) {
+                              setGame({ ...game, opponent_id: value, opponent: opponent.name });
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите соперника" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">—</SelectItem>
+                          {opponents.map((opp) => (
+                            <SelectItem key={opp.id} value={opp.id}>
+                              {opp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
