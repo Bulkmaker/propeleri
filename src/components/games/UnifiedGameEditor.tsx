@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/navigation";
+import { formatInBelgrade } from "@/lib/utils/datetime";
+import { RESULT_COLORS } from "@/lib/utils/constants";
+import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import { GameLineupEditor } from "@/components/games/GameLineupEditor";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
@@ -115,6 +118,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   const tt = useTranslations("tournament");
   const tc = useTranslations("common");
   const ts = useTranslations("stats");
+  const tg = useTranslations("game");
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -582,6 +586,20 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
   const isTournamentMatch = Boolean(match);
 
+  // Подготовка данных для GameMatchCard
+  const opponentVisualLookup = buildOpponentVisualLookup(opponents, teams);
+  const visual = resolveOpponentVisual(game.opponent, game.opponent_id, opponentVisualLookup);
+
+  const dateLabel = formatInBelgrade(game.game_date, {
+    month: "short",
+    day: "numeric",
+  });
+  const timeLabel = formatInBelgrade(game.game_date, {
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  });
+
   // Единая структура для всех матчей
   return (
     <div className="space-y-4">
@@ -597,12 +615,19 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       )}
 
       <GameMatchCard
-        game={game}
-        opponent={opponents.find(o => o.name === game.opponent) || null}
-        team={teams.find(t => t.is_propeleri) || null}
-        tournament={tournament}
+        teamName="Propeleri"
+        opponentName={game.opponent}
+        opponentLogoUrl={visual.logoUrl}
+        opponentCountry={visual.country}
+        teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
+        opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
+        dateLabel={dateLabel}
+        timeLabel={timeLabel}
+        location={game.location}
+        resultLabel={tg(`result.${game.result}`)}
+        resultClassName={RESULT_COLORS[game.result as any]}
+        matchTimeLabel={tg("matchTime")}
         variant="compact"
-        showDetails={false}
       />
 
       <Tabs defaultValue="match" className="w-full">
