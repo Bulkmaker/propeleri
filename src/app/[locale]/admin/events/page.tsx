@@ -42,6 +42,7 @@ export default function AdminEventsPage() {
   const t = useTranslations("admin");
   const tt = useTranslations("tournament");
   const tc = useTranslations("common");
+  const te = useTranslations("events");
 
   const [events, setEvents] = useState<TeamEvent[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -156,10 +157,10 @@ export default function AdminEventsPage() {
   }
 
   async function handleDeleteEvent(id: string) {
-    if (!window.confirm("Удалить событие?")) return;
+    if (!window.confirm(te("deleteConfirm"))) return;
     const { error } = await supabase.from("events").delete().eq("id", id);
     if (error) {
-      window.alert(`Не удалось удалить событие: ${error.message}`);
+      window.alert(te("deleteError", { message: error.message }));
       return;
     }
     loadData();

@@ -24,7 +24,16 @@
     "viewAll": "Смотреть все",
     "search": "Поиск",
     "filters": "Фильтры",
-    "all": "Все"
+    "all": "Все",
+    "player": "Игрок",
+    "unknownPlayer": "Игрок",
+    "selected": "выбрано",
+    "notSelected": "Не выбрано"
+  },
+  "locale": {
+    "sr": "Сербский",
+    "ru": "Русский",
+    "en": "Английский"
   },
   "positions": {
     "forward": "Нападающий",
@@ -112,7 +121,43 @@
       "loss": "Поражение",
       "draw": "Ничья",
       "pending": "Предстоит"
-    }
+    },
+    "period": {
+      "1": "1 период",
+      "2": "2 период",
+      "3": "3 период",
+      "OT": "ОТ",
+      "SO": "Буллиты"
+    },
+    "goaliePerformance": {
+      "excellent": "Отлично",
+      "good": "Хорошо",
+      "average": "Нормально",
+      "bad": "Слабо"
+    },
+    "goalsAndAssists": "Голы и ассисты (наша команда)",
+    "goalNumber": "Гол #{number} - автор",
+    "selectPlayer": "Выбрать игрока",
+    "periodLabel": "Период",
+    "timeLabel": "Время",
+    "timePlaceholder": "мм:сс",
+    "assist1Label": "Ассист 1 (опционально)",
+    "assist2Label": "Ассист 2 (опционально)",
+    "noAssist": "Без ассиста",
+    "goalieAndPerformance": "Вратарь и оценка игры",
+    "selectGoalie": "Кто стоял на воротах",
+    "notSelected": "Не выбрано",
+    "loadingLineup": "Загрузка состава",
+    "needMoreGoals": "Нужно заполнить {count} {goalWord}",
+    "goalWord": "гол",
+    "goalWordPlural": "гола/голов",
+    "setScoreForGoals": "Поставьте счёт нашей команды больше 0, и поля для голов появятся автоматически",
+    "goalActions": "Голевые действия и вратарь",
+    "goalWithNumber": "Гол {number}: {scorer}",
+    "assists": "Ассисты:",
+    "goalie": "Вратарь: {name}",
+    "performanceRating": "Оценка игры: {rating}",
+    "deleteGameConfirm": "Вы уверены, что хотите удалить эту игру?"
   },
   "training": {
     "title": "Тренировки",
@@ -165,7 +210,13 @@
     "autosaveSaving": "Автосохранение...",
     "autosaveSaved": "Сохранено",
     "autosaveError": "Ошибка сохранения",
-    "autosaveHint": "Изменения сохраняются автоматически"
+    "autosaveHint": "Изменения сохраняются автоматически",
+    "titlePlaceholder": "напр. Вторник тренировка",
+    "invalidDate": "Некорректная дата тренировки",
+    "deleteConfirm": "Удалить тренировку и всю связанную статистику?",
+    "errorScorerTeam": "Автор гола должен быть из выбранной команды и отмечен как присутствующий.",
+    "errorAssistTeam": "Ассист должен быть из той же команды и не совпадать с автором гола.",
+    "statsSaved": "Статистика и матч сохранены."
   },
   "stats": {
     "title": "Статистика",
@@ -194,7 +245,9 @@
     "past": "Прошедшие",
     "noEvents": "Нет событий",
     "linkedTournament": "Связанный турнир",
-    "openTournament": "Открыть страницу турнира"
+    "openTournament": "Открыть страницу турнира",
+    "deleteConfirm": "Удалить событие?",
+    "deleteError": "Не удалось удалить событие: {message}"
   },
   "auth": {
     "loginTitle": "Вход",
@@ -229,7 +282,8 @@
     "dateOfBirth": "Дата рождения",
     "height": "Рост (см)",
     "weight": "Вес (кг)",
-    "saved": "Профиль сохранён!"
+    "saved": "Профиль сохранён!",
+    "notFound": "Профиль не найден. Пожалуйста, попробуйте войти снова."
   },
   "admin": {
     "dashboard": "Панель управления",
@@ -359,7 +413,38 @@
     "group": "Группа",
     "label": "Метка",
     "reopen": "Открыть заново",
-    "complete": "Завершить"
+    "complete": "Завершить",
+    "matchNotFound": "Матч не найден",
+    "matchAndTime": "Матч и время",
+    "roster": "Состав",
+    "lineup": "Лайнап",
+    "statistics": "Статистика",
+    "labelPlaceholder": "1/4 финала",
+    "scorePlaceholder": "—",
+    "locationFromTournament": "Локация подтягивается из турнира автоматически.",
+    "noTeamsInGroup": "В выбранной группе пока нет команд.",
+    "teamA": "Команда A",
+    "teamB": "Команда B",
+    "lineupAvailable": "Для матча будет доступен лайнап и статистика (создаётся связанная игра).",
+    "lineupNotAvailable": "Без команды Propeleri матч не создаёт связанную игру, поэтому вкладки лайнапа и статистики будут недоступны.",
+    "tournamentRoster": "Турнирный состав",
+    "noAvailablePlayers": "Нет доступных игроков",
+    "noLinkedGame": "Для этого матча нет связанной игры. Добавьте Propeleri в пары соперников и сохраните матч.",
+    "noStatsGame": "Для этого матча нет связанной игры. Статистика недоступна.",
+    "playerStats": "Статистика игроков",
+    "noPlayersForStats": "Нет игроков для статистики. Сначала сохраните лайнап.",
+    "playerColumn": "Игрок",
+    "gameLocation": "Локация игры: {location}",
+    "errorBothTeamsGroup": "Для группового матча нужно выбрать обе команды",
+    "errorBothTeamsPlayoff": "Для плей-офф выберите обе команды или оставьте обе пустыми",
+    "errorDifferentTeams": "Выберите две разные команды",
+    "errorInvalidDate": "Некорректная дата матча",
+    "errorNoGame": "Для этого матча нет связанной игры. Статистику сохранить нельзя.",
+    "errorDuplicatePlayer": "В статистике найден дублирующийся игрок",
+    "matchSaved": "Матч сохранён",
+    "rosterSaved": "Состав турнира обновлён",
+    "statsSaved": "Статистика сохранена",
+    "playoffTeamsNote": "Для плей-офф команды можно оставить пустыми и заполнить позже."
   },
   "schedule": {
     "title": "Расписание",

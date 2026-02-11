@@ -24,7 +24,16 @@
     "viewAll": "View all",
     "search": "Search",
     "filters": "Filters",
-    "all": "All"
+    "all": "All",
+    "player": "Player",
+    "unknownPlayer": "Player",
+    "selected": "selected",
+    "notSelected": "Not selected"
+  },
+  "locale": {
+    "sr": "Serbian",
+    "ru": "Russian",
+    "en": "English"
   },
   "positions": {
     "forward": "Forward",
@@ -112,7 +121,43 @@
       "loss": "Loss",
       "draw": "Draw",
       "pending": "Upcoming"
-    }
+    },
+    "period": {
+      "1": "1st period",
+      "2": "2nd period",
+      "3": "3rd period",
+      "OT": "OT",
+      "SO": "Shootout"
+    },
+    "goaliePerformance": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "average": "Average",
+      "bad": "Poor"
+    },
+    "goalsAndAssists": "Goals and assists (our team)",
+    "goalNumber": "Goal #{number} - scorer",
+    "selectPlayer": "Select player",
+    "periodLabel": "Period",
+    "timeLabel": "Time",
+    "timePlaceholder": "mm:ss",
+    "assist1Label": "Assist 1 (optional)",
+    "assist2Label": "Assist 2 (optional)",
+    "noAssist": "No assist",
+    "goalieAndPerformance": "Goalie and performance rating",
+    "selectGoalie": "Who was in net",
+    "notSelected": "Not selected",
+    "loadingLineup": "Loading lineup",
+    "needMoreGoals": "Need to fill {count} goal(s)",
+    "goalWord": "goal",
+    "goalWordPlural": "goals",
+    "setScoreForGoals": "Set our team score above 0, and goal fields will appear automatically",
+    "goalActions": "Goal actions and goalie",
+    "goalWithNumber": "Goal {number}: {scorer}",
+    "assists": "Assists:",
+    "goalie": "Goalie: {name}",
+    "performanceRating": "Performance: {rating}",
+    "deleteGameConfirm": "Are you sure you want to delete this game?"
   },
   "training": {
     "title": "Training Sessions",
@@ -165,7 +210,13 @@
     "autosaveSaving": "Autosaving...",
     "autosaveSaved": "Saved",
     "autosaveError": "Save error",
-    "autosaveHint": "Changes are saved automatically"
+    "autosaveHint": "Changes are saved automatically",
+    "titlePlaceholder": "e.g. Tuesday training",
+    "invalidDate": "Invalid training date",
+    "deleteConfirm": "Delete training and all related stats?",
+    "errorScorerTeam": "Goal scorer must be from the selected team and marked as attended.",
+    "errorAssistTeam": "Assist must be from the same team and not the same player as the goal scorer.",
+    "statsSaved": "Stats and match saved."
   },
   "stats": {
     "title": "Statistics",
@@ -194,7 +245,9 @@
     "past": "Past",
     "noEvents": "No events",
     "linkedTournament": "Linked tournament",
-    "openTournament": "Open tournament page"
+    "openTournament": "Open tournament page",
+    "deleteConfirm": "Delete event?",
+    "deleteError": "Failed to delete event: {message}"
   },
   "auth": {
     "loginTitle": "Sign In",
@@ -229,7 +282,8 @@
     "dateOfBirth": "Date of Birth",
     "height": "Height (cm)",
     "weight": "Weight (kg)",
-    "saved": "Profile saved!"
+    "saved": "Profile saved!",
+    "notFound": "Profile not found. Please try logging in again."
   },
   "admin": {
     "dashboard": "Dashboard",
@@ -359,7 +413,38 @@
     "group": "Group",
     "label": "Label",
     "reopen": "Reopen",
-    "complete": "Complete"
+    "complete": "Complete",
+    "matchNotFound": "Match not found",
+    "matchAndTime": "Match and time",
+    "roster": "Roster",
+    "lineup": "Lineup",
+    "statistics": "Statistics",
+    "labelPlaceholder": "Quarterfinal",
+    "scorePlaceholder": "—",
+    "locationFromTournament": "Location is pulled from tournament automatically.",
+    "noTeamsInGroup": "No teams in selected group yet.",
+    "teamA": "Team A",
+    "teamB": "Team B",
+    "lineupAvailable": "Lineup and stats will be available for the match (linked game is created).",
+    "lineupNotAvailable": "Without Propeleri team, match doesn't create a linked game, so lineup and stats tabs will be unavailable.",
+    "tournamentRoster": "Tournament roster",
+    "noAvailablePlayers": "No available players",
+    "noLinkedGame": "No linked game for this match. Add Propeleri to opponent pairs and save match.",
+    "noStatsGame": "No linked game for this match. Stats unavailable.",
+    "playerStats": "Player stats",
+    "noPlayersForStats": "No players for stats. Save lineup first.",
+    "playerColumn": "Player",
+    "gameLocation": "Game location: {location}",
+    "errorBothTeamsGroup": "Group match requires both teams",
+    "errorBothTeamsPlayoff": "For playoff, select both teams or leave both empty",
+    "errorDifferentTeams": "Select two different teams",
+    "errorInvalidDate": "Invalid match date",
+    "errorNoGame": "No linked game for this match. Stats cannot be saved.",
+    "errorDuplicatePlayer": "Duplicate player found in stats",
+    "matchSaved": "Match saved",
+    "rosterSaved": "Tournament roster updated",
+    "statsSaved": "Stats saved",
+    "playoffTeamsNote": "For playoff, teams can be left empty and filled later."
   },
   "schedule": {
     "title": "Schedule",

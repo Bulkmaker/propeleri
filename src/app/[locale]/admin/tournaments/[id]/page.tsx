@@ -671,19 +671,19 @@ export default function AdminTournamentDetailPage() {
     const hasOneTeamOnly = Boolean(matchForm.team_a_id) !== Boolean(matchForm.team_b_id);
 
     if (requiresTeams && !hasBothTeams) {
-      setError("Для группового матча нужно выбрать обе команды");
+      setError(tt("errorBothTeamsGroup"));
       setSaving(false);
       return;
     }
 
     if (matchForm.stage === "playoff" && hasOneTeamOnly) {
-      setError("Для плей-офф выберите обе команды или оставьте обе пустыми");
+      setError(tt("errorBothTeamsPlayoff"));
       setSaving(false);
       return;
     }
 
     if (hasBothTeams && matchForm.team_a_id === matchForm.team_b_id) {
-      setError("Команды не должны совпадать");
+      setError(tt("errorDifferentTeams"));
       setSaving(false);
       return;
     }
@@ -700,7 +700,7 @@ export default function AdminTournamentDetailPage() {
       : null;
 
     if (matchForm.match_date && !matchDateUtc) {
-      setError("Некорректная дата матча");
+      setError(tt("errorInvalidDate"));
       setSaving(false);
       return;
     }

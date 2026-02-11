@@ -63,20 +63,8 @@ type GameNotesPayload = {
   goalie_report: GoalieReportInput | null;
 };
 
-const GOALIE_PERFORMANCE_LABELS: Record<GoaliePerformance, string> = {
-  excellent: "Отлично",
-  good: "Хорошо",
-  average: "Нормально",
-  bad: "Слабо",
-};
-const GOAL_PERIOD_LABELS: Record<GoalPeriod, string> = {
-  "1": "1 период",
-  "2": "2 период",
-  "3": "3 период",
-  OT: "ОТ",
-  SO: "Буллиты",
-};
-const GOAL_PERIOD_VALUES = Object.keys(GOAL_PERIOD_LABELS) as GoalPeriod[];
+// Goal period values for validation
+const GOAL_PERIOD_VALUES: GoalPeriod[] = ["1", "2", "3", "OT", "SO"];
 
 function normalizeGoalClock(value: string): string {
   const cleaned = value.trim();
@@ -231,7 +219,7 @@ export default async function GameDetailPage({
 
   function getPlayerName(playerId: string) {
     const player = playerLookup.get(playerId);
-    if (!player) return "Игрок";
+    if (!player) return tc("unknownPlayer");
     const numberPrefix = player.jersey_number != null ? `#${player.jersey_number} ` : "";
     return `${numberPrefix}${player.first_name} ${player.last_name}`;
   }
@@ -323,7 +311,7 @@ export default async function GameDetailPage({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
-              Голевые действия и вратарь
+              {t("goalActions")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -335,18 +323,18 @@ export default async function GameDetailPage({
                     className="rounded-md border border-border/40 p-3"
                   >
                     <p className="text-sm font-semibold">
-                      Гол {index + 1}: {getPlayerName(event.scorer_player_id)}
+                      {t("goalWithNumber", { number: index + 1, scorer: getPlayerName(event.scorer_player_id) })}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {GOAL_PERIOD_LABELS[event.period]}
+                      {t(`period.${event.period}`)}
                       {event.goal_time ? `, ${event.goal_time}` : ""}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Ассисты:{" "}
+                      {t("assists")}:{" "}
                       {[event.assist_1_player_id, event.assist_2_player_id]
                         .filter(Boolean)
                         .map((playerId) => getPlayerName(playerId))
-                        .join(", ") || "без ассиста"}
+                        .join(", ") || tc("noData")}
                     </p>
                   </div>
                 ))}
@@ -356,10 +344,10 @@ export default async function GameDetailPage({
             {goalieReport && (
               <div className="rounded-md border border-border/40 p-3">
                 <p className="text-sm font-semibold">
-                  Вратарь: {getPlayerName(goalieReport.goalie_player_id)}
+                  {t("goalie", { name: getPlayerName(goalieReport.goalie_player_id) })}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Оценка игры: {GOALIE_PERFORMANCE_LABELS[goalieReport.performance]}
+                  {t("performanceRating", { rating: t(`goaliePerformance.${goalieReport.performance}`) })}
                 </p>
               </div>
             )}

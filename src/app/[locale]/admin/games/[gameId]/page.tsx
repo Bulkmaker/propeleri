@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Link } from "@/i18n/navigation";
@@ -17,8 +18,8 @@ export default function AdminGameEditPage() {
   const params = useParams();
   const gameId = params.gameId as string;
   const router = useRouter();
-  const t = useTranslations("common"); // or "games" if you have specific keys
-  const tg = useTranslations("games"); // assuming "games" namespace exists
+  const t = useTranslations("common");
+  const tg = useTranslations("game");
 
   const [game, setGame] = useState<Game | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -82,7 +83,7 @@ export default function AdminGameEditPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this game?")) return;
+    if (!window.confirm(tg("deleteGameConfirm"))) return;
 
     const { error } = await supabase.from("games").delete().eq("id", gameId);
 
@@ -130,7 +131,7 @@ export default function AdminGameEditPage() {
 
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-[400px]">
-          <TabsTrigger value="details">{t("details")}</TabsTrigger>
+          <TabsTrigger value="details">{tg("details")}</TabsTrigger>
           <TabsTrigger value="lineup">{tg("lineup")}</TabsTrigger>
           <TabsTrigger value="stats">Stats</TabsTrigger>
         </TabsList>

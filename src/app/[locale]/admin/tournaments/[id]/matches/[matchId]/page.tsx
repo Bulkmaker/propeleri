@@ -224,7 +224,7 @@ export default function TournamentMatchEditorPage() {
       setPlayers([]);
       setRegisteredPlayerIds([]);
       setStatsRows([]);
-      setError("Матч турнира не найден");
+      setError(tt("matchNotFound"));
       setLoading(false);
       return;
     }
@@ -312,7 +312,7 @@ export default function TournamentMatchEditorPage() {
       const statPlayer = stat ? extractPlayer(stat.player) : null;
       const rosterPlayer = rosterById.get(playerId);
 
-      const firstName = statPlayer?.first_name ?? rosterPlayer?.first_name ?? "Игрок";
+      const firstName = statPlayer?.first_name ?? rosterPlayer?.first_name ?? tc("player");
       const lastName = statPlayer?.last_name ?? rosterPlayer?.last_name ?? "";
       const jersey =
         statPlayer?.jersey_number ?? rosterPlayer?.jersey_number ?? null;
@@ -391,17 +391,17 @@ export default function TournamentMatchEditorPage() {
     const hasBothTeams = Boolean(form.team_a_id && form.team_b_id);
     const hasOneTeamOnly = Boolean(form.team_a_id) !== Boolean(form.team_b_id);
     if (form.stage === "group" && !hasBothTeams) {
-      setError("Для группового матча нужно выбрать обе команды");
+      setError(tt("errorBothTeamsGroup"));
       return;
     }
 
     if (form.stage === "playoff" && hasOneTeamOnly) {
-      setError("Для плей-офф выберите обе команды или оставьте обе пустыми");
+      setError(tt("errorBothTeamsPlayoff"));
       return;
     }
 
     if (hasBothTeams && form.team_a_id === form.team_b_id) {
-      setError("Выберите две разные команды");
+      setError(tt("errorDifferentTeams"));
       return;
     }
 
@@ -420,7 +420,7 @@ export default function TournamentMatchEditorPage() {
       ? belgradeDateTimeLocalInputToUtcIso(form.match_date)
       : null;
     if (form.match_date && !matchDateUtc) {
-      setError("Некорректная дата матча");
+      setError(tt("errorInvalidDate"));
       setSavingAction(null);
       return;
     }
@@ -448,7 +448,7 @@ export default function TournamentMatchEditorPage() {
 
     await loadAll();
     setSavingAction(null);
-    setSuccess("Матч сохранён");
+    setSuccess(tt("matchSaved"));
   }
 
   async function toggleRegisteredPlayer(playerId: string) {
@@ -480,7 +480,7 @@ export default function TournamentMatchEditorPage() {
       isRegistered ? prev.filter((id) => id !== playerId) : [...prev, playerId]
     );
     setSavingAction(null);
-    setSuccess("Состав турнира обновлён");
+    setSuccess(tt("rosterSaved"));
   }
 
   function updateStatRow(playerId: string, field: keyof Omit<StatsRowState, "player_id" | "player_name" | "jersey_number">, value: number) {
@@ -498,7 +498,7 @@ export default function TournamentMatchEditorPage() {
 
   async function saveStats() {
     if (!match?.game_id) {
-      setError("Для этого матча нет связанной игры. Статистику сохранить нельзя.");
+      setError(tt("errorNoGame"));
       return;
     }
 
@@ -509,7 +509,7 @@ export default function TournamentMatchEditorPage() {
     const duplicateCheck = new Set<string>();
     for (const row of statsRows) {
       if (duplicateCheck.has(row.player_id)) {
-        setError("В статистике найден дублирующийся игрок");
+        setError(tt("errorDuplicatePlayer"));
         setSavingAction(null);
         return;
       }
@@ -546,7 +546,7 @@ export default function TournamentMatchEditorPage() {
     }
 
     setSavingAction(null);
-    setSuccess("Статистика сохранена");
+    setSuccess(tt("statsSaved"));
   }
 
   if (loading) {
@@ -558,7 +558,7 @@ export default function TournamentMatchEditorPage() {
   }
 
   if (!tournament || !match) {
-    return <div className="p-6 text-center text-muted-foreground">Матч не найден</div>;
+    return <div className="p-6 text-center text-muted-foreground">{tt("matchNotFound")}</div>;
   }
 
   return (
@@ -605,11 +605,11 @@ export default function TournamentMatchEditorPage() {
 
         <Tabs defaultValue="match" className="w-full">
           <TabsList className="mb-4 flex h-auto flex-wrap gap-1">
-            <TabsTrigger value="match">Матч и время</TabsTrigger>
-            <TabsTrigger value="opponent">Соперник</TabsTrigger>
-            <TabsTrigger value="roster">Состав</TabsTrigger>
-            <TabsTrigger value="lineup">Лайнап</TabsTrigger>
-            <TabsTrigger value="stats">Статистика</TabsTrigger>
+            <TabsTrigger value="match">{tt("matchAndTime")}</TabsTrigger>
+            <TabsTrigger value="opponent">{tt("opponent")}</TabsTrigger>
+            <TabsTrigger value="roster">{tt("roster")}</TabsTrigger>
+            <TabsTrigger value="lineup">{tt("lineup")}</TabsTrigger>
+            <TabsTrigger value="stats">{tt("statistics")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="match" className="space-y-4">
@@ -698,7 +698,7 @@ export default function TournamentMatchEditorPage() {
                         onChange={(event) =>
                           setForm((prev) => ({ ...prev, bracket_label: event.target.value }))
                         }
-                        placeholder="1/4 финала"
+                        placeholder={tt("labelPlaceholder")}
                       />
                     </div>
                   )}
@@ -720,11 +720,11 @@ export default function TournamentMatchEditorPage() {
                     <Label>{tt("location")}</Label>
                     <Input
                       value={tournament.location ?? ""}
-                      placeholder="—"
+                      placeholder={tt("scorePlaceholder")}
                       disabled
                     />
                     <p className="text-xs text-muted-foreground">
-                      Локация подтягивается из турнира автоматически.
+                      {tt("locationFromTournament")}
                     </p>
                   </div>
                 </div>
@@ -863,7 +863,7 @@ export default function TournamentMatchEditorPage() {
 
                 {form.stage === "group" && form.group_id && scopedTeams.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    В выбранной группе пока нет команд.
+                    {tt("noTeamsInGroup")}
                   </p>
                 )}
 
@@ -871,13 +871,13 @@ export default function TournamentMatchEditorPage() {
                   <div className="rounded-md border border-border/40 p-3">
                     <div className="flex items-center gap-2">
                       <TeamAvatar
-                        name={selectedTeamA?.name ?? "Команда A"}
+                        name={selectedTeamA?.name ?? tt("teamA")}
                         logoUrl={selectedTeamA?.logo_url}
                         country={selectedTeamA?.country}
                         size="sm"
                       />
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{selectedTeamA?.name ?? "Не выбрано"}</p>
+                        <p className="font-medium truncate">{selectedTeamA?.name ?? tc("notSelected")}</p>
                         {selectedTeamA?.is_propeleri && (
                           <Badge className="bg-primary/20 text-primary text-xs mt-1">{tt("propeleri")}</Badge>
                         )}
@@ -888,13 +888,13 @@ export default function TournamentMatchEditorPage() {
                   <div className="rounded-md border border-border/40 p-3">
                     <div className="flex items-center gap-2">
                       <TeamAvatar
-                        name={selectedTeamB?.name ?? "Команда B"}
+                        name={selectedTeamB?.name ?? tt("teamB")}
                         logoUrl={selectedTeamB?.logo_url}
                         country={selectedTeamB?.country}
                         size="sm"
                       />
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{selectedTeamB?.name ?? "Не выбрано"}</p>
+                        <p className="font-medium truncate">{selectedTeamB?.name ?? tc("notSelected")}</p>
                         {selectedTeamB?.is_propeleri && (
                           <Badge className="bg-primary/20 text-primary text-xs mt-1">{tt("propeleri")}</Badge>
                         )}
@@ -905,8 +905,8 @@ export default function TournamentMatchEditorPage() {
 
                 <p className="text-xs text-muted-foreground">
                   {hasPropeleriTeam
-                    ? "Для матча будет доступен лайнап и статистика (создаётся связанная игра)."
-                    : "Без команды Propeleri матч не создаёт связанную игру, поэтому вкладки лайнапа и статистики будут недоступны."}
+                    ? tt("lineupAvailable")
+                    : tt("lineupNotAvailable")}
                 </p>
 
                 <Button onClick={() => void saveMatch()} disabled={savingAction === "match"}>
@@ -925,12 +925,12 @@ export default function TournamentMatchEditorPage() {
             <Card className="border-border/40">
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base font-semibold">Турнирный состав</h2>
-                  <Badge className="bg-primary/20 text-primary">{registeredPlayerIds.length} выбрано</Badge>
+                  <h2 className="text-base font-semibold">{tt("tournamentRoster")}</h2>
+                  <Badge className="bg-primary/20 text-primary">{registeredPlayerIds.length} {tc("selected")}</Badge>
                 </div>
 
                 {players.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Нет доступных игроков</p>
+                  <p className="text-sm text-muted-foreground">{tt("noAvailablePlayers")}</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {sortPlayersByNumberAndName(players).map((player) => {
@@ -969,7 +969,7 @@ export default function TournamentMatchEditorPage() {
             {!match.game_id ? (
               <Card className="border-border/40">
                 <CardContent className="p-6 text-sm text-muted-foreground">
-                  Для этого матча нет связанной игры. Добавьте Propeleri в пары соперников и сохраните матч.
+                  {tt("noLinkedGame")}
                 </CardContent>
               </Card>
             ) : (
@@ -988,14 +988,14 @@ export default function TournamentMatchEditorPage() {
             {!match.game_id ? (
               <Card className="border-border/40">
                 <CardContent className="p-6 text-sm text-muted-foreground">
-                  Для этого матча нет связанной игры. Статистика недоступна.
+                  {tt("noStatsGame")}
                 </CardContent>
               </Card>
             ) : (
               <Card className="border-border/40">
                 <CardContent className="p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-base font-semibold">Статистика игроков</h2>
+                    <h2 className="text-base font-semibold">{tt("playerStats")}</h2>
                     <Button
                       type="button"
                       onClick={() => void saveStats()}
@@ -1012,14 +1012,14 @@ export default function TournamentMatchEditorPage() {
 
                   {statsRows.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      Нет игроков для статистики. Сначала сохраните лайнап.
+                      {tt("noPlayersForStats")}
                     </p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[680px] text-sm">
                         <thead>
                           <tr className="border-b border-border/50">
-                            <th className="text-left px-2 py-2">Игрок</th>
+                            <th className="text-left px-2 py-2">{tt("playerColumn")}</th>
                             <th className="text-center px-2 py-2">{ts("goals")}</th>
                             <th className="text-center px-2 py-2">{ts("assists")}</th>
                             <th className="text-center px-2 py-2">{ts("penaltyMinutes")}</th>
@@ -1108,7 +1108,7 @@ export default function TournamentMatchEditorPage() {
 
         {game?.location && (
           <p className="text-xs text-muted-foreground">
-            Локация игры: <span className="text-foreground">{game.location}</span>
+            {tt("gameLocation", { location: game.location })}
           </p>
         )}
       </div>

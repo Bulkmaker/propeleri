@@ -406,7 +406,7 @@ export default function TrainingStatsEntryPage() {
         }
 
         if (!teamPlayerIds.has(event.scorer_player_id)) {
-          setError("Автор гола должен быть из выбранной команды и отмечен как присутствующий.");
+          setError(tt("errorScorerTeam"));
           setSaving(false);
           savingRef.current = false;
           return false;
@@ -417,7 +417,7 @@ export default function TrainingStatsEntryPage() {
           (!teamPlayerIds.has(event.assist_player_id) ||
             event.assist_player_id === event.scorer_player_id)
         ) {
-          setError("Ассист должен быть из той же команды и не совпадать с автором гола.");
+          setError(tt("errorAssistTeam"));
           setSaving(false);
           savingRef.current = false;
           return false;
@@ -496,7 +496,7 @@ export default function TrainingStatsEntryPage() {
 
     setSession((prev) => (prev ? { ...prev, match_data: matchData } : prev));
     if (showMessage) {
-      setMessage("Статистика и матч сохранены.");
+      setMessage(tt("statsSaved"));
     }
     setSaving(false);
     savingRef.current = false;
@@ -512,6 +512,7 @@ export default function TrainingStatsEntryPage() {
     supabase,
     teamAGoalieId,
     teamBGoalieId,
+    tt,
   ]);
 
   async function handleSave() {

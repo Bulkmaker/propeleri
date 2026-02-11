@@ -111,7 +111,7 @@ export default async function TrainingDetailPage({
   function getPlayerName(playerId: string | null) {
     if (!playerId) return "—";
     const player = playerLookup.get(playerId);
-    if (!player) return "Игрок";
+    if (!player) return tc("unknownPlayer");
     return formatPlayerNameWithNumber(player);
   }
 

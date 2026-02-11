@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
   DropdownMenu,
@@ -12,12 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Globe } from "lucide-react";
 import { routing } from "@/i18n/routing";
 
-const localeLabels: Record<string, string> = {
-  sr: "Srpski",
-  ru: "Русский",
-  en: "English",
-};
-
 const localeFlags: Record<string, string> = {
   sr: "🇷🇸",
   ru: "🇷🇺",
@@ -26,6 +20,7 @@ const localeFlags: Record<string, string> = {
 
 export function LocaleSwitcher() {
   const locale = useLocale();
+  const t = useTranslations("locale");
   const router = useRouter();
   const pathname = usePathname();
 
@@ -49,7 +44,7 @@ export function LocaleSwitcher() {
             className={`cursor-pointer ${loc === locale ? "text-primary" : ""}`}
           >
             <span className="mr-2">{localeFlags[loc]}</span>
-            {localeLabels[loc]}
+            {t(loc)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -14,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import type {
     Game,
     Season,
@@ -32,6 +32,7 @@ import type {
 import {
     belgradeDateTimeLocalInputToUtcIso,
     utcToBelgradeDateTimeLocalInput,
+    formatInBelgrade,
 } from "@/lib/utils/datetime";
 import { buildOpponentVisualLookup } from "@/lib/utils/opponent-visual";
 import { updateGameStats } from "@/lib/utils/game-stats";
@@ -62,29 +63,13 @@ interface GameFormProps {
     teams: Team[];
     players: Profile[];
     onSave: (data: any) => Promise<void>;
-    onDelete?: (id: string) => Promise<void>;
     onCancel?: () => void;
     isManagedByTournament?: boolean;
 }
 
 // --- Constants ---
 
-const GOALIE_PERFORMANCE_OPTIONS: { value: GoaliePerformance; label: string }[] = [
-    { value: "excellent", label: "Отлично" },
-    { value: "good", label: "Хорошо" },
-    { value: "average", label: "Нормально" },
-    { value: "bad", label: "Слабо" },
-];
-
-const GOAL_PERIOD_OPTIONS: { value: GoalPeriod; label: string }[] = [
-    { value: "1", label: "1 период" },
-    { value: "2", label: "2 период" },
-    { value: "3", label: "3 период" },
-    { value: "OT", label: "ОТ" },
-    { value: "SO", label: "Буллиты" },
-];
-
-const GOAL_PERIOD_VALUES = GOAL_PERIOD_OPTIONS.map((option) => option.value);
+const GOAL_PERIOD_VALUES: GoalPeriod[] = ["1", "2", "3", "OT", "SO"];
 
 // --- Helpers ---
 
@@ -187,7 +172,6 @@ export function GameForm({
     teams,
     players,
     onSave,
-    onDelete,
     onCancel,
     isManagedByTournament = false,
 }: GameFormProps) {
@@ -197,6 +181,21 @@ export function GameForm({
     const tc = useTranslations("common");
 
     const supabase = useMemo(() => createClient(), []);
+
+    const GOALIE_PERFORMANCE_OPTIONS: { value: GoaliePerformance; label: string }[] = [
+        { value: "excellent", label: tg("goaliePerformance.excellent") },
+        { value: "good", label: tg("goaliePerformance.good") },
+        { value: "average", label: tg("goaliePerformance.average") },
+        { value: "bad", label: tg("goaliePerformance.bad") },
+    ];
+
+    const GOAL_PERIOD_OPTIONS: { value: GoalPeriod; label: string }[] = [
+        { value: "1", label: tg("period.1") },
+        { value: "2", label: tg("period.2") },
+        { value: "3", label: tg("period.3") },
+        { value: "OT", label: tg("period.OT") },
+        { value: "SO", label: tg("period.SO") },
+    ];
 
     // -- State --
     const [form, setForm] = useState<GameFormData>({
@@ -217,7 +216,6 @@ export function GameForm({
     const [newOpponentName, setNewOpponentName] = useState("");
     const [error, setError] = useState("");
     const [saving, setSaving] = useState(false);
-    const [deleting, setDeleting] = useState(false);
     const [lineupPlayers, setLineupPlayers] = useState<Profile[]>([]);
     const [lineupLoading, setLineupLoading] = useState(false);
 
@@ -502,18 +500,7 @@ export function GameForm({
             await onSave(payload);
 
             // 6. Handle Stats (if editing)
-            if (initialData && typeof window === "undefined") {
-                // Note: client side component... 
-                // Wait, updateGameStats needs supabase client? 
-                // The prop has supabase client? No, GameForm creates it.
-
-                // However, updateGameStats is async.
-                // Also, this component runs on client usually.
-                // Let's import createClient inside updateGameStats? No.
-
-                // We have supabase from useMemo inside GameForm.
-                await updateGameStats(supabase, initialData.id, notesValue);
-            } else if (initialData) {
+            if (initialData) {
                 await updateGameStats(supabase, initialData.id, notesValue);
             }
 
@@ -752,22 +739,25 @@ export function GameForm({
                 <div className="space-y-4 rounded-md border border-border/50 p-4 bg-background/40">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-semibold">Голы и ассисты (наша команда)</p>
+                            <p className="text-sm font-semibold">{tg("goalsAndAssists")}</p>
                             <p className="text-xs text-muted-foreground">
-                                Нужно заполнить {teamGoals} {teamGoals === 1 ? "гол" : "гола/голов"}.
+                                {tg("needMoreGoals", {
+                                    count: teamGoals,
+                                    goalWord: teamGoals === 1 ? tg("goalWord") : tg("goalWordPlural")
+                                })}
                             </p>
                         </div>
                         {lineupLoading && (
                             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                Загрузка состава
+                                {tg("loadingLineup")}
                             </span>
                         )}
                     </div>
 
                     {teamGoals === 0 ? (
                         <p className="text-xs text-muted-foreground">
-                            Поставьте счёт нашей команды больше 0, и поля для голов появятся автоматически.
+                            {tg("setScoreForGoals")}
                         </p>
                     ) : (
                         <div className="space-y-3">
@@ -779,7 +769,7 @@ export function GameForm({
                                         className="grid gap-2 rounded-md border border-border/40 p-3 md:grid-cols-5"
                                     >
                                         <div className="space-y-1">
-                                            <Label className="text-xs">Гол #{index + 1} - автор</Label>
+                                            <Label className="text-xs">{tg("goalNumber", { number: index + 1 })}</Label>
                                             <Select
                                                 value={event.scorer_player_id || "__none__"}
                                                 onValueChange={(value) =>
@@ -791,10 +781,10 @@ export function GameForm({
                                                 }
                                             >
                                                 <SelectTrigger className="bg-background">
-                                                    <SelectValue placeholder="Выбрать игрока" />
+                                                    <SelectValue placeholder={tg("selectPlayer")} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="__none__">Выбрать игрока</SelectItem>
+                                                    <SelectItem value="__none__">{tg("selectPlayer")}</SelectItem>
                                                     {availablePlayers.map((player) => (
                                                         <SelectItem key={player.id} value={player.id}>
                                                             {formatPlayerOption(player)}
@@ -804,7 +794,7 @@ export function GameForm({
                                             </Select>
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-xs">Период</Label>
+                                            <Label className="text-xs">{tg("periodLabel")}</Label>
                                             <Select
                                                 value={event.period}
                                                 onValueChange={(value) =>
@@ -824,19 +814,19 @@ export function GameForm({
                                             </Select>
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-xs">Время</Label>
+                                            <Label className="text-xs">{tg("timeLabel")}</Label>
                                             <Input
                                                 value={event.goal_time}
                                                 onChange={(e) =>
                                                     updateGoalEvent(index, "goal_time", e.target.value)
                                                 }
                                                 className="bg-background"
-                                                placeholder="мм:сс"
+                                                placeholder={tg("timePlaceholder")}
                                                 inputMode="numeric"
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-xs">Ассист 1 (опционально)</Label>
+                                            <Label className="text-xs">{tg("assist1Label")}</Label>
                                             <Select
                                                 value={event.assist_1_player_id || "__none__"}
                                                 onValueChange={(value) =>
@@ -848,10 +838,10 @@ export function GameForm({
                                                 }
                                             >
                                                 <SelectTrigger className="bg-background">
-                                                    <SelectValue placeholder="Без ассиста" />
+                                                    <SelectValue placeholder={tg("noAssist")} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="__none__">Без ассиста</SelectItem>
+                                                    <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
                                                     {availablePlayers
                                                         .filter((player) => player.id !== event.scorer_player_id)
                                                         .map((player) => (
@@ -863,7 +853,7 @@ export function GameForm({
                                             </Select>
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-xs">Ассист 2 (опционально)</Label>
+                                            <Label className="text-xs">{tg("assist2Label")}</Label>
                                             <Select
                                                 value={event.assist_2_player_id || "__none__"}
                                                 onValueChange={(value) =>
@@ -875,10 +865,10 @@ export function GameForm({
                                                 }
                                             >
                                                 <SelectTrigger className="bg-background">
-                                                    <SelectValue placeholder="Без ассиста" />
+                                                    <SelectValue placeholder={tg("noAssist")} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="__none__">Без ассиста</SelectItem>
+                                                    <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
                                                     {availablePlayers
                                                         .filter(
                                                             (player) =>
@@ -900,7 +890,7 @@ export function GameForm({
                     )}
 
                     <div className="space-y-2 border-t border-border/40 pt-4">
-                        <Label>Вратарь и оценка игры</Label>
+                        <Label>{tg("goalieAndPerformance")}</Label>
                         <div className="grid gap-2 md:grid-cols-2">
                             <Select
                                 value={goalieReport.goalie_player_id || "__none__"}
@@ -912,10 +902,10 @@ export function GameForm({
                                 }
                             >
                                 <SelectTrigger className="bg-background">
-                                    <SelectValue placeholder="Кто стоял на воротах" />
+                                    <SelectValue placeholder={tg("selectGoalie")} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="__none__">Не выбрано</SelectItem>
+                                    <SelectItem value="__none__">{tc("notSelected")}</SelectItem>
                                     {goalieOptions.map((player) => (
                                         <SelectItem key={player.id} value={player.id}>
                                             {formatPlayerOption(player)}
@@ -959,9 +949,11 @@ export function GameForm({
                                 className="text-xs text-muted-foreground flex items-center justify-between"
                             >
                                 <span>
-                                    {/* Note: formatInBelgrade usage might need to be imported or passed down if not available in shared utils. 
-                      I imported it from logic.tsx or similar in previous file. 
-                      I need to import it. */}
+                                    {formatInBelgrade(game.game_date, "sr", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric"
+                                    })}
                                 </span>
                                 <span className="font-medium text-foreground">
                                     {game.is_home ? game.home_score : game.away_score} :{" "}
@@ -990,26 +982,6 @@ export function GameForm({
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {tc("save")}
                 </Button>
-                {initialData && !isManagedByTournament && onDelete && (
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => {
-                            if (window.confirm("Удалить матч и всю связанную статистику?")) {
-                                setDeleting(true);
-                                onDelete(initialData.id);
-                            }
-                        }}
-                        disabled={deleting}
-                    >
-                        {deleting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Trash2 className="h-4 w-4" />
-                        )}
-                        {tc("delete")}
-                    </Button>
-                )}
             </div>
         </div>
     );

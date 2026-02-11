@@ -164,9 +164,7 @@ export default function ProfilePage() {
             <User className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">{tc("noData")}</h2>
             <p className="text-muted-foreground text-sm mb-6">
-              {t("title") === "Moj profil"
-                ? "Profil nije pronađen. Molimo pokušajte ponovo kasnije."
-                : "Профиль не найден. Пожалуйста, попробуйте войти снова."}
+              {t("notFound")}
             </p>
             <Button
               variant="outline"

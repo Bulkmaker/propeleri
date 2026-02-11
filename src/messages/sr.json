@@ -24,7 +24,16 @@
     "viewAll": "Pogledaj sve",
     "search": "Pretraga",
     "filters": "Filteri",
-    "all": "Sve"
+    "all": "Sve",
+    "player": "Igrac",
+    "unknownPlayer": "Igrac",
+    "selected": "izabrano",
+    "notSelected": "Nije izabrano"
+  },
+  "locale": {
+    "sr": "Srpski",
+    "ru": "Ruski",
+    "en": "Engleski"
   },
   "positions": {
     "forward": "Napadac",
@@ -112,7 +121,43 @@
       "loss": "Poraz",
       "draw": "Nereseno",
       "pending": "Predstojecci"
-    }
+    },
+    "period": {
+      "1": "1. period",
+      "2": "2. period",
+      "3": "3. period",
+      "OT": "Produzeci",
+      "SO": "Penali"
+    },
+    "goaliePerformance": {
+      "excellent": "Odlicno",
+      "good": "Dobro",
+      "average": "Prosecno",
+      "bad": "Slabo"
+    },
+    "goalsAndAssists": "Golovi i asistencije (nas tim)",
+    "goalNumber": "Gol #{number} - strelac",
+    "selectPlayer": "Izaberi igraca",
+    "periodLabel": "Period",
+    "timeLabel": "Vreme",
+    "timePlaceholder": "mm:ss",
+    "assist1Label": "Asistencija 1 (opciono)",
+    "assist2Label": "Asistencija 2 (opciono)",
+    "noAssist": "Bez asistencije",
+    "goalieAndPerformance": "Golman i ocena igre",
+    "selectGoalie": "Ko je bio na vratima",
+    "notSelected": "Nije izabrano",
+    "loadingLineup": "Ucitavanje postave",
+    "needMoreGoals": "Treba uneti {count} {goalWord}",
+    "goalWord": "gol",
+    "goalWordPlural": "golova",
+    "setScoreForGoals": "Postavi rezultat nase ekipe veci od 0, i polja za golove ce se pojaviti automatski",
+    "goalActions": "Golevi dogadjaji i golman",
+    "goalWithNumber": "Gol {number}: {scorer}",
+    "assists": "Asistencije:",
+    "goalie": "Golman: {name}",
+    "performanceRating": "Ocena igre: {rating}",
+    "deleteGameConfirm": "Jeste li sigurni da zelite da izbrisete ovu utakmicu?"
   },
   "training": {
     "title": "Treninzi",
@@ -165,7 +210,13 @@
     "autosaveSaving": "Automatsko cuvanje...",
     "autosaveSaved": "Sacuvano",
     "autosaveError": "Greska pri cuvanju",
-    "autosaveHint": "Izmene se automatski cuvaju"
+    "autosaveHint": "Izmene se automatski cuvaju",
+    "titlePlaceholder": "npr. Utorak trening",
+    "invalidDate": "Neispravna datum treninga",
+    "deleteConfirm": "Obrisati trening i svu povezanu statistiku?",
+    "errorScorerTeam": "Autor gola mora biti iz odabrane ekipe i oznacen kao prisustan.",
+    "errorAssistTeam": "Asistencija mora biti iz iste ekipe i ne sme biti isti igrac kao autor gola.",
+    "statsSaved": "Statistika i mec sacuvani."
   },
   "stats": {
     "title": "Statistika",
@@ -194,7 +245,9 @@
     "past": "Prosli",
     "noEvents": "Nema dogadjaja",
     "linkedTournament": "Povezani turnir",
-    "openTournament": "Otvori stranicu turnira"
+    "openTournament": "Otvori stranicu turnira",
+    "deleteConfirm": "Obrisati dogadjaj?",
+    "deleteError": "Nije uspelo brisanje dogadjaja: {message}"
   },
   "auth": {
     "loginTitle": "Prijavi se",
@@ -229,7 +282,8 @@
     "dateOfBirth": "Datum rodjenja",
     "height": "Visina (cm)",
     "weight": "Tezina (kg)",
-    "saved": "Profil sacuvan!"
+    "saved": "Profil sacuvan!",
+    "notFound": "Profil nije pronadjen. Molimo pokusajte ponovo kasnije."
   },
   "admin": {
     "dashboard": "Kontrolna tabla",
@@ -359,7 +413,38 @@
     "group": "Grupa",
     "label": "Oznaka",
     "reopen": "Ponovo otvori",
-    "complete": "Zavrsi"
+    "complete": "Zavrsi",
+    "matchNotFound": "Mec nije pronadjen",
+    "matchAndTime": "Mec i vreme",
+    "roster": "Sastav",
+    "lineup": "Lajnap",
+    "statistics": "Statistika",
+    "labelPlaceholder": "1/4 finala",
+    "scorePlaceholder": "—",
+    "locationFromTournament": "Lokacija se automatski preuzima iz turnira.",
+    "noTeamsInGroup": "U odabranoj grupi jos nema timova.",
+    "teamA": "Tim A",
+    "teamB": "Tim B",
+    "lineupAvailable": "Za mec ce biti dostupan lajnap i statistika (kreira se povezana igra).",
+    "lineupNotAvailable": "Bez tima Propeleri mec ne kreira povezanu igru, pa tabovi lajnap i statistika nece biti dostupni.",
+    "tournamentRoster": "Turnirski sastav",
+    "noAvailablePlayers": "Nema dostupnih igraca",
+    "noLinkedGame": "Za ovaj mec nema povezane igre. Dodaj Propeleri u parove protivnika i sacuvaj mec.",
+    "noStatsGame": "Za ovaj mec nema povezane igre. Statistika nije dostupna.",
+    "playerStats": "Statistika igraca",
+    "noPlayersForStats": "Nema igraca za statistiku. Prvo sacuvaj lajnap.",
+    "playerColumn": "Igrac",
+    "gameLocation": "Lokacija igre: {location}",
+    "errorBothTeamsGroup": "Za grupni mec treba odabrati oba tima",
+    "errorBothTeamsPlayoff": "Za plej-of odaberi oba tima ili ostavi oba prazna",
+    "errorDifferentTeams": "Timovi ne smeju biti isti",
+    "errorInvalidDate": "Neispravna datum meca",
+    "errorNoGame": "Za ovaj mec nema povezane igre. Statistiku nije moguce sacuvati.",
+    "errorDuplicatePlayer": "U statistici je pronadjen dupliran igrac",
+    "matchSaved": "Mec sacuvan",
+    "rosterSaved": "Sastav turnira azuriran",
+    "statsSaved": "Statistika sacuvana",
+    "playoffTeamsNote": "Za plej-of timove mozete ostaviti praznim i popuniti kasnije."
   },
   "schedule": {
     "title": "Raspored",

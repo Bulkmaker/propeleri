@@ -186,7 +186,7 @@ export default function AdminTrainingPage() {
 
     const sessionDateUtc = belgradeDateTimeLocalInputToUtcIso(form.session_date);
     if (!sessionDateUtc) {
-      setError("Некорректная дата тренировки");
+      setError(tt("invalidDate"));
       setSaving(false);
       return;
     }
@@ -333,7 +333,7 @@ export default function AdminTrainingPage() {
   }
 
   async function handleDeleteSession(sessionId: string) {
-    if (!window.confirm("Удалить тренировку и всю связанную статистику?")) return;
+    if (!window.confirm(tt("deleteConfirm"))) return;
 
     setDeletingId(sessionId);
     setError("");
@@ -419,7 +419,7 @@ export default function AdminTrainingPage() {
                   onChange={(e) =>
                     setForm({ ...form, title: e.target.value })
                   }
-                  placeholder="npr. Utorkom trening"
+                  placeholder={tt("titlePlaceholder")}
                   className="bg-background"
                 />
               </div>
