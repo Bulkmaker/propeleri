@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,14 @@ interface PlayerForm {
 }
 
 type ActivePlayersSort = "name" | "number" | "position" | "training_team";
+type SortDirection = "asc" | "desc";
+
+function normalizeSearchValue(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
 
 export default function AdminPlayersPage() {
   const locale = useLocale();
@@ -82,6 +90,10 @@ export default function AdminPlayersPage() {
   const [error, setError] = useState("");
   const [editingPlayer, setEditingPlayer] = useState<Profile | null>(null);
   const [activeSort, setActiveSort] = useState<ActivePlayersSort>("name");
+  const [activeSortDirection, setActiveSortDirection] = useState<SortDirection>("asc");
+  const [pendingSort, setPendingSort] = useState<ActivePlayersSort>("name");
+  const [pendingSortDirection, setPendingSortDirection] = useState<SortDirection>("asc");
+  const [searchQuery, setSearchQuery] = useState("");
   const [createForm, setCreateForm] = useState({
     login: "",
     password: "",
@@ -343,40 +355,102 @@ export default function AdminPlayersPage() {
 
   const pending = useMemo(() => players.filter((p) => !p.is_approved), [players]);
   const approved = useMemo(() => players.filter((p) => p.is_approved), [players]);
-  const sortedApproved = useMemo(() => {
-    const sorted = [...approved];
-    const byName = (a: Profile, b: Profile) =>
-      `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const normalizedSearchQuery = useMemo(
+    () => normalizeSearchValue(deferredSearchQuery),
+    [deferredSearchQuery]
+  );
 
-    sorted.sort((a, b) => {
-      if (activeSort === "number") {
-        if (a.jersey_number === null && b.jersey_number === null) return byName(a, b);
-        if (a.jersey_number === null) return 1;
-        if (b.jersey_number === null) return -1;
-        return a.jersey_number - b.jersey_number || byName(a, b);
-      }
+  const sortPlayers = useMemo(
+    () =>
+      (source: Profile[], sortBy: ActivePlayersSort, direction: SortDirection) => {
+        const sorted = [...source];
+        const byName = (a: Profile, b: Profile) =>
+          `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
 
-      if (activeSort === "position") {
-        const posDiff = POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position);
-        return posDiff || byName(a, b);
-      }
+        const compare = (a: Profile, b: Profile) => {
+          if (sortBy === "number") {
+            if (a.jersey_number === null && b.jersey_number === null) return byName(a, b);
+            if (a.jersey_number === null) return 1;
+            if (b.jersey_number === null) return -1;
+            return a.jersey_number - b.jersey_number || byName(a, b);
+          }
 
-      if (activeSort === "training_team") {
-        const teamRank: Record<TrainingTeam | "none", number> = {
-          team_a: 0,
-          team_b: 1,
-          none: 2,
+          if (sortBy === "position") {
+            const posDiff = POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position);
+            return posDiff || byName(a, b);
+          }
+
+          if (sortBy === "training_team") {
+            const teamRank: Record<TrainingTeam | "none", number> = {
+              team_a: 0,
+              team_b: 1,
+              none: 2,
+            };
+            const aTeam = a.default_training_team ?? "none";
+            const bTeam = b.default_training_team ?? "none";
+            return teamRank[aTeam] - teamRank[bTeam] || byName(a, b);
+          }
+
+          return byName(a, b);
         };
-        const aTeam = a.default_training_team ?? "none";
-        const bTeam = b.default_training_team ?? "none";
-        return teamRank[aTeam] - teamRank[bTeam] || byName(a, b);
-      }
 
-      return byName(a, b);
-    });
+        sorted.sort((a, b) => {
+          const value = compare(a, b);
+          return direction === "desc" ? -value : value;
+        });
 
-    return sorted;
-  }, [approved, activeSort]);
+        return sorted;
+      },
+    []
+  );
+
+  const sortedPending = useMemo(
+    () => sortPlayers(pending, pendingSort, pendingSortDirection),
+    [pending, pendingSort, pendingSortDirection, sortPlayers]
+  );
+
+  const sortedApproved = useMemo(
+    () => sortPlayers(approved, activeSort, activeSortDirection),
+    [approved, activeSort, activeSortDirection, sortPlayers]
+  );
+
+  const matchesPlayerSearch = useMemo(
+    () =>
+      (player: Profile) => {
+        if (!normalizedSearchQuery) return true;
+
+        const loginFromEmail = extractLoginFromEmail(player.email) ?? "";
+        const searchableParts = [
+          player.first_name,
+          player.last_name,
+          `${player.first_name} ${player.last_name}`,
+          `${player.last_name} ${player.first_name}`,
+          player.nickname ?? "",
+          player.username ?? "",
+          loginFromEmail,
+          player.email,
+          player.jersey_number?.toString() ?? "",
+          player.position,
+          player.default_training_team ?? "",
+        ];
+
+        return searchableParts.some((part) =>
+          normalizeSearchValue(part).includes(normalizedSearchQuery)
+        );
+      },
+    [normalizedSearchQuery]
+  );
+
+  const filteredPending = useMemo(
+    () => sortedPending.filter(matchesPlayerSearch),
+    [sortedPending, matchesPlayerSearch]
+  );
+
+  const filteredApproved = useMemo(
+    () => sortedApproved.filter(matchesPlayerSearch),
+    [sortedApproved, matchesPlayerSearch]
+  );
 
   function formatDateOfBirth(dateOfBirth: string | null) {
     if (!dateOfBirth) return "-";
@@ -430,6 +504,18 @@ export default function AdminPlayersPage() {
       </div>
 
       <div className="p-6">
+      <div className="mb-6">
+        <div className="max-w-md space-y-2">
+          <Label htmlFor="players-search">{tc("search")}</Label>
+          <Input
+            id="players-search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-background"
+            placeholder={t("searchPlayersPlaceholder")}
+          />
+        </div>
+      </div>
       {/* Edit Player Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
@@ -798,48 +884,81 @@ export default function AdminPlayersPage() {
       {/* Pending Approvals */}
       {pending.length > 0 && (
         <Card className="border-yellow-500/20 mb-6">
-          <CardHeader>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               {t("pendingApprovals")}
               <Badge className="bg-yellow-500/20 text-yellow-500">
-                {pending.length}
+                {filteredPending.length}
+                {normalizedSearchQuery ? `/${pending.length}` : ""}
               </Badge>
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="pending-players-sort" className="text-xs text-muted-foreground">
+                {t("sortBy")}
+              </Label>
+              <Select value={pendingSort} onValueChange={(value) => setPendingSort(value as ActivePlayersSort)}>
+                <SelectTrigger id="pending-players-sort" className="w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">{t("sortByName")}</SelectItem>
+                  <SelectItem value="number">{t("sortByNumber")}</SelectItem>
+                  <SelectItem value="position">{t("sortByPosition")}</SelectItem>
+                  <SelectItem value="training_team">{t("sortByTrainingTeam")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={pendingSortDirection}
+                onValueChange={(value) => setPendingSortDirection(value as SortDirection)}
+              >
+                <SelectTrigger id="pending-players-sort-direction" className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">{t("sortAsc")}</SelectItem>
+                  <SelectItem value="desc">{t("sortDesc")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {pending.map((player) => (
-                <div
-                  key={player.id}
-                  className="flex items-center justify-between py-3 px-4 rounded-md bg-secondary/50"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {formatPlayerName(player)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {renderPlayerLogin(player)}
-                    </p>
+              {filteredPending.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">{tc("noData")}</p>
+              ) : (
+                filteredPending.map((player) => (
+                  <div
+                    key={player.id}
+                    className="flex items-center justify-between py-3 px-4 rounded-md bg-secondary/50"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {formatPlayerName(player)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {renderPlayerLogin(player)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEdit(player)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => approvePlayer(player.id)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        {t("approve")}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openEdit(player)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => approvePlayer(player.id)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      {t("approve")}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -850,7 +969,8 @@ export default function AdminPlayersPage() {
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            {t("activePlayers")} ({approved.length})
+            {t("activePlayers")} ({filteredApproved.length}
+            {normalizedSearchQuery ? `/${approved.length}` : ""})
           </CardTitle>
           <div className="flex items-center gap-2">
             <Label htmlFor="active-players-sort" className="text-xs text-muted-foreground">
@@ -865,6 +985,18 @@ export default function AdminPlayersPage() {
                 <SelectItem value="number">{t("sortByNumber")}</SelectItem>
                 <SelectItem value="position">{t("sortByPosition")}</SelectItem>
                 <SelectItem value="training_team">{t("sortByTrainingTeam")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={activeSortDirection}
+              onValueChange={(value) => setActiveSortDirection(value as SortDirection)}
+            >
+              <SelectTrigger id="active-players-sort-direction" className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">{t("sortAsc")}</SelectItem>
+                <SelectItem value="desc">{t("sortDesc")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -883,76 +1015,84 @@ export default function AdminPlayersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedApproved.map((player) => (
-                <TableRow key={player.id}>
-                  <TableCell className="text-primary font-bold">
-                    {player.jersey_number ?? "-"}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span>
-                        {formatPlayerName(player)}
-                      </span>
-                      {player.team_role === "captain" && (
-                        <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                          {tr("captain")}
-                        </Badge>
-                      )}
-                      {player.team_role === "assistant_captain" && (
-                        <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40">
-                          {tr("assistantCaptain")}
-                        </Badge>
-                      )}
-                      {player.is_guest && (
-                        <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                          {tt("guest")}
-                        </Badge>
-                      )}
-                    </div>
-                    <br />
-                    <span className="text-xs text-muted-foreground">
-                      {renderPlayerLogin(player)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
-                      {tp(player.position)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {player.default_training_team ? (
-                      <Badge variant="outline" className="text-xs">
-                        {player.default_training_team === "team_a" ? tt("teamA") : tt("teamB")}
-                      </Badge>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">{tt("noTeam")}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDateOfBirth(player.date_of_birth)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center">
-                      <span
-                        className={`h-2.5 w-2.5 rounded-full ${player.is_active ? "bg-green-500" : "bg-red-500"}`}
-                        aria-label={player.is_active ? t("active") : t("inactive")}
-                        title={player.is_active ? t("active") : t("inactive")}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openEdit(player)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+              {filteredApproved.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                    {tc("noData")}
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredApproved.map((player) => (
+                  <TableRow key={player.id}>
+                    <TableCell className="text-primary font-bold">
+                      {player.jersey_number ?? "-"}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>
+                          {formatPlayerName(player)}
+                        </span>
+                        {player.team_role === "captain" && (
+                          <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                            {tr("captain")}
+                          </Badge>
+                        )}
+                        {player.team_role === "assistant_captain" && (
+                          <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40">
+                            {tr("assistantCaptain")}
+                          </Badge>
+                        )}
+                        {player.is_guest && (
+                          <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                            {tt("guest")}
+                          </Badge>
+                        )}
+                      </div>
+                      <br />
+                      <span className="text-xs text-muted-foreground">
+                        {renderPlayerLogin(player)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
+                        {tp(player.position)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {player.default_training_team ? (
+                        <Badge variant="outline" className="text-xs">
+                          {player.default_training_team === "team_a" ? tt("teamA") : tt("teamB")}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{tt("noTeam")}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {formatDateOfBirth(player.date_of_birth)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center">
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${player.is_active ? "bg-green-500" : "bg-red-500"}`}
+                          aria-label={player.is_active ? t("active") : t("inactive")}
+                          title={player.is_active ? t("active") : t("inactive")}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEdit(player)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

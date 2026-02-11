@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { countryFlagFromValue } from "@/lib/utils/country";
 
@@ -23,6 +26,8 @@ export function TeamAvatar({
 }) {
   const flag = countryFlagFromValue(country);
   const initial = name.trim().slice(0, 1).toUpperCase() || "?";
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
+  const shouldRenderLogo = Boolean(logoUrl) && failedLogoUrl !== logoUrl;
 
   return (
     <div
@@ -34,8 +39,13 @@ export function TeamAvatar({
       title={name}
       aria-label={name}
     >
-      {logoUrl ? (
-        <img src={logoUrl} alt={name} className="h-full w-full object-cover" />
+      {shouldRenderLogo ? (
+        <img
+          src={logoUrl ?? undefined}
+          alt={name}
+          className="h-full w-full object-cover"
+          onError={() => setFailedLogoUrl(logoUrl ?? null)}
+        />
       ) : (
         <span>{flag ?? initial}</span>
       )}

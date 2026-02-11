@@ -12,6 +12,15 @@ export function useUser() {
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
+    async function loadProfile(userId: string) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      setProfile(data ?? null);
+    }
+
     async function getUser() {
       const {
         data: { user },
@@ -19,12 +28,9 @@ export function useUser() {
       setUser(user);
 
       if (user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        setProfile(data);
+        await loadProfile(user.id);
+      } else {
+        setProfile(null);
       }
 
       setLoading(false);
@@ -34,9 +40,13 @@ export function useUser() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+
+      if (nextUser) {
+        await loadProfile(nextUser.id);
+      } else {
         setProfile(null);
       }
     });

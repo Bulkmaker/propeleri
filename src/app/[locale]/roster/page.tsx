@@ -1,15 +1,8 @@
-import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Link } from "@/i18n/navigation";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users } from "lucide-react";
 import type { Profile } from "@/types/database";
-import { POSITION_COLORS } from "@/lib/utils/constants";
-import type { PlayerPosition } from "@/types/database";
-import { formatPlayerName } from "@/lib/utils/player-name";
+import RosterClient from "@/components/roster/RosterClient";
 
 export default async function RosterPage({
   params,
@@ -20,7 +13,6 @@ export default async function RosterPage({
   setRequestLocale(locale);
 
   const t = await getTranslations("roster");
-  const tp = await getTranslations("positions");
 
   const supabase = await createClient();
   const { data: players } = await supabase
@@ -31,10 +23,6 @@ export default async function RosterPage({
     .order("jersey_number", { ascending: true });
 
   const allPlayers = (players ?? []) as Profile[];
-
-  const forwards = allPlayers.filter((p) => p.position === "forward");
-  const defense = allPlayers.filter((p) => p.position === "defense");
-  const goalies = allPlayers.filter((p) => p.position === "goalie");
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -51,79 +39,8 @@ export default async function RosterPage({
           <p>Nema registrovanih igraca</p>
         </div>
       ) : (
-        <div className="space-y-10">
-          {forwards.length > 0 && (
-            <PositionSection title={tp("forward")} players={forwards} />
-          )}
-          {defense.length > 0 && (
-            <PositionSection title={tp("defense")} players={defense} />
-          )}
-          {goalies.length > 0 && (
-            <PositionSection title={tp("goalie")} players={goalies} />
-          )}
-        </div>
+        <RosterClient players={allPlayers} />
       )}
     </div>
-  );
-}
-
-function PositionSection({
-  title,
-  players,
-}: {
-  title: string;
-  players: Profile[];
-}) {
-  return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <span className="h-1 w-6 bg-primary rounded-full" />
-        {title}
-      </h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {players.map((player) => (
-          <PlayerCard key={player.id} player={player} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PlayerCard({ player }: { player: Profile }) {
-  const tp = useTranslations("positions");
-  const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
-
-  return (
-    <Link href={`/roster/${player.id}`}>
-      <Card className="border-border/40 card-hover bg-card group cursor-pointer">
-        <CardContent className="p-4 text-center">
-          <Avatar className="h-20 w-20 mx-auto mb-3 ring-2 ring-border group-hover:ring-primary/50 transition-all">
-            <AvatarImage src={player.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-secondary text-lg font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          {player.jersey_number != null && (
-            <p className="text-2xl font-black text-primary mb-1">
-              #{player.jersey_number}
-            </p>
-          )}
-          <p className="font-semibold text-sm">
-            {formatPlayerName(player)}
-          </p>
-          <Badge
-            variant="secondary"
-            className={`mt-2 text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}
-          >
-            {tp(player.position)}
-          </Badge>
-          {player.team_role !== "player" && (
-            <Badge variant="outline" className="mt-1 text-xs border-primary/30 text-primary">
-              {player.team_role === "captain" ? "C" : "A"}
-            </Badge>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
   );
 }

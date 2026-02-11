@@ -173,20 +173,13 @@ export function GameMatchCard({
               </div>
 
               <div className="flex flex-col items-center md:items-end text-center md:text-right gap-2">
-                {opponentLogoUrl ? (
-                  <img
-                    src={opponentLogoUrl}
-                    alt={opponentName}
-                    className="h-20 w-20 md:h-28 md:w-28 object-contain drop-shadow-[0_0_16px_rgba(255,255,255,0.12)]"
-                  />
-                ) : (
-                  <TeamAvatar
-                    name={opponentName}
-                    country={opponentCountry}
-                    size="lg"
-                    className="h-20 w-20 md:h-28 md:w-28 text-4xl md:text-5xl"
-                  />
-                )}
+                <TeamAvatar
+                  name={opponentName}
+                  logoUrl={opponentLogoUrl}
+                  country={opponentCountry}
+                  size="lg"
+                  className="h-20 w-20 md:h-28 md:w-28 text-4xl md:text-5xl"
+                />
                 <div className={cn("font-bold text-base md:text-2xl tracking-wide max-w-[220px] truncate")}>
                   {opponentName}
                 </div>

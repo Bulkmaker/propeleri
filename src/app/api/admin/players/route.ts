@@ -62,6 +62,14 @@ function normalizeCredentials(login?: string, password?: string) {
   } as const;
 }
 
+function mapAuthAdminError(message: string) {
+  if (message.includes("Database error loading user")) {
+    return "Auth account has legacy token fields in an invalid state. Run auth token normalization migration and retry.";
+  }
+
+  return message;
+}
+
 export async function POST(request: NextRequest) {
   const adminCheck = await requireAdmin();
   if ("error" in adminCheck) return adminCheck.error;
@@ -100,7 +108,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (createError) {
-    return NextResponse.json({ error: createError.message }, { status: 400 });
+    return NextResponse.json({ error: mapAuthAdminError(createError.message) }, { status: 400 });
   }
 
   // Update profile with additional fields
@@ -168,7 +176,7 @@ export async function PATCH(request: NextRequest) {
   });
 
   if (authError) {
-    return NextResponse.json({ error: authError.message }, { status: 400 });
+    return NextResponse.json({ error: mapAuthAdminError(authError.message) }, { status: 400 });
   }
 
   const { error: profileError } = await admin

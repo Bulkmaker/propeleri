@@ -56,7 +56,14 @@
     "goals": "Goals",
     "assists": "Assists",
     "points": "Points",
-    "number": "Number"
+    "number": "Number",
+    "sortBy": "Sort by",
+    "sortByName": "Name",
+    "sortByNumber": "Jersey number",
+    "sortDirection": "Direction",
+    "sortAsc": "Ascending",
+    "sortDesc": "Descending",
+    "searchPlayersPlaceholder": "First name, last name, nickname or number"
   },
   "player": {
     "stats": "Player Stats",
@@ -256,6 +263,9 @@
     "sortByNumber": "Jersey number",
     "sortByPosition": "Position",
     "sortByTrainingTeam": "Training team",
+    "sortAsc": "Ascending",
+    "sortDesc": "Descending",
+    "searchPlayersPlaceholder": "Name, nickname, number, login or email",
     "appRole": "App Role",
     "active": "Active",
     "inactive": "Inactive",

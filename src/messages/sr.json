@@ -56,7 +56,14 @@
     "goals": "Golovi",
     "assists": "Asistencije",
     "points": "Poeni",
-    "number": "Broj"
+    "number": "Broj",
+    "sortBy": "Sortiranje",
+    "sortByName": "Po imenu",
+    "sortByNumber": "Po broju",
+    "sortDirection": "Smer",
+    "sortAsc": "Rastuce",
+    "sortDesc": "Opadajuce",
+    "searchPlayersPlaceholder": "Ime, prezime, nadimak ili broj"
   },
   "player": {
     "stats": "Statistika igraca",
@@ -256,6 +263,9 @@
     "sortByNumber": "Po broju dresa",
     "sortByPosition": "Po poziciji",
     "sortByTrainingTeam": "Po trening timu",
+    "sortAsc": "Rastuce",
+    "sortDesc": "Opadajuce",
+    "searchPlayersPlaceholder": "Ime, nadimak, broj, login ili email",
     "appRole": "Sistemska uloga",
     "active": "Aktivan",
     "inactive": "Neaktivan",

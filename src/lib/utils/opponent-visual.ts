@@ -24,13 +24,22 @@ export function buildOpponentVisualLookup(
   for (const team of teams) {
     if (team.is_propeleri) continue;
 
-    const visual: OpponentVisual = {
-      logoUrl: team.logo_url ?? null,
-      country: team.country ?? null,
+    const key = normalizeName(team.name);
+    const existingByName = byNormalizedName.get(key);
+    const mergedByName: OpponentVisual = {
+      logoUrl: existingByName?.logoUrl ?? team.logo_url ?? null,
+      country: existingByName?.country ?? team.country ?? null,
     };
 
-    if (team.opponent_id) byOpponentId.set(team.opponent_id, visual);
-    byNormalizedName.set(normalizeName(team.name), visual);
+    byNormalizedName.set(key, mergedByName);
+
+    if (team.opponent_id) {
+      const existingById = byOpponentId.get(team.opponent_id);
+      byOpponentId.set(team.opponent_id, {
+        logoUrl: existingById?.logoUrl ?? team.logo_url ?? null,
+        country: existingById?.country ?? team.country ?? null,
+      });
+    }
   }
 
   for (const opponent of opponents) {
@@ -68,12 +77,18 @@ export function resolveOpponentVisual(
   gameLike: { opponent_id: string | null; opponent: string },
   lookup: OpponentVisualLookup
 ): OpponentVisual {
+  const byName = lookup.byNormalizedName.get(normalizeName(gameLike.opponent));
+
   if (gameLike.opponent_id) {
     const byId = lookup.byOpponentId.get(gameLike.opponent_id);
-    if (byId) return byId;
+    if (byId) {
+      return {
+        logoUrl: byId.logoUrl ?? byName?.logoUrl ?? null,
+        country: byId.country ?? byName?.country ?? null,
+      };
+    }
   }
 
-  const byName = lookup.byNormalizedName.get(normalizeName(gameLike.opponent));
   if (byName) return byName;
 
   return { logoUrl: null, country: null };

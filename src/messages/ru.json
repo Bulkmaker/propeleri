@@ -56,7 +56,14 @@
     "goals": "Голы",
     "assists": "Передачи",
     "points": "Очки",
-    "number": "Номер"
+    "number": "Номер",
+    "sortBy": "Сортировка",
+    "sortByName": "По имени",
+    "sortByNumber": "По номеру",
+    "sortDirection": "Направление",
+    "sortAsc": "По возрастанию",
+    "sortDesc": "По убыванию",
+    "searchPlayersPlaceholder": "Имя, фамилия, ник или номер"
   },
   "player": {
     "stats": "Статистика игрока",
@@ -256,6 +263,9 @@
     "sortByNumber": "По номеру",
     "sortByPosition": "По позиции",
     "sortByTrainingTeam": "По тренировочной команде",
+    "sortAsc": "По возрастанию",
+    "sortDesc": "По убыванию",
+    "searchPlayersPlaceholder": "Имя, ник, номер, логин или email",
     "appRole": "Системная роль",
     "active": "Активен",
     "inactive": "Неактивен",
