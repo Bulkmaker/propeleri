@@ -395,7 +395,7 @@ export default function AdminTrainingPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Sezona</Label>
+                <Label>{t("season")}</Label>
                 <Select
                   value={form.season_id}
                   onValueChange={(v) => setForm({ ...form, season_id: v })}
@@ -413,7 +413,7 @@ export default function AdminTrainingPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Naziv (opciono)</Label>
+                <Label>{t("titleOptional")}</Label>
                 <Input
                   value={form.title}
                   onChange={(e) =>
@@ -425,7 +425,7 @@ export default function AdminTrainingPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Datum i vreme</Label>
+                  <Label>{t("dateAndTime")}</Label>
                   <Input
                     type="datetime-local"
                     value={form.session_date}
@@ -436,7 +436,7 @@ export default function AdminTrainingPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Lokacija</Label>
+                  <Label>{t("location")}</Label>
                   <Input
                     value={form.location}
                     onChange={(e) =>
@@ -502,7 +502,7 @@ export default function AdminTrainingPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Sezona</Label>
+                <Label>{t("season")}</Label>
                 <Select
                   value={scheduleForm.season_id}
                   onValueChange={(v) => setScheduleForm({ ...scheduleForm, season_id: v })}
@@ -571,7 +571,7 @@ export default function AdminTrainingPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Naziv (opciono)</Label>
+                <Label>{t("titleOptional")}</Label>
                 <Input
                   value={scheduleForm.title}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
@@ -579,7 +579,7 @@ export default function AdminTrainingPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Lokacija (opciono)</Label>
+                <Label>{t("locationOptional")}</Label>
                 <Input
                   value={scheduleForm.location}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
@@ -669,7 +669,7 @@ export default function AdminTrainingPage() {
                 </Button>
                 <Link href={`/admin/training/${session.id}`}>
                   <Button size="sm" variant="outline" className="text-xs">
-                    Stats
+                    {t("stats")}
                   </Button>
                 </Link>
                 <Button

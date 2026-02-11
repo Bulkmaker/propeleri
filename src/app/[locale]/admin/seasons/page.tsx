@@ -107,11 +107,11 @@ export default function AdminSeasonsPage() {
           </DialogTrigger>
           <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle>Nova sezona</DialogTitle>
+              <DialogTitle>{t("newSeason")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Naziv</Label>
+                <Label>{t("seasonName")}</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -121,7 +121,7 @@ export default function AdminSeasonsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Pocetak</Label>
+                  <Label>{t("seasonStart")}</Label>
                   <Input
                     type="date"
                     value={form.start_date}
@@ -132,7 +132,7 @@ export default function AdminSeasonsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Kraj</Label>
+                  <Label>{t("seasonEnd")}</Label>
                   <Input
                     type="date"
                     value={form.end_date}
@@ -151,7 +151,7 @@ export default function AdminSeasonsPage() {
                     setForm({ ...form, is_current: e.target.checked })
                   }
                 />
-                Trenutna sezona
+                {t("currentSeason")}
               </label>
               <Button
                 onClick={handleSave}
@@ -180,7 +180,7 @@ export default function AdminSeasonsPage() {
                 </div>
                 {season.is_current && (
                   <Badge className="bg-green-600/20 text-green-400">
-                    Trenutna
+                    {t("current")}
                   </Badge>
                 )}
               </div>
@@ -190,7 +190,7 @@ export default function AdminSeasonsPage() {
                   variant="outline"
                   onClick={() => setCurrent(season.id)}
                 >
-                  Postavi kao trenutnu
+                  {t("setAsCurrent")}
                 </Button>
               )}
             </CardContent>

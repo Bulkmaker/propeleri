@@ -189,7 +189,7 @@ export function GameDetailView({
   };
 
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
-  const opponentName = opponentTeam?.name ?? game.opponent ?? "Unknown Opponent";
+  const opponentName = opponentTeam?.name ?? game.opponent ?? t("unknownOpponent");
   const opponentLogo = opponentTeam?.logo_url;
   const opponentCountry = opponentTeam?.country;
 
@@ -363,7 +363,7 @@ export function GameDetailView({
                 <TableHeader>
                   <TableRow>
                     <TableHead>#</TableHead>
-                    <TableHead>Player</TableHead>
+                    <TableHead>{t("playerColumn")}</TableHead>
                     <TableHead className="text-center">{ts("goals")}</TableHead>
                     <TableHead className="text-center">{ts("assists")}</TableHead>
                     <TableHead className="text-center">{ts("points")}</TableHead>

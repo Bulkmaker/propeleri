@@ -179,7 +179,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       .single();
 
     if (gameError || !gameData) {
-      setError("Game not found");
+      setError(tg("gameNotFound"));
       setLoading(false);
       return;
     }
@@ -342,7 +342,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
     setStatsRows(nextStatsRows);
     setLoading(false);
-  }, [gameId, supabase, tc]);
+  }, [gameId, supabase, tc, tg]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -396,7 +396,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
     await loadAll();
     setSavingAction(null);
-    setSuccess("Матч сохранён");
+    setSuccess(tg("matchSaved"));
     onRefresh?.();
   }
 
@@ -575,14 +575,14 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   }
 
   if (!game) {
-    return <div className="p-6 text-center text-muted-foreground">Game not found</div>;
+    return <div className="p-6 text-center text-muted-foreground">{tg("gameNotFound")}</div>;
   }
 
   const isTournamentMatch = Boolean(match);
 
   // Подготовка данных для GameMatchCard
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
-  const opponentName = opponentTeam?.name ?? game.opponent ?? "Unknown Opponent";
+  const opponentName = opponentTeam?.name ?? game.opponent ?? tg("unknownOpponent");
   const opponentLogo = opponentTeam?.logo_url;
   const opponentCountry = opponentTeam?.country;
 
@@ -647,7 +647,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                 <>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Соперник</Label>
+                      <Label>{tg("opponent")}</Label>
                       <Select
                         value={game.opponent_team_id || "__none__"}
                         onValueChange={(value) => {
@@ -662,7 +662,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Выберите соперника" />
+                          <SelectValue placeholder={tg("selectOpponent")} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">—</SelectItem>
@@ -678,7 +678,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Место проведения</Label>
+                      <Label>{tg("venue")}</Label>
                       <Input
                         value={game.location || ""}
                         onChange={(e) => setGame({ ...game, location: e.target.value })}
@@ -688,7 +688,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Дата и время</Label>
+                      <Label>{tg("dateAndTime")}</Label>
                       <Input
                         type="datetime-local"
                         value={toDateTimeLocalInput(game.game_date)}
@@ -702,7 +702,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Дома/В гостях</Label>
+                      <Label>{tg("homeAway")}</Label>
                       <Select
                         value={game.is_home ? "home" : "away"}
                         onValueChange={(value) => setGame({ ...game, is_home: value === "home" })}
@@ -711,8 +711,8 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="home">Дома</SelectItem>
-                          <SelectItem value="away">В гостях</SelectItem>
+                          <SelectItem value="home">{tg("homeLabel")}</SelectItem>
+                          <SelectItem value="away">{tg("awayLabel")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -720,7 +720,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
-                      <Label>Счёт (мы)</Label>
+                      <Label>{tg("scoreUs")}</Label>
                       <Input
                         type="number"
                         min={0}
@@ -737,7 +737,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Счёт (соперник)</Label>
+                      <Label>{tg("scoreOpponent")}</Label>
                       <Input
                         type="number"
                         min={0}
@@ -754,7 +754,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Результат</Label>
+                      <Label>{tg("resultLabel")}</Label>
                       <Select
                         value={game.result}
                         onValueChange={(value: string) => setGame({ ...game, result: value as Game["result"] })}
@@ -763,10 +763,10 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="win">Победа</SelectItem>
-                          <SelectItem value="loss">Поражение</SelectItem>
-                          <SelectItem value="draw">Ничья</SelectItem>
-                          <SelectItem value="pending">Ожидается</SelectItem>
+                          <SelectItem value="win">{tg("result.win")}</SelectItem>
+                          <SelectItem value="loss">{tg("result.loss")}</SelectItem>
+                          <SelectItem value="draw">{tg("result.draw")}</SelectItem>
+                          <SelectItem value="pending">{tg("result.pending")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -976,7 +976,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
             <CardContent className="p-4 space-y-4">
               {!isTournamentMatch && (
                 <p className="text-sm text-muted-foreground border-l-4 border-yellow-500 pl-3 py-2">
-                  Турнирные поля доступны только для матчей в турнирах
+                  {tg("tournamentFieldsOnly")}
                 </p>
               )}
 
@@ -1122,7 +1122,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
             <CardContent className="p-4 space-y-4">
               {!isTournamentMatch && (
                 <p className="text-sm text-muted-foreground border-l-4 border-yellow-500 pl-3 py-2">
-                  Регистрация игроков на турнир доступна только для турнирных матчей
+                  {tg("tournamentRosterOnly")}
                 </p>
               )}
 

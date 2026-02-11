@@ -169,6 +169,7 @@ export function GameForm({
     const tg = useTranslations("game");
     const tt = useTranslations("tournament");
     const tc = useTranslations("common");
+    const ta = useTranslations("admin");
 
     const supabase = useMemo(() => createClient(), []);
 
@@ -367,17 +368,17 @@ export function GameForm({
 
             // 2. Prepare Opponent
             if (!form.opponent_team_id) {
-                throw new Error("Opponent is required");
+                throw new Error(tg("errorOpponentRequired"));
             }
             const opponentTeam = teams.find(t => t.id === form.opponent_team_id);
             if (!opponentTeam) {
-                throw new Error("Selected opponent team not found");
+                throw new Error(tg("errorOpponentNotFound"));
             }
 
             // 3. Prepare Date
             const gameDateUtc = belgradeDateTimeLocalInputToUtcIso(form.game_date);
             if (!gameDateUtc) {
-                throw new Error("Invalid game date");
+                throw new Error(tg("errorInvalidGameDate"));
             }
 
             // 4. Construct Payload
@@ -404,7 +405,7 @@ export function GameForm({
 
         } catch (err: unknown) {
             console.error(err);
-            setError(err instanceof Error ? err.message : "Error saving game");
+            setError(err instanceof Error ? err.message : tg("errorSaving"));
         } finally {
             setSaving(false);
         }
@@ -444,7 +445,7 @@ export function GameForm({
             )}
 
             <div className="space-y-2">
-                <Label>Sezona</Label>
+                <Label>{ta("season")}</Label>
                 <Select
                     value={form.season_id}
                     onValueChange={(v) => setForm({ ...form, season_id: v, tournament_id: "" })}
@@ -517,7 +518,7 @@ export function GameForm({
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label>Datum i vreme</Label>
+                    <Label>{ta("dateAndTime")}</Label>
                     <Input
                         type="datetime-local"
                         value={form.game_date}
@@ -527,7 +528,7 @@ export function GameForm({
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label>Lokacija</Label>
+                    <Label>{ta("location")}</Label>
                     <Input
                         value={form.location}
                         onChange={(e) => setForm({ ...form, location: e.target.value })}
@@ -540,7 +541,7 @@ export function GameForm({
             {initialData && !isManagedByTournament && (
                 <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                        <Label>Domaci gol</Label>
+                        <Label>{ta("homeScore")}</Label>
                         <Input
                             type="number"
                             value={form.home_score}
@@ -559,7 +560,7 @@ export function GameForm({
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Gosti gol</Label>
+                        <Label>{ta("awayScore")}</Label>
                         <Input
                             type="number"
                             value={form.away_score}
@@ -578,7 +579,7 @@ export function GameForm({
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Rezultat</Label>
+                        <Label>{ta("result")}</Label>
                         <Select
                             value={form.result}
                             onValueChange={(v) => setForm({ ...form, result: v as GameResult })}

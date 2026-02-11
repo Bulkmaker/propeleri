@@ -187,11 +187,11 @@ export default function AdminEventsPage() {
           </DialogTrigger>
           <DialogContent className="bg-card border-border max-w-lg">
             <DialogHeader>
-              <DialogTitle>Novi dogadjaj</DialogTitle>
+              <DialogTitle>{t("newEvent")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="space-y-2">
-                <Label>Naslov (SR)</Label>
+                <Label>{t("titleSr")}</Label>
                 <Input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -200,7 +200,7 @@ export default function AdminEventsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Naslov (RU)</Label>
+                  <Label>{t("titleRu")}</Label>
                   <Input
                     value={form.title_ru}
                     onChange={(e) =>
@@ -210,7 +210,7 @@ export default function AdminEventsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Naslov (EN)</Label>
+                  <Label>{t("titleEn")}</Label>
                   <Input
                     value={form.title_en}
                     onChange={(e) =>
@@ -221,7 +221,7 @@ export default function AdminEventsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Opis (SR)</Label>
+                <Label>{t("descriptionSr")}</Label>
                 <Input
                   value={form.description}
                   onChange={(e) =>
@@ -232,7 +232,7 @@ export default function AdminEventsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Tip</Label>
+                  <Label>{t("eventType")}</Label>
                   <Select
                     value={form.event_type}
                     onValueChange={(v) =>
@@ -247,15 +247,15 @@ export default function AdminEventsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="game">Game</SelectItem>
-                      <SelectItem value="training">Training</SelectItem>
-                      <SelectItem value="tournament">Tournament</SelectItem>
-                      <SelectItem value="social">Social</SelectItem>
+                      <SelectItem value="game">{te("game")}</SelectItem>
+                      <SelectItem value="training">{te("training")}</SelectItem>
+                      <SelectItem value="tournament">{te("tournament")}</SelectItem>
+                      <SelectItem value="social">{te("social")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Datum</Label>
+                  <Label>{t("date")}</Label>
                   <Input
                     type="datetime-local"
                     value={form.event_date}
@@ -290,7 +290,7 @@ export default function AdminEventsPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label>Lokacija</Label>
+                <Label>{t("location")}</Label>
                 <Input
                   value={form.location}
                   onChange={(e) =>
@@ -324,7 +324,7 @@ export default function AdminEventsPage() {
                     {event.event_type} |{" "}
                     {event.event_date
                       ? formatInBelgrade(event.event_date, "sr-Latn", { dateStyle: "short" })
-                      : "Bez datuma"}
+                      : t("noDate")}
                   </p>
                 </div>
               </div>
@@ -336,7 +336,7 @@ export default function AdminEventsPage() {
                       : "bg-red-600/20 text-red-400"
                   }
                 >
-                  {event.is_published ? "Published" : "Draft"}
+                  {event.is_published ? t("published") : t("draft")}
                 </Badge>
                 <Button
                   size="sm"

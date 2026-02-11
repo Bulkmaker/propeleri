@@ -618,8 +618,8 @@ export function GameLineupEditor({
       {!readOnly && isTournamentGame && (
         <p className="text-xs text-muted-foreground mb-4">
           {registeredPlayersCount && registeredPlayersCount > 0
-            ? `Tournament roster: ${registeredPlayersCount} players`
-            : "Tournament roster is not selected yet. Showing all active players."}
+            ? t("tournamentRosterInfo", { count: registeredPlayersCount })
+            : t("tournamentRosterNotSelected")}
         </p>
       )}
 
@@ -1106,7 +1106,7 @@ function PositionSlot({
 
           {availablePlayers.length === 0 && (
             <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-              Svi igraci su rasporedjeni
+              {t("allPlayersAssigned")}
             </div>
           )}
         </PopoverContent>

@@ -134,16 +134,16 @@ export default function AdminGalleryPage() {
           <DialogTrigger asChild>
             <Button className="bg-primary">
               <Plus className="h-4 w-4 mr-2" />
-              Novi album
+              {t("newAlbum")}
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle>Novi album</DialogTitle>
+              <DialogTitle>{t("newAlbum")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Naslov (SR)</Label>
+                <Label>{t("titleSr")}</Label>
                 <Input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -152,7 +152,7 @@ export default function AdminGalleryPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Naslov (RU)</Label>
+                  <Label>{t("titleRu")}</Label>
                   <Input
                     value={form.title_ru}
                     onChange={(e) =>
@@ -162,7 +162,7 @@ export default function AdminGalleryPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Naslov (EN)</Label>
+                  <Label>{t("titleEn")}</Label>
                   <Input
                     value={form.title_en}
                     onChange={(e) =>

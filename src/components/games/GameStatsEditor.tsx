@@ -36,6 +36,7 @@ interface GameLineupEntry {
 export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
     const tc = useTranslations("common");
     const ts = useTranslations("stats");
+    const tg = useTranslations("game");
 
     const [rows, setRows] = useState<PlayerStatRow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -108,7 +109,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
             );
         }
 
-        setMessage("Statistika sacuvana!");
+        setMessage(tg("statsSaved"));
         setSaving(false);
     }
 
@@ -125,7 +126,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
             {rows.length === 0 ? (
                 <Card className="border-border/40">
                     <CardContent className="p-6 text-center text-muted-foreground">
-                        Prvo izaberite postavu za ovu utakmicu (Lineup Tab)
+                        {tg("selectLineupFirst")}
                     </CardContent>
                 </Card>
             ) : (
@@ -136,7 +137,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
                                 <thead>
                                     <tr className="border-b border-border">
                                         <th className="text-left py-2 px-2">#</th>
-                                        <th className="text-left py-2 px-2">Igrac</th>
+                                        <th className="text-left py-2 px-2">{tg("playerColumn")}</th>
                                         <th className="text-center py-2 px-2">{ts("goals")}</th>
                                         <th className="text-center py-2 px-2">{ts("assists")}</th>
                                         <th className="text-center py-2 px-2">{ts("penaltyMinutes")}</th>

@@ -62,11 +62,11 @@ export default function AdminGamesPage() {
       setPlayers((playersRes.data ?? []) as Profile[]);
     } catch (err: unknown) {
       console.error("Error loading admin data:", err);
-      setError(err instanceof Error ? err.message : "Failed to load admin data");
+      setError(err instanceof Error ? err.message : tc("error"));
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, tc]);
 
   useEffect(() => {
     loadData();
@@ -136,7 +136,7 @@ export default function AdminGamesPage() {
         ) : (
           games.map((game) => {
             const opponentTeam = teams.find((t) => t.id === game.opponent_team_id);
-            const opponentName = opponentTeam?.name ?? game.opponent ?? "Unknown Opponent";
+            const opponentName = opponentTeam?.name ?? game.opponent ?? tg("unknownOpponent");
             const teamScore = game.is_home ? game.home_score : game.away_score;
             const opponentScore = game.is_home ? game.away_score : game.home_score;
             const tournament = tournaments.find((t) => t.id === game.tournament_id);
