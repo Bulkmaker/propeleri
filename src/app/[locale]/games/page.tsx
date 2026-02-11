@@ -7,6 +7,7 @@ import { Swords, Award } from "lucide-react";
 import type { Game, GameResult, Opponent, Team, Tournament } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 export default async function GamesPage({
   params,
@@ -105,13 +106,12 @@ export default async function GamesPage({
               <div className="mt-3 space-y-3">
                 {games.map((game) => {
                   const visual = resolveOpponentVisual(game, opponentVisuals);
-                  const date = new Date(game.game_date);
-                  const dateLabel = date.toLocaleDateString("sr-Latn", {
+                  const dateLabel = formatInBelgrade(game.game_date, "sr-Latn", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
                   });
-                  const timeLabel = date.toLocaleTimeString("sr-Latn", {
+                  const timeLabel = formatInBelgrade(game.game_date, "sr-Latn", {
                     hour: "2-digit",
                     minute: "2-digit",
                   });
@@ -149,13 +149,12 @@ export default async function GamesPage({
               )}
               {standaloneGames.map((game) => {
                 const visual = resolveOpponentVisual(game, opponentVisuals);
-                const date = new Date(game.game_date);
-                const dateLabel = date.toLocaleDateString("sr-Latn", {
+                const dateLabel = formatInBelgrade(game.game_date, "sr-Latn", {
                   day: "numeric",
                   month: "long",
                   year: "numeric",
                 });
-                const timeLabel = date.toLocaleTimeString("sr-Latn", {
+                const timeLabel = formatInBelgrade(game.game_date, "sr-Latn", {
                   hour: "2-digit",
                   minute: "2-digit",
                 });

@@ -18,6 +18,7 @@ import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle, Swords } from 
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatPlayerName, formatPlayerNameWithNumber } from "@/lib/utils/player-name";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 import type {
   PlayerPosition,
   Profile,
@@ -70,8 +71,6 @@ export default async function TrainingDetailPage({
     .order("goals", { ascending: false });
   const stats = (statsRaw ?? []) as TrainingStatWithPlayer[];
   const matchData = parseTrainingMatchData(session.match_data);
-
-  const date = new Date(session.session_date);
 
   const hasTeams = stats.some((s) => s.training_team);
   const teamA = stats.filter((s) => s.training_team === "team_a");
@@ -140,7 +139,7 @@ export default async function TrainingDetailPage({
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <CalendarDays className="h-4 w-4" />
-            {date.toLocaleDateString("sr-Latn", {
+            {formatInBelgrade(session.session_date, "sr-Latn", {
               weekday: "long",
               day: "numeric",
               month: "long",

@@ -43,6 +43,11 @@ import {
   Upload,
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
+import { buildTournamentMatchUrlParam } from "@/lib/utils/match-slug";
+import {
+  belgradeDateTimeLocalInputToUtcIso,
+  formatInBelgrade,
+} from "@/lib/utils/datetime";
 import type {
   Tournament,
   Team,
@@ -207,17 +212,6 @@ export default function AdminTournamentDetailPage() {
   // Match dialogs
   const [matchDialogOpen, setMatchDialogOpen] = useState(false);
   const [matchForm, setMatchForm] = useState<MatchForm>({
-    team_a_id: "",
-    team_b_id: "",
-    stage: "group",
-    group_id: "",
-    match_date: "",
-    bracket_label: "",
-  });
-
-  const [matchEditDialogOpen, setMatchEditDialogOpen] = useState(false);
-  const [editingMatch, setEditingMatch] = useState<TournamentMatch | null>(null);
-  const [matchEditForm, setMatchEditForm] = useState<MatchForm>({
     team_a_id: "",
     team_b_id: "",
     stage: "group",
@@ -672,18 +666,52 @@ export default function AdminTournamentDetailPage() {
     setSaving(true);
     setError("");
 
+    const requiresTeams = matchForm.stage === "group";
+    const hasBothTeams = Boolean(matchForm.team_a_id && matchForm.team_b_id);
+    const hasOneTeamOnly = Boolean(matchForm.team_a_id) !== Boolean(matchForm.team_b_id);
+
+    if (requiresTeams && !hasBothTeams) {
+      setError("Для группового матча нужно выбрать обе команды");
+      setSaving(false);
+      return;
+    }
+
+    if (matchForm.stage === "playoff" && hasOneTeamOnly) {
+      setError("Для плей-офф выберите обе команды или оставьте обе пустыми");
+      setSaving(false);
+      return;
+    }
+
+    if (hasBothTeams && matchForm.team_a_id === matchForm.team_b_id) {
+      setError("Команды не должны совпадать");
+      setSaving(false);
+      return;
+    }
+
     const resolvedGroupId =
       matchForm.stage === "group"
-        ? matchForm.group_id || findGroupForMatch(matchForm.team_a_id, matchForm.team_b_id)
+        ? matchForm.group_id ||
+          (matchForm.team_a_id && matchForm.team_b_id
+            ? findGroupForMatch(matchForm.team_a_id, matchForm.team_b_id)
+            : null)
         : null;
+    const matchDateUtc = matchForm.match_date
+      ? belgradeDateTimeLocalInputToUtcIso(matchForm.match_date)
+      : null;
+
+    if (matchForm.match_date && !matchDateUtc) {
+      setError("Некорректная дата матча");
+      setSaving(false);
+      return;
+    }
 
     const { error: insertError } = await supabase.from("tournament_matches").insert({
       tournament_id: tournamentId,
-      team_a_id: matchForm.team_a_id,
-      team_b_id: matchForm.team_b_id,
+      team_a_id: matchForm.team_a_id || null,
+      team_b_id: matchForm.team_b_id || null,
       stage: matchForm.stage,
       group_id: resolvedGroupId,
-      match_date: matchForm.match_date || null,
+      match_date: matchDateUtc,
       bracket_label: matchForm.bracket_label || null,
     });
 
@@ -702,54 +730,6 @@ export default function AdminTournamentDetailPage() {
       match_date: "",
       bracket_label: "",
     });
-    setSaving(false);
-    await loadAll();
-  }
-
-  function openEditMatchDialog(match: TournamentMatch) {
-    setEditingMatch(match);
-    setMatchEditForm({
-      team_a_id: match.team_a_id,
-      team_b_id: match.team_b_id,
-      stage: match.stage,
-      group_id: match.group_id ?? "",
-      match_date: match.match_date ? match.match_date.slice(0, 16) : "",
-      bracket_label: match.bracket_label ?? "",
-    });
-    setMatchEditDialogOpen(true);
-  }
-
-  async function saveMatchEdit() {
-    if (!editingMatch) return;
-
-    setSaving(true);
-    setError("");
-
-    const resolvedGroupId =
-      matchEditForm.stage === "group"
-        ? matchEditForm.group_id || findGroupForMatch(matchEditForm.team_a_id, matchEditForm.team_b_id)
-        : null;
-
-    const { error: updateError } = await supabase
-      .from("tournament_matches")
-      .update({
-        team_a_id: matchEditForm.team_a_id,
-        team_b_id: matchEditForm.team_b_id,
-        stage: matchEditForm.stage,
-        group_id: resolvedGroupId,
-        match_date: matchEditForm.match_date || null,
-        bracket_label: matchEditForm.bracket_label || null,
-      })
-      .eq("id", editingMatch.id);
-
-    if (updateError) {
-      setError(updateError.message);
-      setSaving(false);
-      return;
-    }
-
-    setMatchEditDialogOpen(false);
-    setEditingMatch(null);
     setSaving(false);
     await loadAll();
   }
@@ -775,15 +755,18 @@ export default function AdminTournamentDetailPage() {
     await loadAll();
   }
 
-  function teamName(id: string) {
+  function teamName(id: string | null) {
+    if (!id) return "TBD";
     return teams.find((team) => team.id === id)?.name ?? "?";
   }
 
-  function teamById(id: string) {
+  function teamById(id: string | null) {
+    if (!id) return undefined;
     return teams.find((team) => team.id === id);
   }
 
-  function isTeamPropeleri(id: string) {
+  function isTeamPropeleri(id: string | null) {
+    if (!id) return false;
     return teams.find((team) => team.id === id)?.is_propeleri ?? false;
   }
 
@@ -827,6 +810,25 @@ export default function AdminTournamentDetailPage() {
 
   const groupMatches = matches.filter((match) => match.stage === "group");
   const playoffMatches = matches.filter((match) => match.stage === "playoff");
+
+  function getOpponentNameForMatch(match: TournamentMatch): string {
+    const teamA = teamById(match.team_a_id);
+    const teamB = teamById(match.team_b_id);
+
+    if (teamA?.is_propeleri && teamB?.name) return teamB.name;
+    if (teamB?.is_propeleri && teamA?.name) return teamA.name;
+    return teamB?.name ?? teamA?.name ?? "opponent";
+  }
+
+  function matchEditorHref(match: TournamentMatch): string {
+    return `/admin/tournaments/${tournamentId}/matches/${buildTournamentMatchUrlParam({
+      matchId: match.id,
+      matchDate: match.match_date,
+      opponentName: getOpponentNameForMatch(match),
+      tournamentName: tournament?.name ?? "tournament",
+      stage: match.stage,
+    })}`;
+  }
 
   return (
     <div>
@@ -1437,6 +1439,7 @@ export default function AdminTournamentDetailPage() {
                       {groupMatches.map((match) => (
                         <MatchCard
                           key={`${match.id}-${match.score_a}-${match.score_b}-${match.is_completed ? 1 : 0}`}
+                          matchEditorHref={matchEditorHref(match)}
                           match={match}
                           teamName={teamName}
                           teamById={teamById}
@@ -1446,7 +1449,6 @@ export default function AdminTournamentDetailPage() {
                           onUpdateScore={updateMatchScore}
                           onToggleCompleted={toggleMatchCompleted}
                           onDelete={deleteMatch}
-                          onEdit={openEditMatchDialog}
                         />
                       ))}
                     </div>
@@ -1462,6 +1464,7 @@ export default function AdminTournamentDetailPage() {
                       {playoffMatches.map((match) => (
                         <MatchCard
                           key={`${match.id}-${match.score_a}-${match.score_b}-${match.is_completed ? 1 : 0}`}
+                          matchEditorHref={matchEditorHref(match)}
                           match={match}
                           teamName={teamName}
                           teamById={teamById}
@@ -1471,7 +1474,6 @@ export default function AdminTournamentDetailPage() {
                           onUpdateScore={updateMatchScore}
                           onToggleCompleted={toggleMatchCompleted}
                           onDelete={deleteMatch}
-                          onEdit={openEditMatchDialog}
                         />
                       ))}
                     </div>
@@ -1491,6 +1493,7 @@ export default function AdminTournamentDetailPage() {
                     setForm={setMatchForm}
                     teams={teams}
                     groups={groups}
+                    groupTeams={groupTeams}
                     tt={tt}
                   />
 
@@ -1498,40 +1501,10 @@ export default function AdminTournamentDetailPage() {
                     onClick={addMatch}
                     disabled={
                       saving ||
-                      !matchForm.team_a_id ||
-                      !matchForm.team_b_id ||
-                      matchForm.team_a_id === matchForm.team_b_id
-                    }
-                    className="w-full bg-primary"
-                  >
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {tc("save")}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={matchEditDialogOpen} onOpenChange={setMatchEditDialogOpen}>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader>
-                  <DialogTitle>{tt("editMatch")}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <MatchFormFields
-                    form={matchEditForm}
-                    setForm={setMatchEditForm}
-                    teams={teams}
-                    groups={groups}
-                    tt={tt}
-                  />
-
-                  <Button
-                    onClick={saveMatchEdit}
-                    disabled={
-                      saving ||
-                      !matchEditForm.team_a_id ||
-                      !matchEditForm.team_b_id ||
-                      matchEditForm.team_a_id === matchEditForm.team_b_id
+                      (matchForm.stage === "group" &&
+                        (!matchForm.team_a_id ||
+                          !matchForm.team_b_id ||
+                          matchForm.team_a_id === matchForm.team_b_id))
                     }
                     className="w-full bg-primary"
                   >
@@ -1553,14 +1526,32 @@ function MatchFormFields({
   setForm,
   teams,
   groups,
+  groupTeams,
   tt,
 }: {
   form: MatchForm;
   setForm: React.Dispatch<React.SetStateAction<MatchForm>>;
   teams: Team[];
   groups: TournamentGroup[];
+  groupTeams: TournamentGroupTeam[];
   tt: ReturnType<typeof useTranslations>;
 }) {
+  const selectedGroupTeamIds =
+    form.stage === "group" && form.group_id
+      ? new Set(
+          groupTeams
+            .filter((entry) => entry.group_id === form.group_id)
+            .map((entry) => entry.team_id)
+        )
+      : null;
+
+  const scopedTeams =
+    selectedGroupTeamIds && selectedGroupTeamIds.size > 0
+      ? teams.filter((team) => selectedGroupTeamIds.has(team.id))
+      : teams;
+
+  const scopedTeamBOptions = scopedTeams.filter((team) => team.id !== form.team_a_id);
+
   return (
     <>
       <div className="space-y-2">
@@ -1591,10 +1582,37 @@ function MatchFormFields({
           <Select
             value={form.group_id || "__none__"}
             onValueChange={(value) =>
-              setForm((prev) => ({
-                ...prev,
-                group_id: value === "__none__" ? "" : value,
-              }))
+              setForm((prev) => {
+                const nextGroupId = value === "__none__" ? "" : value;
+                if (!nextGroupId) {
+                  return { ...prev, group_id: "" };
+                }
+
+                const allowedIds = new Set(
+                  groupTeams
+                    .filter((entry) => entry.group_id === nextGroupId)
+                    .map((entry) => entry.team_id)
+                );
+
+                let teamAId = prev.team_a_id;
+                let teamBId = prev.team_b_id;
+
+                if (allowedIds.size > 0) {
+                  if (teamAId && !allowedIds.has(teamAId)) teamAId = "";
+                  if (teamBId && !allowedIds.has(teamBId)) teamBId = "";
+                }
+
+                if (teamAId && teamBId && teamAId === teamBId) {
+                  teamBId = "";
+                }
+
+                return {
+                  ...prev,
+                  group_id: nextGroupId,
+                  team_a_id: teamAId,
+                  team_b_id: teamBId,
+                };
+              })
             }
           >
             <SelectTrigger className="bg-background">
@@ -1618,10 +1636,14 @@ function MatchFormFields({
           <Select
             value={form.team_a_id || "__none__"}
             onValueChange={(value) =>
-              setForm((prev) => ({
-                ...prev,
-                team_a_id: value === "__none__" ? "" : value,
-              }))
+              setForm((prev) => {
+                const nextTeamAId = value === "__none__" ? "" : value;
+                return {
+                  ...prev,
+                  team_a_id: nextTeamAId,
+                  team_b_id: prev.team_b_id === nextTeamAId ? "" : prev.team_b_id,
+                };
+              })
             }
           >
             <SelectTrigger className="bg-background">
@@ -1629,7 +1651,7 @@ function MatchFormFields({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">—</SelectItem>
-              {teams.map((team) => (
+              {scopedTeams.map((team) => (
                 <SelectItem key={team.id} value={team.id}>
                   {team.name}
                 </SelectItem>
@@ -1654,17 +1676,26 @@ function MatchFormFields({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">—</SelectItem>
-              {teams
-                .filter((team) => team.id !== form.team_a_id)
-                .map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
+              {scopedTeamBOptions.map((team) => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
+
+      {form.stage === "group" && form.group_id && scopedTeams.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          В выбранной группе пока нет команд.
+        </p>
+      )}
+      {form.stage === "playoff" && (
+        <p className="text-xs text-muted-foreground">
+          Для плей-офф команды можно оставить пустыми и заполнить позже.
+        </p>
+      )}
 
       <div className="space-y-2">
         <Label>{tt("matchDate")}</Label>
@@ -1693,6 +1724,7 @@ function MatchFormFields({
 }
 
 function MatchCard({
+  matchEditorHref,
   match,
   teamName,
   teamById,
@@ -1702,18 +1734,17 @@ function MatchCard({
   onUpdateScore,
   onToggleCompleted,
   onDelete,
-  onEdit,
 }: {
+  matchEditorHref: string;
   match: TournamentMatch;
-  teamName: (id: string) => string;
-  teamById: (id: string) => Team | undefined;
-  isTeamPropeleri: (id: string) => boolean;
+  teamName: (id: string | null) => string;
+  teamById: (id: string | null) => Team | undefined;
+  isTeamPropeleri: (id: string | null) => boolean;
   groups: TournamentGroup[];
   tt: ReturnType<typeof useTranslations>;
   onUpdateScore: (id: string, scoreA: number, scoreB: number) => void;
   onToggleCompleted: (id: string, current: boolean) => void;
   onDelete: (id: string) => void;
-  onEdit: (match: TournamentMatch) => void;
 }) {
   const [scoreA, setScoreA] = useState(match.score_a);
   const [scoreB, setScoreB] = useState(match.score_b);
@@ -1726,6 +1757,7 @@ function MatchCard({
     : null;
   const teamA = teamById(match.team_a_id);
   const teamB = teamById(match.team_b_id);
+  const isPlayableMatch = Boolean(match.team_a_id && match.team_b_id);
 
   return (
     <Card className="border-border/40">
@@ -1793,7 +1825,9 @@ function MatchCard({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {!hasLinkedGame && (scoreA !== match.score_a || scoreB !== match.score_b) && (
+            {!hasLinkedGame &&
+              isPlayableMatch &&
+              (scoreA !== match.score_a || scoreB !== match.score_b) && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1804,7 +1838,7 @@ function MatchCard({
               </Button>
             )}
 
-            {!hasLinkedGame && (
+            {!hasLinkedGame && isPlayableMatch && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1819,22 +1853,11 @@ function MatchCard({
               </Button>
             )}
 
-            {hasLinkedGame ? (
-              <Link href={`/admin/games/${match.game_id}`}>
-                <Button size="sm" variant="outline" className="h-7 text-xs">
-                  {tt("details")}
-                </Button>
-              </Link>
-            ) : (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => onEdit(match)}
-              >
-                <Pencil className="h-3 w-3" />
+            <Link href={matchEditorHref}>
+              <Button size="sm" variant="outline" className="h-7 text-xs">
+                {hasLinkedGame ? tt("details") : tt("editMatch")}
               </Button>
-            )}
+            </Link>
 
             <Button
               size="icon"
@@ -1849,7 +1872,7 @@ function MatchCard({
 
         {match.match_date && (
           <p className="text-xs text-muted-foreground mt-1">
-            {new Date(match.match_date).toLocaleString("sr-Latn", {
+            {formatInBelgrade(match.match_date, "sr-Latn", {
               dateStyle: "short",
               timeStyle: "short",
             })}

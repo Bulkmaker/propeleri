@@ -18,6 +18,7 @@ import type {
 } from "@/types/database";
 import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 type ScheduleItem = {
   id: string;
@@ -193,13 +194,12 @@ export default async function SchedulePage({
 function ScheduleCard({ item }: { item: ScheduleItem }) {
   const tg = useTranslations("game");
   const tt = useTranslations("training");
-  const date = new Date(item.date);
-  const dateLabel = date.toLocaleDateString("sr-Latn", {
+  const dateLabel = formatInBelgrade(item.date, "sr-Latn", {
     weekday: "short",
     day: "numeric",
     month: "short",
   });
-  const timeLabel = date.toLocaleTimeString("sr-Latn", {
+  const timeLabel = formatInBelgrade(item.date, "sr-Latn", {
     hour: "2-digit",
     minute: "2-digit",
   });

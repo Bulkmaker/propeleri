@@ -92,10 +92,13 @@ function BracketMatchCard({
   teamsMap: Map<string, Team>;
   labels: { completed: string };
 }) {
-  const teamA = teamsMap.get(match.team_a_id);
-  const teamB = teamsMap.get(match.team_b_id);
+  const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
+  const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
   const winner =
-    match.is_completed && match.score_a !== match.score_b
+    match.team_a_id &&
+    match.team_b_id &&
+    match.is_completed &&
+    match.score_a !== match.score_b
       ? match.score_a > match.score_b
         ? match.team_a_id
         : match.team_b_id
@@ -117,8 +120,8 @@ function BracketMatchCard({
           }`}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <TeamAvatar
-              name={teamA?.name ?? "Team A"}
+              <TeamAvatar
+              name={teamA?.name ?? "TBD"}
               logoUrl={teamA?.logo_url}
               country={teamA?.country}
               size="xs"
@@ -128,7 +131,7 @@ function BracketMatchCard({
                 winner === match.team_a_id ? "font-bold text-green-400" : ""
               } ${teamA?.is_propeleri ? "text-primary" : ""}`}
             >
-              {teamA?.name ?? "?"}
+              {teamA?.name ?? "TBD"}
             </span>
           </div>
           <span className="text-sm font-bold tabular-nums ml-2">
@@ -141,8 +144,8 @@ function BracketMatchCard({
           }`}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <TeamAvatar
-              name={teamB?.name ?? "Team B"}
+              <TeamAvatar
+              name={teamB?.name ?? "TBD"}
               logoUrl={teamB?.logo_url}
               country={teamB?.country}
               size="xs"
@@ -152,7 +155,7 @@ function BracketMatchCard({
                 winner === match.team_b_id ? "font-bold text-green-400" : ""
               } ${teamB?.is_propeleri ? "text-primary" : ""}`}
             >
-              {teamB?.name ?? "?"}
+              {teamB?.name ?? "TBD"}
             </span>
           </div>
           <span className="text-sm font-bold tabular-nums ml-2">

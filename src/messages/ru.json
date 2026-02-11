@@ -189,7 +189,9 @@
     "title": "События и объявления",
     "upcoming": "Предстоящие",
     "past": "Прошедшие",
-    "noEvents": "Нет событий"
+    "noEvents": "Нет событий",
+    "linkedTournament": "Связанный турнир",
+    "openTournament": "Открыть страницу турнира"
   },
   "auth": {
     "loginTitle": "Вход",

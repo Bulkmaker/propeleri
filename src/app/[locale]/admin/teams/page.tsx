@@ -20,6 +20,7 @@ import { Loader2, Pencil, Plus, Upload } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import type { Game, GameResult, Opponent, Team } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -452,7 +453,7 @@ export default function AdminTeamsPage() {
                             key={game.id}
                             className="text-xs text-muted-foreground flex items-center justify-between"
                           >
-                            <span>{new Date(game.game_date).toLocaleDateString("sr-Latn")}</span>
+                            <span>{formatInBelgrade(game.game_date, "sr-Latn", { dateStyle: "short" })}</span>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-foreground">
                                 {game.is_home ? game.home_score : game.away_score} : {game.is_home ? game.away_score : game.home_score}

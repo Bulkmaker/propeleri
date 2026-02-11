@@ -190,8 +190,8 @@ export interface TournamentMatch {
   id: string;
   tournament_id: string;
   group_id: string | null;
-  team_a_id: string;
-  team_b_id: string;
+  team_a_id: string | null;
+  team_b_id: string | null;
   score_a: number;
   score_b: number;
   match_date: string | null;

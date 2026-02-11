@@ -25,6 +25,12 @@ import {
 import { Link } from "@/i18n/navigation";
 import { CalendarDays, Plus, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react";
 import type { TrainingSession, Season, TrainingSessionStatus } from "@/types/database";
+import {
+  belgradeDateTimeLocalInputToUtcIso,
+  belgradeMinuteKey,
+  formatInBelgrade,
+  utcToBelgradeDateTimeLocalInput,
+} from "@/lib/utils/datetime";
 
 const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
 const WEEKDAY_OPTIONS = [
@@ -49,9 +55,7 @@ function statusBadgeClass(status: TrainingSessionStatus) {
 }
 
 function dateMinuteKey(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value.slice(0, 16);
-  return `${Math.floor(parsed.getTime() / 60000)}`;
+  return belgradeMinuteKey(value);
 }
 
 function formatDateISO(date: Date) {
@@ -168,7 +172,7 @@ export default function AdminTrainingPage() {
     setForm({
       season_id: session.season_id,
       title: session.title ?? "",
-      session_date: session.session_date.slice(0, 16),
+      session_date: utcToBelgradeDateTimeLocalInput(session.session_date),
       location: session.location ?? "",
       status: normalizeStatus(session.status),
       notes: session.notes ?? "",
@@ -179,8 +183,17 @@ export default function AdminTrainingPage() {
   async function handleSave() {
     setSaving(true);
     setError("");
+
+    const sessionDateUtc = belgradeDateTimeLocalInputToUtcIso(form.session_date);
+    if (!sessionDateUtc) {
+      setError("Некорректная дата тренировки");
+      setSaving(false);
+      return;
+    }
+
     const data = {
       ...form,
+      session_date: sessionDateUtc,
       title: form.title || null,
       location: form.location || null,
       notes: form.notes.trim() || null,
@@ -235,12 +248,20 @@ export default function AdminTrainingPage() {
 
     setScheduleSaving(true);
 
+    const rangeStartUtc = belgradeDateTimeLocalInputToUtcIso(`${scheduleForm.start_date}T00:00`);
+    const rangeEndUtc = belgradeDateTimeLocalInputToUtcIso(`${scheduleForm.end_date}T23:59`);
+    if (!rangeStartUtc || !rangeEndUtc) {
+      setScheduleError(tt("validationRange"));
+      setScheduleSaving(false);
+      return;
+    }
+
     const { data: existingRows, error: existingError } = await supabase
       .from("training_sessions")
       .select("session_date")
       .eq("season_id", scheduleForm.season_id)
-      .gte("session_date", `${scheduleForm.start_date}T00:00`)
-      .lte("session_date", `${scheduleForm.end_date}T23:59:59`);
+      .gte("session_date", rangeStartUtc)
+      .lte("session_date", rangeEndUtc);
 
     if (existingError) {
       setScheduleError(existingError.message);
@@ -270,14 +291,19 @@ export default function AdminTrainingPage() {
       if (weekdays.has(cursor.getDay())) {
         const localDate = formatDateISO(cursor);
         const sessionDate = `${localDate}T${scheduleForm.time}`;
-        const key = dateMinuteKey(sessionDate);
+        const sessionDateUtc = belgradeDateTimeLocalInputToUtcIso(sessionDate);
+        if (!sessionDateUtc) {
+          cursor.setDate(cursor.getDate() + 1);
+          continue;
+        }
+        const key = dateMinuteKey(sessionDateUtc);
         if (existingKeys.has(key)) {
           skipped += 1;
         } else {
           payload.push({
             season_id: scheduleForm.season_id,
             title: scheduleForm.title.trim() || null,
-            session_date: sessionDate,
+            session_date: sessionDateUtc,
             location: scheduleForm.location.trim() || null,
             status: scheduleForm.status,
             notes: null,
@@ -622,7 +648,7 @@ export default function AdminTrainingPage() {
                     </Badge>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(session.session_date).toLocaleDateString("sr-Latn", {
+                    {formatInBelgrade(session.session_date, "sr-Latn", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",

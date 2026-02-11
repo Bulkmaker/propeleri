@@ -8,6 +8,7 @@ import { GroupStandingsTable } from "@/components/tournament/GroupStandingsTable
 import { PlacementView } from "@/components/tournament/PlacementView";
 import { BracketView } from "@/components/tournament/BracketView";
 import { computeGroupStandings } from "@/lib/utils/tournament";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 import type {
   Team,
   TournamentTeam,
@@ -191,13 +192,16 @@ export default async function TournamentDetailPage({
           <h2 className="text-lg font-semibold mb-3">{tt("allMatches")}</h2>
           <div className="space-y-2">
             {matches.map((match) => {
-              const teamA = teamsMap.get(match.team_a_id);
-              const teamB = teamsMap.get(match.team_b_id);
+              const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
+              const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
               const groupName = match.group_id
                 ? groups.find((g) => g.id === match.group_id)?.name
                 : null;
               const winner =
-                match.is_completed && match.score_a !== match.score_b
+                match.team_a_id &&
+                match.team_b_id &&
+                match.is_completed &&
+                match.score_a !== match.score_b
                   ? match.score_a > match.score_b
                     ? match.team_a_id
                     : match.team_b_id
@@ -220,7 +224,7 @@ export default async function TournamentDetailPage({
                         )}
                         <div className="flex items-center gap-1.5 min-w-0">
                           <TeamAvatar
-                            name={teamA?.name ?? "Team A"}
+                            name={teamA?.name ?? "TBD"}
                             logoUrl={teamA?.logo_url}
                             country={teamA?.country}
                             size="xs"
@@ -232,7 +236,7 @@ export default async function TournamentDetailPage({
                                 : ""
                             } ${teamA?.is_propeleri ? "text-primary" : ""}`}
                           >
-                            {teamA?.name ?? "?"}
+                            {teamA?.name ?? "TBD"}
                           </span>
                         </div>
                         <span className="text-sm font-bold tabular-nums">
@@ -240,7 +244,7 @@ export default async function TournamentDetailPage({
                         </span>
                         <div className="flex items-center gap-1.5 min-w-0">
                           <TeamAvatar
-                            name={teamB?.name ?? "Team B"}
+                            name={teamB?.name ?? "TBD"}
                             logoUrl={teamB?.logo_url}
                             country={teamB?.country}
                             size="xs"
@@ -252,7 +256,7 @@ export default async function TournamentDetailPage({
                                 : ""
                             } ${teamB?.is_propeleri ? "text-primary" : ""}`}
                           >
-                            {teamB?.name ?? "?"}
+                            {teamB?.name ?? "TBD"}
                           </span>
                         </div>
                       </div>
@@ -264,9 +268,7 @@ export default async function TournamentDetailPage({
                         )}
                         {match.match_date && (
                           <span className="text-xs text-muted-foreground">
-                            {new Date(match.match_date).toLocaleDateString(
-                              "sr-Latn"
-                            )}
+                            {formatInBelgrade(match.match_date, "sr-Latn", { dateStyle: "short" })}
                           </span>
                         )}
                       </div>

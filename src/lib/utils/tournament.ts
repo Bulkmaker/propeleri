@@ -31,6 +31,7 @@ export function computeGroupStandings(
 
   for (const m of matches) {
     if (!m.is_completed) continue;
+    if (!m.team_a_id || !m.team_b_id) continue;
 
     const rowA = map.get(m.team_a_id);
     const rowB = map.get(m.team_b_id);

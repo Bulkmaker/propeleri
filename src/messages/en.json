@@ -189,7 +189,9 @@
     "title": "Events & Announcements",
     "upcoming": "Upcoming",
     "past": "Past",
-    "noEvents": "No events"
+    "noEvents": "No events",
+    "linkedTournament": "Linked tournament",
+    "openTournament": "Open tournament page"
   },
   "auth": {
     "loginTitle": "Sign In",

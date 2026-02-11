@@ -28,6 +28,7 @@ import type {
 import HockeyRink from "@/components/games/HockeyRink";
 import type { RinkPlayer } from "@/components/games/HockeyRink";
 import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
   line_number: number | null;
@@ -236,14 +237,13 @@ export default async function GameDetailPage({
     buildOpponentVisualLookup(teams, opponents)
   );
 
-  const date = new Date(game.game_date);
-  const dateLabel = date.toLocaleDateString("sr-Latn", {
+  const dateLabel = formatInBelgrade(game.game_date, "sr-Latn", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  const timeLabel = date.toLocaleTimeString("sr-Latn", {
+  const timeLabel = formatInBelgrade(game.game_date, "sr-Latn", {
     hour: "2-digit",
     minute: "2-digit",
   });

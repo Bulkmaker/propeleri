@@ -22,8 +22,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Megaphone, Plus, Loader2, Eye, EyeOff } from "lucide-react";
+import { Megaphone, Plus, Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
 import type { TeamEvent, EventType, Tournament } from "@/types/database";
+import {
+  belgradeDateTimeLocalInputToUtcIso,
+  formatInBelgrade,
+} from "@/lib/utils/datetime";
+
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ("name" in error && error.name === "AbortError") return true;
+  if ("message" in error && typeof error.message === "string") {
+    return error.message.toLowerCase().includes("abort");
+  }
+  return false;
+}
 
 export default function AdminEventsPage() {
   const t = useTranslations("admin");
@@ -53,35 +66,66 @@ export default function AdminEventsPage() {
   const supabase = useMemo(() => createClient(), []);
 
   async function loadData() {
-    const [eventsRes, tournamentsRes] = await Promise.all([
-      supabase.from("events").select("*").order("created_at", { ascending: false }),
-      supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
-    ]);
-    setEvents(eventsRes.data ?? []);
-    setTournaments(tournamentsRes.data ?? []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    async function loadInitialData() {
+    try {
       const [eventsRes, tournamentsRes] = await Promise.all([
         supabase.from("events").select("*").order("created_at", { ascending: false }),
         supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
       ]);
       setEvents(eventsRes.data ?? []);
       setTournaments(tournamentsRes.data ?? []);
+    } catch (error) {
+      if (!isAbortError(error)) {
+        console.error("Failed to load admin events data", error);
+      }
+    } finally {
       setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadInitialData() {
+      try {
+        const [eventsRes, tournamentsRes] = await Promise.all([
+          supabase.from("events").select("*").order("created_at", { ascending: false }),
+          supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
+        ]);
+        if (!active) return;
+        setEvents(eventsRes.data ?? []);
+        setTournaments(tournamentsRes.data ?? []);
+      } catch (error) {
+        if (!isAbortError(error)) {
+          console.error("Failed to load initial admin events data", error);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
     }
 
     void loadInitialData();
+    return () => {
+      active = false;
+    };
   }, [supabase]);
 
   async function handleSave() {
     setSaving(true);
     const { tournament_id, ...rest } = form;
+
+    const eventDateUtc = form.event_date
+      ? belgradeDateTimeLocalInputToUtcIso(form.event_date)
+      : null;
+    if (form.event_date && !eventDateUtc) {
+      setSaving(false);
+      return;
+    }
+
     await supabase.from("events").insert({
       ...rest,
-      event_date: form.event_date || null,
+      event_date: eventDateUtc,
       location: form.location || null,
       tournament_id: tournament_id || null,
     });
@@ -108,6 +152,16 @@ export default function AdminEventsPage() {
       .from("events")
       .update({ is_published: !current })
       .eq("id", id);
+    loadData();
+  }
+
+  async function handleDeleteEvent(id: string) {
+    if (!window.confirm("Удалить событие?")) return;
+    const { error } = await supabase.from("events").delete().eq("id", id);
+    if (error) {
+      window.alert(`Не удалось удалить событие: ${error.message}`);
+      return;
+    }
     loadData();
   }
 
@@ -268,7 +322,7 @@ export default function AdminEventsPage() {
                   <p className="text-xs text-muted-foreground">
                     {event.event_type} |{" "}
                     {event.event_date
-                      ? new Date(event.event_date).toLocaleDateString("sr-Latn")
+                      ? formatInBelgrade(event.event_date, "sr-Latn", { dateStyle: "short" })
                       : "Bez datuma"}
                   </p>
                 </div>
@@ -293,6 +347,13 @@ export default function AdminEventsPage() {
                   ) : (
                     <Eye className="h-4 w-4" />
                   )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDeleteEvent(event.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             </CardContent>

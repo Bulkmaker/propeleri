@@ -7,6 +7,7 @@ import { TrainingScoreView } from "@/components/training/TrainingScoreView";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import type { TrainingSession, TrainingSessionStatus } from "@/types/database";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
   if (status === "completed" || status === "canceled") return status;
@@ -109,15 +110,12 @@ export default async function TrainingPage({
                                 </Badge>
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {new Date(session.session_date).toLocaleDateString(
-                                  "sr-Latn",
-                                  {
-                                    weekday: "long",
-                                    day: "numeric",
-                                    month: "long",
-                                    year: "numeric",
-                                  }
-                                )}
+                                {formatInBelgrade(session.session_date, "sr-Latn", {
+                                  weekday: "long",
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                })}
                               </p>
                               {session.notes && (
                                 <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
@@ -178,15 +176,12 @@ export default async function TrainingPage({
                                 </Badge>
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {new Date(session.session_date).toLocaleDateString(
-                                  "sr-Latn",
-                                  {
-                                    weekday: "long",
-                                    day: "numeric",
-                                    month: "long",
-                                    year: "numeric",
-                                  }
-                                )}
+                                {formatInBelgrade(session.session_date, "sr-Latn", {
+                                  weekday: "long",
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                })}
                               </p>
                               {session.notes && (
                                 <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">

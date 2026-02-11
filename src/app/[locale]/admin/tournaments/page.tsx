@@ -140,11 +140,52 @@ export default function AdminTournamentsPage() {
       end_date: form.end_date,
       description: form.description || null,
     };
+    const eventPayload = {
+      title: form.name,
+      title_ru: null,
+      title_en: null,
+      description: form.description || null,
+      description_ru: null,
+      description_en: null,
+      event_type: "tournament" as const,
+      event_date: form.start_date || null,
+      location: form.location || null,
+    };
 
     if (editingId) {
       await supabase.from("tournaments").update(payload).eq("id", editingId);
+
+      const { data: linkedEvent } = await supabase
+        .from("events")
+        .select("id")
+        .eq("tournament_id", editingId)
+        .eq("event_type", "tournament")
+        .limit(1)
+        .maybeSingle();
+
+      if (linkedEvent?.id) {
+        await supabase.from("events").update(eventPayload).eq("id", linkedEvent.id);
+      } else {
+        await supabase.from("events").insert({
+          ...eventPayload,
+          tournament_id: editingId,
+          is_published: true,
+        });
+      }
     } else {
-      await supabase.from("tournaments").insert(payload);
+      const { data: createdTournament } = await supabase
+        .from("tournaments")
+        .insert(payload)
+        .select("id")
+        .single();
+
+      if (createdTournament?.id) {
+        await supabase.from("events").insert({
+          ...eventPayload,
+          tournament_id: createdTournament.id,
+          is_published: true,
+        });
+      }
     }
 
     setDialogOpen(false);

@@ -189,7 +189,9 @@
     "title": "Dogadjaji i obavestenja",
     "upcoming": "Predstojecci",
     "past": "Prosli",
-    "noEvents": "Nema dogadjaja"
+    "noEvents": "Nema dogadjaja",
+    "linkedTournament": "Povezani turnir",
+    "openTournament": "Otvori stranicu turnira"
   },
   "auth": {
     "loginTitle": "Prijavi se",

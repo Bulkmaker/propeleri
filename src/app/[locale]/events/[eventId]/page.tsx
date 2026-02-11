@@ -3,9 +3,19 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, CalendarDays, MapPin } from "lucide-react";
-import type { TeamEvent } from "@/types/database";
+import { ChevronLeft, CalendarDays, MapPin, ArrowRight } from "lucide-react";
+import type { TeamEvent, Tournament, TournamentFormat } from "@/types/database";
+import { formatInBelgrade } from "@/lib/utils/datetime";
+
+const FORMAT_LABELS: Record<TournamentFormat, string> = {
+  cup: "formatCup",
+  placement: "formatPlacement",
+  round_robin: "formatRoundRobin",
+  custom: "formatCustom",
+};
 
 function getLocalizedField(
   item: TeamEvent,
@@ -30,6 +40,8 @@ export default async function EventDetailPage({
   setRequestLocale(locale);
 
   const tc = await getTranslations("common");
+  const te = await getTranslations("events");
+  const tt = await getTranslations("tournament");
 
   const supabase = await createClient();
   const { data: eventRaw } = await supabase
@@ -40,6 +52,26 @@ export default async function EventDetailPage({
   const event = eventRaw as TeamEvent | null;
 
   if (!event) notFound();
+
+  let tournament: Tournament | null = null;
+  if (event.tournament_id) {
+    const { data: tournamentRaw } = await supabase
+      .from("tournaments")
+      .select("*")
+      .eq("id", event.tournament_id)
+      .maybeSingle();
+    tournament = (tournamentRaw as Tournament | null) ?? null;
+  }
+
+  const eventTitle = getLocalizedField(event, locale) || tournament?.name || "";
+  const eventDescription =
+    getLocalizedField(event, locale, "description") ||
+    tournament?.description ||
+    "";
+  const eventDate = event.event_date || tournament?.start_date || null;
+  const eventLocation = event.location || tournament?.location || null;
+  const dateLocale =
+    locale === "ru" ? "ru-RU" : locale === "en" ? "en-US" : "sr-Latn";
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -55,7 +87,7 @@ export default async function EventDetailPage({
         <div className="rounded-xl overflow-hidden mb-6 aspect-[16/9] relative">
           <Image
             src={event.cover_image_url}
-            alt={getLocalizedField(event, locale)}
+            alt={eventTitle}
             fill
             sizes="(max-width: 768px) 100vw, 768px"
             className="object-cover"
@@ -66,14 +98,14 @@ export default async function EventDetailPage({
       <Badge className="mb-3">{event.event_type}</Badge>
 
       <h1 className="text-3xl font-bold mb-4">
-        {getLocalizedField(event, locale)}
+        {eventTitle}
       </h1>
 
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-        {event.event_date && (
+        {eventDate && (
           <span className="flex items-center gap-1">
             <CalendarDays className="h-4 w-4" />
-            {new Date(event.event_date).toLocaleDateString("sr-Latn", {
+            {formatInBelgrade(eventDate, dateLocale, {
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -81,20 +113,64 @@ export default async function EventDetailPage({
             })}
           </span>
         )}
-        {event.location && (
+        {eventLocation && (
           <span className="flex items-center gap-1">
             <MapPin className="h-4 w-4" />
-            {event.location}
+            {eventLocation}
           </span>
         )}
       </div>
 
-      {event.description && (
+      {eventDescription && (
         <div className="prose prose-invert max-w-none">
           <p className="whitespace-pre-wrap text-muted-foreground">
-            {getLocalizedField(event, locale, "description")}
+            {eventDescription}
           </p>
         </div>
+      )}
+
+      {tournament && (
+        <Card className="border-border/40 mt-8">
+          <CardContent className="p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {te("linkedTournament")}
+                </p>
+                <h2 className="text-xl font-semibold mt-1">{tournament.name}</h2>
+              </div>
+              <Badge className="bg-yellow-500/20 text-yellow-400 text-xs">
+                {tt(FORMAT_LABELS[tournament.format as TournamentFormat] ?? "formatCustom")}
+              </Badge>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CalendarDays className="h-4 w-4" />
+                {tournament.start_date} — {tournament.end_date}
+              </span>
+              {tournament.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  {tournament.location}
+                </span>
+              )}
+            </div>
+
+            {tournament.description && (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {tournament.description}
+              </p>
+            )}
+
+            <Button asChild className="w-full sm:w-auto">
+              <Link href={`/tournaments/${tournament.id}`}>
+                {te("openTournament")}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -23,6 +23,7 @@ import { RESULT_COLORS } from "@/lib/utils/constants";
 import type { GameResult } from "@/types/database";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 const headlineFont = Exo_2({
   subsets: ["latin", "cyrillic"],
@@ -376,13 +377,12 @@ function MatchdayPoster({
   opponentLogoUrl: string | null;
   opponentCountry: string | null;
 }) {
-  const date = new Date(game.game_date);
-  const dateLabel = date.toLocaleDateString(localeTag, {
+  const dateLabel = formatInBelgrade(game.game_date, localeTag, {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
-  const timeLabel = date.toLocaleTimeString(localeTag, {
+  const timeLabel = formatInBelgrade(game.game_date, localeTag, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -395,14 +395,15 @@ function MatchdayPoster({
           <p>Propeleri</p>
         </div>
         <span>vs</span>
-        <div className="club-opponent flex items-center gap-2">
+        <div className="club-team-mark">
           <TeamAvatar
             name={game.opponent?.trim() || "Opponent"}
             logoUrl={opponentLogoUrl}
             country={opponentCountry}
             size="md"
+            className="h-12 w-12 text-xl mx-auto"
           />
-          <span>{game.opponent?.trim() || "TBD"}</span>
+          <p>{game.opponent?.trim() || "TBD"}</p>
         </div>
       </div>
 
@@ -438,8 +439,7 @@ function PulseResult({
   opponentLogoUrl: string | null;
   opponentCountry: string | null;
 }) {
-  const date = new Date(game.game_date);
-  const dateLabel = date.toLocaleDateString(localeTag, {
+  const dateLabel = formatInBelgrade(game.game_date, localeTag, {
     day: "numeric",
     month: "short",
   });
@@ -524,13 +524,12 @@ function ResultLine({
   opponentLogoUrl: string | null;
   opponentCountry: string | null;
 }) {
-  const date = new Date(game.game_date);
-  const dateLabel = date.toLocaleDateString(localeTag, {
+  const dateLabel = formatInBelgrade(game.game_date, localeTag, {
     weekday: "short",
     day: "numeric",
     month: "short",
   });
-  const timeLabel = date.toLocaleTimeString(localeTag, {
+  const timeLabel = formatInBelgrade(game.game_date, localeTag, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -563,7 +562,7 @@ function EventPoster({
   locale: string;
 }) {
   const localeTag = toIntlLocale(locale);
-  const date = event.event_date ? new Date(event.event_date) : null;
+  const date = event.event_date;
   const title =
     locale === "ru" && event.title_ru
       ? event.title_ru
@@ -575,8 +574,8 @@ function EventPoster({
     <Link href={`/events/${event.id}`} className="club-event-poster">
       {date && (
         <div className="club-event-poster__date">
-          <span>{date.toLocaleDateString(localeTag, { month: "short" })}</span>
-          <strong>{date.getDate()}</strong>
+          <span>{formatInBelgrade(date, localeTag, { month: "short" })}</span>
+          <strong>{formatInBelgrade(date, localeTag, { day: "numeric" })}</strong>
         </div>
       )}
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -13,11 +14,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LocaleSwitcher } from "./LocaleSwitcher";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/lib/supabase/client";
 import { Menu, User, Shield, LogOut } from "lucide-react";
 import Image from "next/image";
+
+const LocaleSwitcher = dynamic(
+  () => import("./LocaleSwitcher").then((mod) => mod.LocaleSwitcher),
+  { ssr: false }
+);
 
 const navLinks = [
   { href: "/roster", key: "roster" },

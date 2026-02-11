@@ -36,6 +36,11 @@ import type {
 } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
+import {
+  belgradeDateTimeLocalInputToUtcIso,
+  formatInBelgrade,
+  utcToBelgradeDateTimeLocalInput,
+} from "@/lib/utils/datetime";
 
 type GameForm = {
   season_id: string;
@@ -401,7 +406,7 @@ export default function AdminGamesPage() {
       opponent_id: matchedOpponentId,
       opponent: snapshotName,
       location: game.location ?? "",
-      game_date: game.game_date.slice(0, 16),
+      game_date: utcToBelgradeDateTimeLocalInput(game.game_date),
       is_home: game.is_home,
       home_score: game.home_score,
       away_score: game.away_score,
@@ -551,20 +556,8 @@ export default function AdminGamesPage() {
     const isManagedByTournament = Boolean(editingGame?.auto_generated_from_tournament);
 
     if (isManagedByTournament && editingId) {
-      const res = await supabase
-        .from("games")
-        .update({ location: form.location || null })
-        .eq("id", editingId);
-
-      if (res.error) {
-        setError(res.error.message);
-        setSaving(false);
-        return;
-      }
-
       setDialogOpen(false);
       setSaving(false);
-      await loadData();
       return;
     }
 
@@ -621,6 +614,13 @@ export default function AdminGamesPage() {
       return;
     }
 
+    const gameDateUtc = belgradeDateTimeLocalInputToUtcIso(form.game_date);
+    if (!gameDateUtc) {
+      setError("Invalid game date");
+      setSaving(false);
+      return;
+    }
+
     const payload = editingId
       ? {
           season_id: form.season_id,
@@ -628,7 +628,7 @@ export default function AdminGamesPage() {
           opponent_id: opponentRecord.id,
           opponent: opponentRecord.name,
           location: form.location || null,
-          game_date: form.game_date,
+          game_date: gameDateUtc,
           is_home: form.is_home,
           home_score: form.home_score,
           away_score: form.away_score,
@@ -641,7 +641,7 @@ export default function AdminGamesPage() {
           opponent_id: opponentRecord.id,
           opponent: opponentRecord.name,
           location: form.location || null,
-          game_date: form.game_date,
+          game_date: gameDateUtc,
           is_home: form.is_home,
         };
 
@@ -940,6 +940,7 @@ export default function AdminGamesPage() {
                     value={form.location}
                     onChange={(e) => setForm({ ...form, location: e.target.value })}
                     className="bg-background"
+                    disabled={isManagedByTournament}
                   />
                 </div>
               </div>
@@ -1211,7 +1212,7 @@ export default function AdminGamesPage() {
                   <div className="space-y-1 rounded-md border border-border/40 p-2">
                     {opponentHistory.map((game) => (
                       <div key={game.id} className="text-xs text-muted-foreground flex items-center justify-between">
-                        <span>{new Date(game.game_date).toLocaleDateString("sr-Latn")}</span>
+                        <span>{formatInBelgrade(game.game_date, "sr-Latn", { dateStyle: "short" })}</span>
                         <span className="font-medium text-foreground">
                           {game.is_home ? game.home_score : game.away_score} : {game.is_home ? game.away_score : game.home_score}
                         </span>
@@ -1260,7 +1261,6 @@ export default function AdminGamesPage() {
       <div className="p-6 space-y-2">
         {games.map((game) => {
           const visual = resolveOpponentVisual(game, opponentVisuals);
-          const date = new Date(game.game_date);
           const teamScore = game.is_home ? game.home_score : game.away_score;
           const opponentScore = game.is_home ? game.away_score : game.home_score;
           return (
@@ -1272,12 +1272,12 @@ export default function AdminGamesPage() {
               opponentCountry={visual.country}
               teamScore={game.result === "pending" ? undefined : teamScore}
               opponentScore={game.result === "pending" ? undefined : opponentScore}
-              dateLabel={date.toLocaleDateString("sr-Latn", {
+              dateLabel={formatInBelgrade(game.game_date, "sr-Latn", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
               })}
-              timeLabel={date.toLocaleTimeString("sr-Latn", {
+              timeLabel={formatInBelgrade(game.game_date, "sr-Latn", {
                 hour: "2-digit",
                 minute: "2-digit",
               })}

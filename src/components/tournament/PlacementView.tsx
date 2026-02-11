@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import type { TournamentMatch, Team } from "@/types/database";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 interface Props {
   matches: TournamentMatch[];
@@ -21,10 +22,13 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
         {labels.playoffStage}
       </h3>
       {matches.map((match) => {
-        const teamA = teamsMap.get(match.team_a_id);
-        const teamB = teamsMap.get(match.team_b_id);
+        const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
+        const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
         const winner =
-          match.is_completed && match.score_a !== match.score_b
+          match.team_a_id &&
+          match.team_b_id &&
+          match.is_completed &&
+          match.score_a !== match.score_b
             ? match.score_a > match.score_b
               ? match.team_a_id
               : match.team_b_id
@@ -47,9 +51,9 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
                   } ${teamA?.is_propeleri ? "text-primary" : ""}`}
                 >
                   <div className="inline-flex items-center gap-2">
-                    <span className="text-sm">{teamA?.name ?? "?"}</span>
+                    <span className="text-sm">{teamA?.name ?? "TBD"}</span>
                     <TeamAvatar
-                      name={teamA?.name ?? "Team A"}
+                      name={teamA?.name ?? "TBD"}
                       logoUrl={teamA?.logo_url}
                       country={teamA?.country}
                       size="xs"
@@ -74,12 +78,12 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
                 >
                   <div className="inline-flex items-center gap-2">
                     <TeamAvatar
-                      name={teamB?.name ?? "Team B"}
+                      name={teamB?.name ?? "TBD"}
                       logoUrl={teamB?.logo_url}
                       country={teamB?.country}
                       size="xs"
                     />
-                    <span className="text-sm">{teamB?.name ?? "?"}</span>
+                    <span className="text-sm">{teamB?.name ?? "TBD"}</span>
                   </div>
                 </div>
               </div>
@@ -92,7 +96,7 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
               )}
               {match.match_date && (
                 <p className="text-xs text-muted-foreground text-center mt-1">
-                  {new Date(match.match_date).toLocaleString("sr-Latn", {
+                  {formatInBelgrade(match.match_date, "sr-Latn", {
                     dateStyle: "short",
                     timeStyle: "short",
                   })}

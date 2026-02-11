@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, MapPin, Megaphone } from "lucide-react";
 import type { TeamEvent } from "@/types/database";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 
 function getLocalizedField(
   item: TeamEvent,
@@ -93,14 +94,11 @@ export default async function EventsPage({
                           {event.event_date && (
                             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                               <CalendarDays className="h-3 w-3" />
-                              {new Date(event.event_date).toLocaleDateString(
-                                "sr-Latn",
-                                {
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                }
-                              )}
+                              {formatInBelgrade(event.event_date, "sr-Latn", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })}
                             </p>
                           )}
                           {event.location && (

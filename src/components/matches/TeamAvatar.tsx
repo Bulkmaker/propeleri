@@ -43,7 +43,7 @@ export function TeamAvatar({
         <img
           src={logoUrl ?? undefined}
           alt={name}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
           onError={() => setFailedLogoUrl(logoUrl ?? null)}
         />
       ) : (
