@@ -57,7 +57,6 @@ import type {
   TournamentGroupTeam,
   TournamentMatch,
   TournamentMatchStage,
-  Opponent,
 } from "@/types/database";
 
 function normalizeName(value: string) {
@@ -142,7 +141,6 @@ type TeamForm = {
   country: string;
   logo_url: string;
   is_propeleri: boolean;
-  opponent_id: string;
 };
 
 type MatchForm = {
@@ -165,7 +163,7 @@ export default function AdminTournamentDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [allTeams, setAllTeams] = useState<Team[]>([]);
-  const [opponents, setOpponents] = useState<Opponent[]>([]);
+  const [opponents, setOpponents] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [registeredPlayerIds, setRegisteredPlayerIds] = useState<string[]>([]);
   const [tournamentTeamJunctions, setTournamentTeamJunctions] = useState<TournamentTeam[]>([]);
@@ -186,7 +184,6 @@ export default function AdminTournamentDetailPage() {
     country: DEFAULT_COUNTRY_CODE,
     logo_url: "",
     is_propeleri: false,
-    opponent_id: "",
   });
   const [selectedExistingTeamId, setSelectedExistingTeamId] = useState("");
 
@@ -199,7 +196,6 @@ export default function AdminTournamentDetailPage() {
     country: "",
     logo_url: "",
     is_propeleri: false,
-    opponent_id: "",
   });
 
   // Group dialogs
@@ -318,7 +314,7 @@ export default function AdminTournamentDetailPage() {
     );
 
     setMatches((matchesRes.data ?? []) as TournamentMatch[]);
-    setOpponents((opponentsRes.data ?? []) as Opponent[]);
+    setOpponents((opponentsRes.data ?? []) as Team[]);
     setLoading(false);
   }, [supabase, tournamentId]);
 
@@ -344,7 +340,7 @@ export default function AdminTournamentDetailPage() {
       .limit(1);
 
     if (existingRows?.[0]) {
-      const row = existingRows[0] as Opponent;
+      const row = existingRows[0] as Team;
       setOpponents((prev) =>
         prev.some((opponent) => opponent.id === row.id) ? prev : [...prev, row]
       );
@@ -362,7 +358,7 @@ export default function AdminTournamentDetailPage() {
       return null;
     }
 
-    const created = inserted as Opponent;
+    const created = inserted as Team;
     setOpponents((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
     return created.id;
   }
@@ -419,12 +415,6 @@ export default function AdminTournamentDetailPage() {
     if (teamMode === "existing" && selectedExistingTeamId) {
       teamId = selectedExistingTeamId;
     } else {
-      let opponentId: string | null = null;
-      if (!teamForm.is_propeleri) {
-        opponentId =
-          teamForm.opponent_id || (await ensureOpponent(teamForm.name)) || null;
-      }
-
       const { data, error: createError } = await supabase
         .from("teams")
         .insert({
@@ -433,7 +423,6 @@ export default function AdminTournamentDetailPage() {
           country: teamForm.country || null,
           logo_url: teamForm.logo_url || null,
           is_propeleri: teamForm.is_propeleri,
-          opponent_id: teamForm.is_propeleri ? null : opponentId,
         })
         .select("id")
         .single();
@@ -465,7 +454,6 @@ export default function AdminTournamentDetailPage() {
       country: DEFAULT_COUNTRY_CODE,
       logo_url: "",
       is_propeleri: false,
-      opponent_id: "",
     });
     setSelectedExistingTeamId("");
     setSaving(false);
@@ -480,7 +468,6 @@ export default function AdminTournamentDetailPage() {
       country: resolveCountryCode(team.country) || team.country || "",
       logo_url: team.logo_url ?? "",
       is_propeleri: team.is_propeleri,
-      opponent_id: team.opponent_id ?? "",
     });
     setTeamEditDialogOpen(true);
   }
@@ -491,11 +478,6 @@ export default function AdminTournamentDetailPage() {
     setSaving(true);
     setError("");
 
-    let opponentId: string | null = teamEditForm.opponent_id || null;
-    if (!teamEditForm.is_propeleri && !opponentId) {
-      opponentId = (await ensureOpponent(teamEditForm.name)) || null;
-    }
-
     const { error: updateError } = await supabase
       .from("teams")
       .update({
@@ -504,7 +486,6 @@ export default function AdminTournamentDetailPage() {
         country: teamEditForm.country || null,
         logo_url: teamEditForm.logo_url || null,
         is_propeleri: teamEditForm.is_propeleri,
-        opponent_id: teamEditForm.is_propeleri ? null : opponentId,
       })
       .eq("id", editingTeam.id);
 

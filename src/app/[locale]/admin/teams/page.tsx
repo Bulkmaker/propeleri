@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Pencil, Plus, Upload } from "lucide-react";
 import imageCompression from "browser-image-compression";
-import type { Game, GameResult, Opponent, Team } from "@/types/database";
+import type { Game, GameResult, Team } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
@@ -42,7 +42,6 @@ export default function AdminTeamsPage() {
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [games, setGames] = useState<Game[]>([]);
-  const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -61,19 +60,13 @@ export default function AdminTeamsPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const loadData = useCallback(async () => {
-    const [teamsRes, gamesRes, opponentsRes] = await Promise.all([
+    const [teamsRes, gamesRes] = await Promise.all([
       supabase.from("teams").select("*").order("name", { ascending: true }),
       supabase.from("games").select("*").order("game_date", { ascending: false }),
-      supabase
-        .from("opponents")
-        .select("*")
-        .eq("is_active", true)
-        .order("name", { ascending: true }),
     ]);
 
     setTeams((teamsRes.data ?? []) as Team[]);
     setGames((gamesRes.data ?? []) as Game[]);
-    setOpponents((opponentsRes.data ?? []) as Opponent[]);
     setLoading(false);
   }, [supabase]);
 
@@ -84,42 +77,6 @@ export default function AdminTeamsPage() {
     return () => window.clearTimeout(timer);
   }, [loadData]);
 
-  function findOpponentByName(value: string) {
-    const normalized = normalizeName(value);
-    return opponents.find((opponent) => normalizeName(opponent.name) === normalized) ?? null;
-  }
-
-  async function ensureOpponent(name: string): Promise<Opponent | null> {
-    const cleaned = name.trim();
-    if (!cleaned) return null;
-
-    const local = findOpponentByName(cleaned);
-    if (local) return local;
-
-    const normalized = normalizeName(cleaned);
-    const { data: existingRows } = await supabase
-      .from("opponents")
-      .select("*")
-      .eq("normalized_name", normalized)
-      .limit(1);
-
-    if (existingRows?.[0]) {
-      return existingRows[0] as Opponent;
-    }
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("opponents")
-      .insert({ name: cleaned })
-      .select("*")
-      .single();
-
-    if (insertError) {
-      setError(insertError.message);
-      return null;
-    }
-
-    return inserted as Opponent;
-  }
 
   async function uploadTeamLogo(file: File) {
     setUploadingLogo(true);
@@ -191,23 +148,12 @@ export default function AdminTeamsPage() {
     setSaving(true);
     setError("");
 
-    let opponentId: string | null = null;
-    if (!form.is_propeleri) {
-      const opponent = await ensureOpponent(form.name);
-      if (!opponent) {
-        setSaving(false);
-        return;
-      }
-      opponentId = opponent.id;
-    }
-
     const payload = {
       name: form.name.trim(),
       city: form.city.trim() || null,
       country: form.country.trim() || null,
       logo_url: form.logo_url.trim() || null,
       is_propeleri: form.is_propeleri,
-      opponent_id: form.is_propeleri ? null : opponentId,
     };
 
     const result = editingTeam
@@ -226,31 +172,23 @@ export default function AdminTeamsPage() {
   }
 
   const historyByTeam = useMemo(() => {
-    const normalizedOpponentById = new Map<string, string>();
-    for (const opponent of opponents) {
-      normalizedOpponentById.set(opponent.id, normalizeName(opponent.name));
-    }
-
     const map = new Map<string, Game[]>();
     for (const team of teams) {
       if (team.is_propeleri) continue;
 
       const teamName = normalizeName(team.name);
       const gamesForTeam = games.filter((game) => {
-        if (team.opponent_id && game.opponent_id) {
-          return game.opponent_id === team.opponent_id;
+        // Match by opponent_team_id if available
+        if (game.opponent_team_id) {
+          return game.opponent_team_id === team.id;
         }
 
-        if (team.opponent_id && !game.opponent_id) {
-          return teamName === normalizeName(game.opponent);
+        // Fallback to name matching for old games
+        if (game.opponent) {
+          return normalizeName(game.opponent) === teamName;
         }
 
-        if (!team.opponent_id && game.opponent_id) {
-          const opponentName = normalizedOpponentById.get(game.opponent_id);
-          return opponentName === teamName;
-        }
-
-        return normalizeName(game.opponent) === teamName;
+        return false;
       });
 
       map.set(
@@ -262,7 +200,7 @@ export default function AdminTeamsPage() {
     }
 
     return map;
-  }, [games, opponents, teams]);
+  }, [games, teams]);
 
   if (loading) {
     return (

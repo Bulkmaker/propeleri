@@ -10,7 +10,6 @@ import type {
   GameStats,
   SlotPosition,
   Team,
-  Opponent,
   Tournament,
   TournamentMatch,
   Profile,
@@ -48,7 +47,7 @@ export default async function GameDetailPage({
 
   if (!game) notFound();
 
-  const [lineupRes, statsRes, teamsRes, opponentsRes, tournamentsRes, tournamentMatchRes] = await Promise.all([
+  const [lineupRes, statsRes, teamsRes, tournamentsRes, tournamentMatchRes] = await Promise.all([
     supabase
       .from("game_lineups")
       .select("*, player:profiles(*)")
@@ -59,7 +58,6 @@ export default async function GameDetailPage({
       .eq("game_id", gameId)
       .order("goals", { ascending: false }),
     supabase.from("teams").select("*"),
-    supabase.from("opponents").select("*").eq("is_active", true),
     supabase.from("tournaments").select("*"),
     supabase.from("tournament_matches").select("*").eq("game_id", gameId).maybeSingle()
   ]);
@@ -67,7 +65,6 @@ export default async function GameDetailPage({
   const lineup = (lineupRes.data ?? []) as GameLineupEntry[];
   const stats = (statsRes.data ?? []) as GameStatEntry[];
   const teams = (teamsRes.data ?? []) as Team[];
-  const opponents = (opponentsRes.data ?? []) as Opponent[];
   const tournaments = (tournamentsRes.data ?? []) as Tournament[];
   const tournamentMatch = (tournamentMatchRes.data ?? null) as TournamentMatch | null;
 
@@ -86,7 +83,6 @@ export default async function GameDetailPage({
         lineup={lineup}
         stats={stats}
         teams={teams}
-        opponents={opponents}
         tournaments={tournaments}
         tournamentMatch={tournamentMatch}
         locale={locale}
