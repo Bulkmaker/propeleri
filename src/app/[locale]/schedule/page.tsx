@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
+import { TrainingScoreView } from "@/components/training/TrainingScoreView";
 import { CalendarDays, Dumbbell } from "lucide-react";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import type {
@@ -16,6 +17,7 @@ import type {
   TrainingSessionStatus,
 } from "@/types/database";
 import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
+import { parseTrainingMatchData } from "@/lib/utils/training-match";
 
 type ScheduleItem = {
   id: string;
@@ -27,6 +29,8 @@ type ScheduleItem = {
   opponentCountry?: string | null;
   teamScore?: number;
   opponentScore?: number;
+  trainingScoreA?: number;
+  trainingScoreB?: number;
   subtitle?: string;
   result?: GameResult;
   status?: TrainingSessionStatus;
@@ -43,6 +47,15 @@ function statusBadgeClass(status: TrainingSessionStatus) {
   if (status === "completed") return "bg-green-500/10 text-green-500 border-green-500/20";
   if (status === "canceled") return "bg-red-500/10 text-red-500 border-red-500/20";
   return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+}
+
+function getEndOfCurrentWeek(date: Date) {
+  const endOfWeek = new Date(date);
+  const dayOfWeek = endOfWeek.getDay(); // 0 = Sunday
+  const daysUntilSunday = (7 - dayOfWeek) % 7;
+  endOfWeek.setDate(endOfWeek.getDate() + daysUntilSunday);
+  endOfWeek.setHours(23, 59, 59, 999);
+  return endOfWeek;
 }
 
 export default async function SchedulePage({
@@ -98,20 +111,33 @@ export default async function SchedulePage({
         href: `/games/${game.id}`,
       };
     }),
-    ...trainings.map((session) => ({
-      id: session.id,
-      type: "training" as const,
-      date: session.session_date,
-      title: session.title || ts("session"),
-      status: normalizeStatus(session.status),
-      location: session.location ?? undefined,
-      href: `/training/${session.id}`,
-    })),
+    ...trainings.map((session) => {
+      const matchData = parseTrainingMatchData(session.match_data);
+      return {
+        id: session.id,
+        type: "training" as const,
+        date: session.session_date,
+        title: session.title || ts("session"),
+        status: normalizeStatus(session.status),
+        trainingScoreA: matchData?.team_a_score,
+        trainingScoreB: matchData?.team_b_score,
+        location: session.location ?? undefined,
+        href: `/training/${session.id}`,
+      };
+    }),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const now = new Date();
-  const upcoming = items.filter((i) => new Date(i.date) >= now);
-  const past = items.filter((i) => new Date(i.date) < now).reverse();
+  const endOfWeek = getEndOfCurrentWeek(now);
+  const filteredItems = items.filter((item) => {
+    const itemDate = new Date(item.date);
+    if (itemDate < now) return true;
+    if (item.type === "training") return itemDate <= endOfWeek;
+    return true;
+  });
+
+  const upcoming = filteredItems.filter((i) => new Date(i.date) >= now);
+  const past = filteredItems.filter((i) => new Date(i.date) < now).reverse();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -122,7 +148,7 @@ export default async function SchedulePage({
         <h1 className="text-3xl font-bold">{t("title")}</h1>
       </div>
 
-      {items.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <CalendarDays className="h-12 w-12 mx-auto mb-4 opacity-30" />
           <p>{t("noEvents")}</p>
@@ -225,6 +251,14 @@ function ScheduleCard({ item }: { item: ScheduleItem }) {
               </p>
             </div>
           </div>
+          {item.trainingScoreA != null && item.trainingScoreB != null && (
+            <TrainingScoreView
+              teamAScore={item.trainingScoreA}
+              teamBScore={item.trainingScoreB}
+              teamALabel={tt("teamA")}
+              teamBLabel={tt("teamB")}
+            />
+          )}
         </CardContent>
       </Card>
     </Link>

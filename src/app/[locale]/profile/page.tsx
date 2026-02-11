@@ -75,6 +75,7 @@ export default function ProfilePage() {
       .update({
         first_name: profile.first_name,
         last_name: profile.last_name,
+        nickname: profile.nickname,
         jersey_number: profile.jersey_number,
         position: profile.position,
         bio: profile.bio,
@@ -196,7 +197,7 @@ export default function ProfilePage() {
 
           {/* Form */}
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{t("title") === "Moj profil" ? "Ime" : "First Name"}</Label>
                 <Input
@@ -213,6 +214,16 @@ export default function ProfilePage() {
                   value={profile.last_name}
                   onChange={(e) =>
                     setProfile({ ...profile, last_name: e.target.value })
+                  }
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("nickname")}</Label>
+                <Input
+                  value={profile.nickname ?? ""}
+                  onChange={(e) =>
+                    setProfile({ ...profile, nickname: e.target.value || null })
                   }
                   className="bg-background"
                 />

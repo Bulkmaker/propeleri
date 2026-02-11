@@ -9,6 +9,7 @@ import { Users } from "lucide-react";
 import type { Profile } from "@/types/database";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import type { PlayerPosition } from "@/types/database";
+import { formatPlayerName } from "@/lib/utils/player-name";
 
 export default async function RosterPage({
   params,
@@ -108,7 +109,7 @@ function PlayerCard({ player }: { player: Profile }) {
             </p>
           )}
           <p className="font-semibold text-sm">
-            {player.first_name} {player.last_name}
+            {formatPlayerName(player)}
           </p>
           <Badge
             variant="secondary"

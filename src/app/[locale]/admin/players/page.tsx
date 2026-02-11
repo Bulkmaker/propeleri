@@ -34,10 +34,18 @@ import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload } from "lucide-re
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
 import imageCompression from "browser-image-compression";
+import {
+  extractLoginFromEmail,
+  isSyntheticLoginEmail,
+  isTechnicalPlayerEmail,
+  normalizeLogin,
+} from "@/lib/auth/login";
+import { formatPlayerName } from "@/lib/utils/player-name";
 
 interface PlayerForm {
   first_name: string;
   last_name: string;
+  nickname: string;
   jersey_number: string;
   position: PlayerPosition;
   team_role: PlayerRole;
@@ -48,6 +56,7 @@ interface PlayerForm {
   phone: string;
   bio: string;
   default_training_team: string;
+  is_guest: boolean;
   is_active: boolean;
   is_approved: boolean;
 }
@@ -74,16 +83,21 @@ export default function AdminPlayersPage() {
   const [editingPlayer, setEditingPlayer] = useState<Profile | null>(null);
   const [activeSort, setActiveSort] = useState<ActivePlayersSort>("name");
   const [createForm, setCreateForm] = useState({
-    email: "",
+    login: "",
     password: "",
     first_name: "",
-    last_name: "",
+    is_guest: false,
     jersey_number: "",
     position: "forward" as PlayerPosition,
+  });
+  const [credentialsForm, setCredentialsForm] = useState({
+    login: "",
+    password: "",
   });
   const [form, setForm] = useState<PlayerForm>({
     first_name: "",
     last_name: "",
+    nickname: "",
     jersey_number: "",
     position: "forward",
     team_role: "player",
@@ -94,6 +108,7 @@ export default function AdminPlayersPage() {
     phone: "",
     bio: "",
     default_training_team: "none",
+    is_guest: false,
     is_active: true,
     is_approved: true,
   });
@@ -140,9 +155,14 @@ export default function AdminPlayersPage() {
   function openEdit(player: Profile) {
     setEditingPlayer(player);
     setError("");
+    setCredentialsForm({
+      login: "",
+      password: "",
+    });
     setForm({
       first_name: player.first_name,
       last_name: player.last_name,
+      nickname: player.nickname ?? "",
       jersey_number: player.jersey_number?.toString() ?? "",
       position: player.position,
       team_role: player.team_role,
@@ -153,6 +173,7 @@ export default function AdminPlayersPage() {
       phone: player.phone ?? "",
       bio: player.bio ?? "",
       default_training_team: player.default_training_team ?? "none",
+      is_guest: player.is_guest ?? false,
       is_active: player.is_active,
       is_approved: player.is_approved,
     });
@@ -169,6 +190,7 @@ export default function AdminPlayersPage() {
       .update({
         first_name: form.first_name,
         last_name: form.last_name,
+        nickname: form.nickname.trim() || null,
         jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
         position: form.position,
         team_role: form.team_role,
@@ -179,6 +201,7 @@ export default function AdminPlayersPage() {
         phone: form.phone || null,
         bio: form.bio || null,
         default_training_team: form.default_training_team === "none" ? null : form.default_training_team,
+        is_guest: form.is_guest,
         is_active: form.is_active,
         is_approved: form.is_approved,
       })
@@ -188,6 +211,34 @@ export default function AdminPlayersPage() {
       setError(err.message);
       setSaving(false);
       return;
+    }
+
+    const credentialsLogin = normalizeLogin(credentialsForm.login);
+    const credentialsPassword = credentialsForm.password;
+    const credentialsProvided = Boolean(credentialsLogin) || Boolean(credentialsPassword);
+    if (credentialsProvided) {
+      if (!credentialsLogin || !credentialsPassword) {
+        setError(t("fillBothCredentials"));
+        setSaving(false);
+        return;
+      }
+
+      const credentialsRes = await fetch("/api/admin/players", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingPlayer.id,
+          login: credentialsLogin,
+          password: credentialsPassword,
+        }),
+      });
+
+      const credentialsData = await credentialsRes.json();
+      if (!credentialsRes.ok) {
+        setError(credentialsData.error || "Failed to update credentials");
+        setSaving(false);
+        return;
+      }
     }
 
     setDialogOpen(false);
@@ -245,10 +296,10 @@ export default function AdminPlayersPage() {
   function openCreate() {
     setError("");
     setCreateForm({
-      email: "",
+      login: "",
       password: "",
       first_name: "",
-      last_name: "",
+      is_guest: false,
       jersey_number: "",
       position: "forward",
     });
@@ -259,10 +310,22 @@ export default function AdminPlayersPage() {
     setSaving(true);
     setError("");
 
+    const login = normalizeLogin(createForm.login);
+    const password = createForm.password;
+    if ((login && !password) || (!login && password)) {
+      setError(t("fillBothCredentials"));
+      setSaving(false);
+      return;
+    }
+
     const res = await fetch("/api/admin/players", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(createForm),
+      body: JSON.stringify({
+        ...createForm,
+        login: login || null,
+        password: password || null,
+      }),
     });
 
     const data = await res.json();
@@ -326,6 +389,28 @@ export default function AdminPlayersPage() {
     }).format(parsed);
   }
 
+  function renderPlayerLogin(player: Profile) {
+    if (player.username) {
+      return player.username;
+    }
+
+    const loginFromSyntheticEmail = extractLoginFromEmail(player.email);
+    if (loginFromSyntheticEmail) {
+      return loginFromSyntheticEmail;
+    }
+
+    if (isTechnicalPlayerEmail(player.email)) {
+      return t("noLogin");
+    }
+
+    if (isSyntheticLoginEmail(player.email)) {
+      return t("noLogin");
+    }
+
+    // Backward compatibility for legacy email-based accounts.
+    return player.email;
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -350,7 +435,8 @@ export default function AdminPlayersPage() {
         <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {t("editPlayer")} — {editingPlayer?.first_name} {editingPlayer?.last_name}
+              {t("editPlayer")}
+              {editingPlayer ? ` — ${formatPlayerName(editingPlayer)}` : ""}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -384,7 +470,7 @@ export default function AdminPlayersPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{ta("firstName")}</Label>
                 <Input
@@ -398,6 +484,14 @@ export default function AdminPlayersPage() {
                 <Input
                   value={form.last_name}
                   onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{tpr("nickname")}</Label>
+                <Input
+                  value={form.nickname}
+                  onChange={(e) => setForm({ ...form, nickname: e.target.value })}
                   className="bg-background"
                 />
               </div>
@@ -480,6 +574,33 @@ export default function AdminPlayersPage() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t("loginField")}</Label>
+                <Input
+                  value={credentialsForm.login}
+                  onChange={(e) =>
+                    setCredentialsForm({ ...credentialsForm, login: e.target.value })
+                  }
+                  placeholder={t("credentialsOptional")}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("loginPassword")}</Label>
+                <Input
+                  type="text"
+                  value={credentialsForm.password}
+                  onChange={(e) =>
+                    setCredentialsForm({ ...credentialsForm, password: e.target.value })
+                  }
+                  placeholder={t("credentialsOptional")}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("credentialsHint")}</p>
+
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{t("teamRoleColumn")}</Label>
@@ -534,6 +655,15 @@ export default function AdminPlayersPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={form.is_guest}
+                  onChange={(e) => setForm({ ...form, is_guest: e.target.checked })}
+                  className="rounded border-border"
+                />
+                <span className="text-sm">{tt("guest")}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={form.is_active}
                   onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
                   className="rounded border-border"
@@ -558,7 +688,7 @@ export default function AdminPlayersPage() {
             )}
             <Button
               onClick={handleSave}
-              disabled={saving || !form.first_name || !form.last_name}
+              disabled={saving || !form.first_name.trim()}
               className="w-full bg-primary"
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -575,7 +705,7 @@ export default function AdminPlayersPage() {
             <DialogTitle>{t("addPlayerTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label>{ta("firstName")}</Label>
                 <Input
@@ -584,36 +714,29 @@ export default function AdminPlayersPage() {
                   className="bg-background"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>{ta("lastName")}</Label>
-                <Input
-                  value={createForm.last_name}
-                  onChange={(e) => setCreateForm({ ...createForm, last_name: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>{ta("email")}</Label>
+              <Label>{t("loginField")}</Label>
               <Input
-                type="email"
-                value={createForm.email}
-                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                value={createForm.login}
+                onChange={(e) => setCreateForm({ ...createForm, login: e.target.value })}
                 className="bg-background"
+                placeholder={t("credentialsOptional")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>{ta("password")}</Label>
+              <Label>{t("loginPassword")}</Label>
               <Input
                 type="text"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 className="bg-background"
-                placeholder={t("minPasswordChars")}
+                placeholder={t("credentialsOptional")}
               />
             </div>
+            <p className="text-xs text-muted-foreground">{t("credentialsHint")}</p>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -645,6 +768,16 @@ export default function AdminPlayersPage() {
               </div>
             </div>
 
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={createForm.is_guest}
+                onChange={(e) => setCreateForm({ ...createForm, is_guest: e.target.checked })}
+                className="rounded border-border"
+              />
+              <span className="text-sm">{tt("guest")}</span>
+            </label>
+
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
                 {error}
@@ -652,7 +785,7 @@ export default function AdminPlayersPage() {
             )}
             <Button
               onClick={handleCreate}
-              disabled={saving || !createForm.first_name || !createForm.last_name || !createForm.email || !createForm.password}
+              disabled={saving || !createForm.first_name.trim()}
               className="w-full bg-primary"
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -682,10 +815,10 @@ export default function AdminPlayersPage() {
                 >
                   <div>
                     <p className="font-medium">
-                      {player.first_name} {player.last_name}
+                      {formatPlayerName(player)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {player.email}
+                      {renderPlayerLogin(player)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -758,7 +891,7 @@ export default function AdminPlayersPage() {
                   <TableCell className="font-medium">
                     <div className="flex flex-wrap items-center gap-2">
                       <span>
-                        {player.first_name} {player.last_name}
+                        {formatPlayerName(player)}
                       </span>
                       {player.team_role === "captain" && (
                         <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
@@ -770,10 +903,15 @@ export default function AdminPlayersPage() {
                           {tr("assistantCaptain")}
                         </Badge>
                       )}
+                      {player.is_guest && (
+                        <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                          {tt("guest")}
+                        </Badge>
+                      )}
                     </div>
                     <br />
                     <span className="text-xs text-muted-foreground">
-                      {player.email}
+                      {renderPlayerLogin(player)}
                     </span>
                   </TableCell>
                   <TableCell>

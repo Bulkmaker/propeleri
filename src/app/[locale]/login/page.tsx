@@ -10,11 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
+import { isValidLogin, loginToEmail, normalizeLogin } from "@/lib/auth/login";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,8 +23,23 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    const normalizedLogin = normalizeLogin(login);
+    if (!normalizedLogin) {
+      setError(t("loginRequired"));
+      return;
+    }
+
+    if (!normalizedLogin.includes("@") && !isValidLogin(normalizedLogin)) {
+      setError(t("invalidLoginFormat"));
+      return;
+    }
+
     setLoading(true);
 
+    const email = normalizedLogin.includes("@")
+      ? normalizedLogin
+      : loginToEmail(normalizedLogin);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -56,13 +72,13 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
+              <Label htmlFor="login">{t("loginField")}</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                id="login"
+                type="text"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                placeholder={t("loginPlaceholder")}
                 required
                 className="bg-background border-border"
               />

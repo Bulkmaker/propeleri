@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle } from "lucide-react";
 import Image from "next/image";
+import { isValidLogin, loginToEmail, normalizeLogin } from "@/lib/auth/login";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -36,16 +38,30 @@ export default function RegisterPage() {
       return;
     }
 
+    const normalizedLogin = normalizeLogin(login);
+    if (!normalizedLogin) {
+      setError(t("loginRequired"));
+      return;
+    }
+
+    if (!isValidLogin(normalizedLogin)) {
+      setError(t("invalidLoginFormat"));
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const email = loginToEmail(normalizedLogin);
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           first_name: firstName,
           last_name: lastName,
+          nickname: nickname.trim() || null,
+          username: normalizedLogin,
         },
       },
     });
@@ -54,6 +70,17 @@ export default function RegisterPage() {
       setError(error.message);
       setLoading(false);
       return;
+    }
+
+    if (data.user) {
+      await supabase
+        .from("profiles")
+        .update({
+          email,
+          nickname: nickname.trim() || null,
+          username: normalizedLogin,
+        })
+        .eq("id", data.user.id);
     }
 
     setSuccess(true);
@@ -119,13 +146,22 @@ export default function RegisterPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
+              <Label htmlFor="nickname">{t("nickname")}</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                className="bg-background border-border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login">{t("loginField")}</Label>
+              <Input
+                id="login"
+                type="text"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                placeholder={t("loginPlaceholder")}
                 required
                 className="bg-background border-border"
               />

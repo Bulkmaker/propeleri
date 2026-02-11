@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +24,7 @@ import type {
   TrainingStats,
   TrainingTeam,
 } from "@/types/database";
+import { formatPlayerName, formatPlayerNameWithNumber } from "@/lib/utils/player-name";
 
 const NONE_OPTION = "__none__";
 
@@ -31,9 +32,11 @@ interface TrainingRow {
   player_id: string;
   first_name: string;
   last_name: string;
+  nickname: string | null;
   jersey_number: number | null;
   default_training_team: TrainingTeam | null;
   attended: boolean;
+  is_guest: boolean;
   goals: number;
   assists: number;
   training_team: TrainingTeam | null;
@@ -110,6 +113,38 @@ function normalizeGoalEventsCount(
   return next;
 }
 
+function buildAutosaveSnapshot(
+  rows: TrainingRow[],
+  matchScoreA: number,
+  matchScoreB: number,
+  teamAGoalieId: string,
+  teamBGoalieId: string,
+  goalEvents: GoalEventForm[]
+) {
+  return JSON.stringify({
+    rows: [...rows]
+      .map((row) => ({
+        player_id: row.player_id,
+        attended: row.attended,
+        goals: row.goals,
+        assists: row.assists,
+        training_team: row.training_team,
+      }))
+      .sort((a, b) => a.player_id.localeCompare(b.player_id)),
+    match: {
+      team_a_score: matchScoreA,
+      team_b_score: matchScoreB,
+      team_a_goalie_player_id: teamAGoalieId,
+      team_b_goalie_player_id: teamBGoalieId,
+      goal_events: goalEvents.map((event) => ({
+        team: event.team,
+        scorer_player_id: event.scorer_player_id,
+        assist_player_id: event.assist_player_id,
+      })),
+    },
+  });
+}
+
 export default function TrainingStatsEntryPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
@@ -123,6 +158,9 @@ export default function TrainingStatsEntryPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [session, setSession] = useState<TrainingSession | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle"
+  );
 
   const [matchScoreA, setMatchScoreA] = useState(0);
   const [matchScoreB, setMatchScoreB] = useState(0);
@@ -131,6 +169,9 @@ export default function TrainingStatsEntryPage() {
   const [goalEvents, setGoalEvents] = useState<GoalEventForm[]>([]);
 
   const supabase = useMemo(() => createClient(), []);
+  const isInitializedRef = useRef(false);
+  const savingRef = useRef(false);
+  const lastSavedSnapshotRef = useRef("");
 
   useEffect(() => {
     async function load() {
@@ -154,9 +195,11 @@ export default function TrainingStatsEntryPage() {
           player_id: p.id,
           first_name: p.first_name,
           last_name: p.last_name,
+          nickname: p.nickname,
           jersey_number: p.jersey_number,
           default_training_team: p.default_training_team,
           attended: e?.attended ?? false,
+          is_guest: p.is_guest ?? false,
           goals: e?.goals ?? 0,
           assists: e?.assists ?? 0,
           training_team: e?.training_team ?? null,
@@ -210,21 +253,39 @@ export default function TrainingStatsEntryPage() {
     setGoalEvents((prev) => normalizeGoalEventsCount(prev, nextA, nextB));
   }
 
-  function toggleAttendance(idx: number) {
+  function toggleAttendance(playerId: string) {
     setRows((prev) =>
-      prev.map((row, i) => (i === idx ? { ...row, attended: !row.attended } : row))
+      prev.map((row) => {
+        if (row.player_id !== playerId) return row;
+        const nextAttended = !row.attended;
+        return {
+          ...row,
+          attended: nextAttended,
+          training_team: nextAttended
+            ? row.training_team ?? row.default_training_team ?? null
+            : row.training_team,
+        };
+      })
     );
   }
 
-  function updateRow(idx: number, field: "goals" | "assists", value: number) {
+  function updateRow(
+    playerId: string,
+    field: "goals" | "assists",
+    value: number
+  ) {
     setRows((prev) =>
-      prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row))
+      prev.map((row) =>
+        row.player_id === playerId ? { ...row, [field]: value } : row
+      )
     );
   }
 
-  function setTeam(idx: number, team: TrainingTeam | null) {
+  function setTeam(playerId: string, team: TrainingTeam | null) {
     setRows((prev) =>
-      prev.map((row, i) => (i === idx ? { ...row, training_team: team } : row))
+      prev.map((row) =>
+        row.player_id === playerId ? { ...row, training_team: team } : row
+      )
     );
   }
 
@@ -248,6 +309,28 @@ export default function TrainingStatsEntryPage() {
     () =>
       rows
         .filter((row) => row.attended && row.training_team === "team_b")
+        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+    [rows]
+  );
+
+  const teamRowsA = useMemo(
+    () =>
+      rows
+        .filter((row) => row.training_team === "team_a")
+        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+    [rows]
+  );
+  const teamRowsB = useMemo(
+    () =>
+      rows
+        .filter((row) => row.training_team === "team_b")
+        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+    [rows]
+  );
+  const unassignedRows = useMemo(
+    () =>
+      rows
+        .filter((row) => !row.training_team)
         .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
     [rows]
   );
@@ -288,10 +371,25 @@ export default function TrainingStatsEntryPage() {
     );
   }
 
-  async function handleSave() {
+  const autosaveSnapshot = useMemo(
+    () =>
+      buildAutosaveSnapshot(
+        rows,
+        matchScoreA,
+        matchScoreB,
+        teamAGoalieId,
+        teamBGoalieId,
+        goalEvents
+      ),
+    [goalEvents, matchScoreA, matchScoreB, rows, teamAGoalieId, teamBGoalieId]
+  );
+
+  const persistChanges = useCallback(async (showMessage: boolean) => {
+    if (savingRef.current) return false;
+    savingRef.current = true;
     setSaving(true);
-    setMessage("");
     setError("");
+    if (showMessage) setMessage("");
 
     const structuredMode = matchScoreA + matchScoreB > 0;
     const goalsByPlayer = new Map<string, number>();
@@ -300,9 +398,8 @@ export default function TrainingStatsEntryPage() {
 
     if (structuredMode) {
       for (const event of goalEvents) {
-        const teamPlayerIds = new Set(
-          getPlayersByTeam(event.team).map((player) => player.player_id)
-        );
+        const teamPlayers = event.team === "team_a" ? attendedTeamA : attendedTeamB;
+        const teamPlayerIds = new Set(teamPlayers.map((player) => player.player_id));
 
         if (!event.scorer_player_id) {
           continue;
@@ -311,7 +408,8 @@ export default function TrainingStatsEntryPage() {
         if (!teamPlayerIds.has(event.scorer_player_id)) {
           setError("Автор гола должен быть из выбранной команды и отмечен как присутствующий.");
           setSaving(false);
-          return;
+          savingRef.current = false;
+          return false;
         }
 
         if (
@@ -321,7 +419,8 @@ export default function TrainingStatsEntryPage() {
         ) {
           setError("Ассист должен быть из той же команды и не совпадать с автором гола.");
           setSaving(false);
-          return;
+          savingRef.current = false;
+          return false;
         }
 
         goalsByPlayer.set(
@@ -348,6 +447,7 @@ export default function TrainingStatsEntryPage() {
       session_id: sessionId,
       player_id: row.player_id,
       attended: row.attended,
+      is_guest: row.attended ? row.is_guest : false,
       training_team: row.training_team,
       goals: structuredMode ? goalsByPlayer.get(row.player_id) ?? 0 : row.goals,
       assists: structuredMode ? assistsByPlayer.get(row.player_id) ?? 0 : row.assists,
@@ -360,7 +460,8 @@ export default function TrainingStatsEntryPage() {
     if (statsRes.error) {
       setError(statsRes.error.message);
       setSaving(false);
-      return;
+      savingRef.current = false;
+      return false;
     }
 
     const hasMatchData =
@@ -389,12 +490,149 @@ export default function TrainingStatsEntryPage() {
     if (sessionRes.error) {
       setError(sessionRes.error.message);
       setSaving(false);
-      return;
+      savingRef.current = false;
+      return false;
     }
 
     setSession((prev) => (prev ? { ...prev, match_data: matchData } : prev));
-    setMessage("Статистика и матч сохранены.");
+    if (showMessage) {
+      setMessage("Статистика и матч сохранены.");
+    }
     setSaving(false);
+    savingRef.current = false;
+    return true;
+  }, [
+    attendedTeamA,
+    attendedTeamB,
+    goalEvents,
+    matchScoreA,
+    matchScoreB,
+    rows,
+    sessionId,
+    supabase,
+    teamAGoalieId,
+    teamBGoalieId,
+  ]);
+
+  async function handleSave() {
+    const ok = await persistChanges(true);
+    if (ok) {
+      lastSavedSnapshotRef.current = autosaveSnapshot;
+      setAutosaveStatus("saved");
+    }
+  }
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      lastSavedSnapshotRef.current = autosaveSnapshot;
+      return;
+    }
+
+    if (autosaveSnapshot === lastSavedSnapshotRef.current) return;
+
+    const timer = window.setTimeout(async () => {
+      setAutosaveStatus("saving");
+      const ok = await persistChanges(false);
+      if (ok) {
+        lastSavedSnapshotRef.current = autosaveSnapshot;
+        setAutosaveStatus("saved");
+      } else {
+        setAutosaveStatus("error");
+      }
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [autosaveSnapshot, loading, persistChanges]);
+
+  function renderPlayerRow(row: TrainingRow) {
+    const structuredMode = matchScoreA + matchScoreB > 0;
+
+    return (
+      <div
+        key={row.player_id}
+        className="rounded-md border border-border/50 bg-secondary/20 p-2.5 flex items-center gap-2"
+      >
+        <span className="w-8 text-xs text-primary font-bold text-center">
+          {row.jersey_number ?? "-"}
+        </span>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => toggleAttendance(row.player_id)}
+          className={`h-7 w-7 p-0 shrink-0 ${
+            row.attended ? "text-green-400 hover:text-green-300" : "text-red-400 hover:text-red-300"
+          }`}
+          aria-label={tt("attendance")}
+        >
+          {row.attended ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+        </Button>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium truncate">
+            {formatPlayerName(row)}
+          </p>
+          <div className="flex items-center gap-2">
+            {row.is_guest && (
+              <span className="text-[10px] rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-400">
+                {tt("guest")}
+              </span>
+            )}
+            {!row.attended && (
+              <span className="text-[10px] text-muted-foreground">{tt("absent")}</span>
+            )}
+          </div>
+        </div>
+
+        <Input
+          type="number"
+          min={0}
+          value={row.goals}
+          onChange={(e) => updateRow(row.player_id, "goals", parseInt(e.target.value) || 0)}
+          className="w-12 h-7 text-center bg-background"
+          disabled={!row.attended || structuredMode}
+        />
+
+        <Input
+          type="number"
+          min={0}
+          value={row.assists}
+          onChange={(e) => updateRow(row.player_id, "assists", parseInt(e.target.value) || 0)}
+          className="w-12 h-7 text-center bg-background"
+          disabled={!row.attended || structuredMode}
+        />
+
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={row.training_team === "team_a" ? "default" : "ghost"}
+            className={`h-7 w-7 p-0 text-xs font-bold ${
+              row.training_team === "team_a"
+                ? "bg-white text-black hover:bg-white/90"
+                : "text-muted-foreground"
+            }`}
+            onClick={() => setTeam(row.player_id, row.training_team === "team_a" ? null : "team_a")}
+          >
+            A
+          </Button>
+          <Button
+            size="sm"
+            variant={row.training_team === "team_b" ? "default" : "ghost"}
+            className={`h-7 w-7 p-0 text-xs font-bold ${
+              row.training_team === "team_b"
+                ? "bg-gray-700 text-white hover:bg-gray-600"
+                : "text-muted-foreground"
+            }`}
+            onClick={() => setTeam(row.player_id, row.training_team === "team_b" ? null : "team_b")}
+          >
+            B
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -419,15 +657,39 @@ export default function TrainingStatsEntryPage() {
           <h1 className="text-2xl font-bold">
             {session?.title || tt("session")} · {tt("attendance")} & {ts("title")}
           </h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={autoAssignTeams}
-            className="border-primary/30 text-primary"
-          >
-            <Wand2 className="h-4 w-4 mr-2" />
-            {tt("autoAssign")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground min-w-[130px] text-right">
+              {autosaveStatus === "saving"
+                ? tt("autosaveSaving")
+                : autosaveStatus === "saved"
+                  ? tt("autosaveSaved")
+                  : autosaveStatus === "error"
+                    ? tt("autosaveError")
+                    : ""}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={autoAssignTeams}
+              className="border-primary/30 text-primary"
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              {tt("autoAssign")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-primary"
+            >
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {tc("save")}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -473,8 +735,7 @@ export default function TrainingStatsEntryPage() {
                     <SelectItem value={NONE_OPTION}>-</SelectItem>
                     {attendedTeamA.map((player) => (
                       <SelectItem key={player.player_id} value={player.player_id}>
-                        {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
-                          `${player.first_name} ${player.last_name}`}
+                        {formatPlayerNameWithNumber(player)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -493,8 +754,7 @@ export default function TrainingStatsEntryPage() {
                     <SelectItem value={NONE_OPTION}>-</SelectItem>
                     {attendedTeamB.map((player) => (
                       <SelectItem key={player.player_id} value={player.player_id}>
-                        {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
-                          `${player.first_name} ${player.last_name}`}
+                        {formatPlayerNameWithNumber(player)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -541,8 +801,7 @@ export default function TrainingStatsEntryPage() {
                             <SelectItem value={NONE_OPTION}>-</SelectItem>
                             {players.map((player) => (
                               <SelectItem key={player.player_id} value={player.player_id}>
-                                {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
-                                  `${player.first_name} ${player.last_name}`}
+                                {formatPlayerNameWithNumber(player)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -567,8 +826,7 @@ export default function TrainingStatsEntryPage() {
                               .filter((player) => player.player_id !== event.scorer_player_id)
                               .map((player) => (
                                 <SelectItem key={player.player_id} value={player.player_id}>
-                                  {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
-                                    `${player.first_name} ${player.last_name}`}
+                                  {formatPlayerNameWithNumber(player)}
                                 </SelectItem>
                               ))}
                           </SelectContent>
@@ -589,107 +847,54 @@ export default function TrainingStatsEntryPage() {
         </Card>
 
         <Card className="border-border/40">
-          <CardContent className="p-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 px-2">#</th>
-                    <th className="text-left py-2 px-2">Igrac</th>
-                    <th className="text-center py-2 px-2">{tt("teams")}</th>
-                    <th className="text-center py-2 px-2">{ts("goals")}</th>
-                    <th className="text-center py-2 px-2">{ts("assists")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, idx) => (
-                    <tr key={row.player_id} className="border-b border-border/50">
-                      <td className="py-2 px-2 text-primary font-bold">
-                        {row.jersey_number ?? "-"}
-                      </td>
-                      <td className="py-2 px-2 font-medium">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => toggleAttendance(idx)}
-                            className={`h-7 w-7 p-0 ${
-                              row.attended
-                                ? "text-green-400 hover:text-green-300"
-                                : "text-red-400 hover:text-red-300"
-                            }`}
-                            aria-label={tt("attendance")}
-                          >
-                            {row.attended ? (
-                              <CheckCircle className="h-4 w-4" />
-                            ) : (
-                              <XCircle className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <span>
-                            {row.first_name} {row.last_name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            size="sm"
-                            variant={row.training_team === "team_a" ? "default" : "ghost"}
-                            className={`h-7 w-7 p-0 text-xs font-bold ${
-                              row.training_team === "team_a"
-                                ? "bg-white text-black hover:bg-white/90"
-                                : "text-muted-foreground"
-                            }`}
-                            onClick={() =>
-                              setTeam(idx, row.training_team === "team_a" ? null : "team_a")
-                            }
-                          >
-                            A
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={row.training_team === "team_b" ? "default" : "ghost"}
-                            className={`h-7 w-7 p-0 text-xs font-bold ${
-                              row.training_team === "team_b"
-                                ? "bg-gray-700 text-white hover:bg-gray-600"
-                                : "text-muted-foreground"
-                            }`}
-                            onClick={() =>
-                              setTeam(idx, row.training_team === "team_b" ? null : "team_b")
-                            }
-                          >
-                            B
-                          </Button>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={row.goals}
-                          onChange={(e) => updateRow(idx, "goals", parseInt(e.target.value) || 0)}
-                          className="w-16 h-8 text-center bg-background mx-auto"
-                          disabled={!row.attended || matchScoreA + matchScoreB > 0}
-                        />
-                      </td>
-                      <td className="py-2 px-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={row.assists}
-                          onChange={(e) =>
-                            updateRow(idx, "assists", parseInt(e.target.value) || 0)
-                          }
-                          className="w-16 h-8 text-center bg-background mx-auto"
-                          disabled={!row.attended || matchScoreA + matchScoreB > 0}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">
+              {tt("teams")} · {tt("attendance")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-white border border-border" />
+                  {tt("teamA")}
+                  <span className="text-xs text-muted-foreground">({teamRowsA.length})</span>
+                </p>
+                {teamRowsA.length > 0 ? (
+                  <div className="space-y-2">
+                    {teamRowsA.map((row) => renderPlayerRow(row))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{tc("noData")}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-gray-600" />
+                  {tt("teamB")}
+                  <span className="text-xs text-muted-foreground">({teamRowsB.length})</span>
+                </p>
+                {teamRowsB.length > 0 ? (
+                  <div className="space-y-2">
+                    {teamRowsB.map((row) => renderPlayerRow(row))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{tc("noData")}</p>
+                )}
+              </div>
             </div>
+
+            {unassignedRows.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  {tt("noTeam")} ({unassignedRows.length})
+                </p>
+                <div className="space-y-2">
+                  {unassignedRows.map((row) => renderPlayerRow(row))}
+                </div>
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2 mt-4">
@@ -703,14 +908,7 @@ export default function TrainingStatsEntryPage() {
               </p>
             )}
 
-            <Button onClick={handleSave} disabled={saving} className="mt-4 bg-primary">
-              {saving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 h-4 w-4" />
-              )}
-              {tc("save")}
-            </Button>
+            <p className="text-xs text-muted-foreground mt-4">{tt("autosaveHint")}</p>
           </CardContent>
         </Card>
       </div>
