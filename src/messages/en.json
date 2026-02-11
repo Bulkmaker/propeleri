@@ -64,6 +64,13 @@
   "roster": {
     "title": "Team Roster",
     "allPositions": "All Positions",
+    "player": "Player",
+    "position": "Position",
+    "role": "Role",
+    "height": "Height",
+    "weight": "Weight",
+    "captain": "Captain",
+    "assistant_captain": "Assistant",
     "gamesPlayed": "Games",
     "goals": "Goals",
     "assists": "Assists",

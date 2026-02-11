@@ -64,6 +64,13 @@
   "roster": {
     "title": "Sastav tima",
     "allPositions": "Sve pozicije",
+    "player": "Igrac",
+    "position": "Pozicija",
+    "role": "Uloga",
+    "height": "Visina",
+    "weight": "Tezina",
+    "captain": "Kapiten",
+    "assistant_captain": "Asistent",
     "gamesPlayed": "Utakmice",
     "goals": "Golovi",
     "assists": "Asistencije",

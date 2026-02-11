@@ -64,6 +64,13 @@
   "roster": {
     "title": "Состав команды",
     "allPositions": "Все позиции",
+    "player": "Игрок",
+    "position": "Позиция",
+    "role": "Роль",
+    "height": "Рост",
+    "weight": "Вес",
+    "captain": "Капитан",
+    "assistant_captain": "Ассистент",
     "gamesPlayed": "Игры",
     "goals": "Голы",
     "assists": "Передачи",
