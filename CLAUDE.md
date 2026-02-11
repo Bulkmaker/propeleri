@@ -8,10 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev      # Start dev server (Turbopack)
 npm run build    # Production build with TypeScript checking
 npm run start    # Start production server
+npm run test      # Run Playwright tests
+npx playwright test --ui # Run tests with UI
 npm run lint     # ESLint
 ```
-
-No test framework is configured.
 
 ## Architecture
 

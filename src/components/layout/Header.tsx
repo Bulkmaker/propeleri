@@ -145,7 +145,6 @@ export function Header() {
               </Link>
             )}
           </div>
-
           {/* Mobile menu */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild className="md:hidden">
@@ -215,6 +214,29 @@ export function Header() {
               </nav>
             </SheetContent>
           </Sheet>
+        </div>
+      </div>
+
+      {/* Mobile Horizontal Navigation */}
+      <div className="md:hidden border-t border-border/10">
+        <div className="container mx-auto">
+          <nav className="flex items-center gap-6 overflow-x-auto px-4 py-3 no-scrollbar scroll-smooth">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+              return (
+                <Link
+                  key={link.key}
+                  href={link.href}
+                  className={`whitespace-nowrap text-[11px] font-bold uppercase tracking-widest transition-colors ${isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  {t(link.key)}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </div>
     </header>
