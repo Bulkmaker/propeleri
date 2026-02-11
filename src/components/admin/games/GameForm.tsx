@@ -14,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type {
     Game,
     Season,
@@ -58,7 +58,7 @@ interface GameFormProps {
     tournaments: Tournament[];
     teams: Team[];
     players: Profile[];
-    onSave: (data: any) => Promise<void>;
+    onSave: (data: Record<string, unknown>) => Promise<void>;
     onCancel?: () => void;
     isManagedByTournament?: boolean;
 }
@@ -68,10 +68,6 @@ interface GameFormProps {
 const GOAL_PERIOD_VALUES: GoalPeriod[] = ["1", "2", "3", "OT", "SO"];
 
 // --- Helpers ---
-
-function normalizeName(value: string) {
-    return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
 
 function createEmptyGoalEvent(): GoalEventInput {
     return {
@@ -168,10 +164,8 @@ export function GameForm({
     teams,
     players,
     onSave,
-    onCancel,
     isManagedByTournament = false,
 }: GameFormProps) {
-    const t = useTranslations("admin");
     const tg = useTranslations("game");
     const tt = useTranslations("tournament");
     const tc = useTranslations("common");
@@ -387,7 +381,7 @@ export function GameForm({
             }
 
             // 4. Construct Payload
-            const payload: any = {
+            const payload: Record<string, unknown> = {
                 season_id: form.season_id,
                 tournament_id: form.tournament_id || null,
                 opponent_team_id: opponentTeam.id,
@@ -408,9 +402,9 @@ export function GameForm({
                 await updateGameStats(supabase, initialData.id, notesValue);
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || "Error saving game");
+            setError(err instanceof Error ? err.message : "Error saving game");
         } finally {
             setSaving(false);
         }

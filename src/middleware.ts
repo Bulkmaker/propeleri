@@ -54,7 +54,7 @@ export default async function middleware(request: NextRequest) {
     const segments = pathname.split("/");
     const localeSegment = segments[1];
     const availableLocales = routing.locales;
-    const hasLocale = availableLocales.includes(localeSegment as any);
+    const hasLocale = (availableLocales as readonly string[]).includes(localeSegment);
     const locale = hasLocale ? localeSegment : routing.defaultLocale;
 
     const loginUrl = new URL(hasLocale ? `/${locale}/login` : "/login", request.url);

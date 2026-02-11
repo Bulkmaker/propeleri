@@ -146,7 +146,6 @@ export function GameDetailView({
 
   teams,
   tournaments,
-  tournamentMatch,
   locale,
   isAdmin = false,
 }: GameDetailViewProps) {
@@ -156,25 +155,10 @@ export function GameDetailView({
   const tc = useTranslations("common");
 
   const notes = useMemo(() => parseGameNotesPayload(game.notes), [game.notes]);
-  const goalEvents = notes?.goal_events ?? [];
+  const goalEvents = useMemo(() => notes?.goal_events ?? [], [notes]);
   const goalieReport = notes?.goalie_report ?? null;
 
   const tournament = tournaments.find((t) => t.id === game.tournament_id);
-
-  const notePlayerIds = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...goalEvents.flatMap((event) =>
-            [event.scorer_player_id, event.assist_1_player_id, event.assist_2_player_id].filter(
-              Boolean
-            )
-          ),
-          ...(goalieReport?.goalie_player_id ? [goalieReport.goalie_player_id] : []),
-        ])
-      ),
-    [goalEvents, goalieReport]
-  );
 
   const playerLookup = useMemo(() => {
     const map = new Map<

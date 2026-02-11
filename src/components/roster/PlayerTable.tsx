@@ -24,7 +24,6 @@ interface PlayerTableProps {
 export function PlayerTable({ players }: PlayerTableProps) {
     const t = useTranslations("roster");
     const tp = useTranslations("positions");
-    const tc = useTranslations("common");
     const router = useRouter();
 
     return (
@@ -67,7 +66,7 @@ export function PlayerTable({ players }: PlayerTableProps) {
                                                     {formatPlayerName(player)}
                                                 </span>
                                                 {player.nickname && (
-                                                    <span className="text-xs text-muted-foreground truncate">"{player.nickname}"</span>
+                                                    <span className="text-xs text-muted-foreground truncate">&ldquo;{player.nickname}&rdquo;</span>
                                                 )}
                                             </div>
                                         </div>

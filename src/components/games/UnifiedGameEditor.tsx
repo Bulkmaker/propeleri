@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "@/i18n/navigation";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 
@@ -113,7 +112,6 @@ function sortPlayersByNumberAndName(list: Profile[]) {
 }
 
 export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps) {
-  const router = useRouter();
   const locale = useLocale();
   const tt = useTranslations("tournament");
   const tc = useTranslations("common");
@@ -256,7 +254,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     setTournament(loadedTournament);
 
     const allTeams = (allTeamsRes.data ?? []) as Team[];
-    const tournamentTeams = (junctionsRes.data ?? []) as any[];
+    const tournamentTeams = (junctionsRes.data ?? []) as { team_id: string }[];
     const loadedTeamIds = new Set(tournamentTeams.map((row) => row.team_id));
     const loadedTeams = allTeams.filter((team) => loadedTeamIds.has(team.id));
 
@@ -347,7 +345,10 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   }, [gameId, supabase, tc]);
 
   useEffect(() => {
-    void loadAll();
+    const timer = window.setTimeout(() => {
+      void loadAll();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadAll]);
 
   const selectedTeamA = teamById.get(form.team_a_id);
@@ -756,7 +757,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                       <Label>Результат</Label>
                       <Select
                         value={game.result}
-                        onValueChange={(value: any) => setGame({ ...game, result: value })}
+                        onValueChange={(value: string) => setGame({ ...game, result: value as Game["result"] })}
                       >
                         <SelectTrigger>
                           <SelectValue />

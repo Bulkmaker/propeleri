@@ -894,6 +894,7 @@ function PositionSlot({
                 {/* Player avatar or initials */}
                 {player?.avatar_url ? (
                   <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={player.avatar_url}
                       alt=""

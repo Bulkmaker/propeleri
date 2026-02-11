@@ -40,6 +40,7 @@ export function TeamAvatar({
       aria-label={name}
     >
       {shouldRenderLogo ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={logoUrl ?? undefined}
           alt={name}

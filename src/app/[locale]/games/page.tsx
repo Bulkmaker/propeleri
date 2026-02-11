@@ -46,9 +46,9 @@ export default async function GamesPage({
     allGames = (gamesRes.data ?? []) as Game[];
     allTournaments = (tournamentsRes.data ?? []) as Tournament[];
     teams = (teamsRes.data ?? []) as Team[];
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error loading games page data:", err);
-    error = err.message || "Failed to load games";
+    error = err instanceof Error ? err.message : "Failed to load games";
   }
 
 

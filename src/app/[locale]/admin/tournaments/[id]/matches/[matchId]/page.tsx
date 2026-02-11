@@ -330,7 +330,7 @@ export default function TournamentMatchEditorPage() {
 
     setStatsRows(nextStatsRows);
     setLoading(false);
-  }, [matchId, supabase, tournamentId]);
+  }, [matchId, supabase, tournamentId, tc, tt]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

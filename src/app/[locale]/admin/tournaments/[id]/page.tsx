@@ -163,7 +163,6 @@ export default function AdminTournamentDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [allTeams, setAllTeams] = useState<Team[]>([]);
-  const [opponents, setOpponents] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [registeredPlayerIds, setRegisteredPlayerIds] = useState<string[]>([]);
   const [tournamentTeamJunctions, setTournamentTeamJunctions] = useState<TournamentTeam[]>([]);
@@ -226,7 +225,6 @@ export default function AdminTournamentDetailPage() {
       groupsRes,
       groupTeamsRes,
       matchesRes,
-      opponentsRes,
     ] = await Promise.all([
       supabase.from("tournaments").select("*").eq("id", tournamentId).single(),
       supabase
@@ -257,7 +255,6 @@ export default function AdminTournamentDetailPage() {
         .select("*")
         .eq("tournament_id", tournamentId)
         .order("match_date", { ascending: true }),
-      supabase.from("opponents").select("*").eq("is_active", true).order("name"),
     ]);
 
     setTournament((tournamentRes.data ?? null) as Tournament | null);
@@ -314,7 +311,6 @@ export default function AdminTournamentDetailPage() {
     );
 
     setMatches((matchesRes.data ?? []) as TournamentMatch[]);
-    setOpponents((opponentsRes.data ?? []) as Team[]);
     setLoading(false);
   }, [supabase, tournamentId]);
 
@@ -325,43 +321,6 @@ export default function AdminTournamentDetailPage() {
     return () => window.clearTimeout(timer);
   }, [loadAll]);
 
-  async function ensureOpponent(name: string): Promise<string | null> {
-    const cleaned = name.trim();
-    if (!cleaned) return null;
-
-    const normalized = normalizeName(cleaned);
-    const existing = opponents.find((opponent) => normalizeName(opponent.name) === normalized);
-    if (existing) return existing.id;
-
-    const { data: existingRows } = await supabase
-      .from("opponents")
-      .select("*")
-      .eq("normalized_name", normalized)
-      .limit(1);
-
-    if (existingRows?.[0]) {
-      const row = existingRows[0] as Team;
-      setOpponents((prev) =>
-        prev.some((opponent) => opponent.id === row.id) ? prev : [...prev, row]
-      );
-      return row.id;
-    }
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("opponents")
-      .insert({ name: cleaned })
-      .select("*")
-      .single();
-
-    if (insertError) {
-      setError(insertError.message);
-      return null;
-    }
-
-    const created = inserted as Team;
-    setOpponents((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-    return created.id;
-  }
 
   async function uploadTeamLogo(file: File, formTarget: "new" | "edit") {
     setUploadingLogo(true);

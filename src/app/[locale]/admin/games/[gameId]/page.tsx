@@ -46,7 +46,10 @@ export default function AdminGameEditPage() {
   }, [gameId, supabase]);
 
   useEffect(() => {
-    loadData();
+    const timer = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadData]);
 
   const handleDelete = async () => {

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { MapPin, Pencil } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,6 @@ type Props = {
   variant?: Variant;
   badges?: React.ReactNode;
   actions?: React.ReactNode;
-  adminEditUrl?: string;
 };
 
 export function GameMatchCard({
@@ -45,7 +44,6 @@ export function GameMatchCard({
   variant = "poster",
   badges,
   actions,
-  adminEditUrl,
 }: Props) {
   const isPending = teamScore == null || opponentScore == null;
 

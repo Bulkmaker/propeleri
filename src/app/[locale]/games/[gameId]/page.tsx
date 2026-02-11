@@ -3,7 +3,6 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { GameDetailView } from "@/components/matches/GameDetailView";
 import type {
   GameLineup,

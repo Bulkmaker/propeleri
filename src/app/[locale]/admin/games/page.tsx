@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
 import { Plus, Trophy, Loader2 } from "lucide-react";
-import type { Game, Season, GameResult, Tournament, Team, Profile, TournamentMatch } from "@/types/database";
+import type { Game, Season, GameResult, Tournament, Team, Profile } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
@@ -25,7 +25,6 @@ export default function AdminGamesPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
-  const [tournamentMatches, setTournamentMatches] = useState<TournamentMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -42,14 +41,12 @@ export default function AdminGamesPage() {
         tournamentsRes,
         teamsRes,
         playersRes,
-        tournamentMatchesRes
       ] = await Promise.all([
         supabase.from("games").select("*").order("game_date", { ascending: false }),
         supabase.from("seasons").select("*").order("start_date", { ascending: false }),
         supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
         supabase.from("teams").select("*"),
         supabase.from("profiles").select("*").eq("is_active", true).eq("is_approved", true).order("jersey_number", { ascending: true }),
-        supabase.from("tournament_matches").select("*").not("game_id", "is", null)
       ]);
 
       if (gamesRes.error) throw gamesRes.error;
@@ -57,17 +54,15 @@ export default function AdminGamesPage() {
       if (tournamentsRes.error) throw tournamentsRes.error;
       if (teamsRes.error) throw teamsRes.error;
       if (playersRes.error) throw playersRes.error;
-      if (tournamentMatchesRes.error) throw tournamentMatchesRes.error;
 
       setGames((gamesRes.data ?? []) as Game[]);
       setSeasons((seasonsRes.data ?? []) as Season[]);
       setTournaments((tournamentsRes.data ?? []) as Tournament[]);
       setTeams((teamsRes.data ?? []) as Team[]);
       setPlayers((playersRes.data ?? []) as Profile[]);
-      setTournamentMatches((tournamentMatchesRes.data ?? []) as TournamentMatch[]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error loading admin data:", err);
-      setError(err.message || "Failed to load admin data");
+      setError(err instanceof Error ? err.message : "Failed to load admin data");
     } finally {
       setLoading(false);
     }
@@ -79,7 +74,7 @@ export default function AdminGamesPage() {
 
 
 
-  async function handleCreateSave(payload: any) {
+  async function handleCreateSave(payload: Record<string, unknown>) {
     const { error: insertError } = await supabase.from("games").insert(payload);
     if (insertError) {
       throw insertError;
