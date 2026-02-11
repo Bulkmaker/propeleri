@@ -28,8 +28,8 @@ import type {
   Tournament,
   TournamentMatch,
 } from "@/types/database";
-import HockeyRink from "@/components/games/HockeyRink";
-import type { RinkPlayer } from "@/components/games/HockeyRink";
+import { GameLineupEditor } from "@/components/games/GameLineupEditor";
+import type { ReadOnlyPlayer } from "@/components/games/GameLineupEditor";
 
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { Button } from "@/components/ui/button";
@@ -163,7 +163,7 @@ export function GameDetailView({
   const playerLookup = useMemo(() => {
     const map = new Map<
       string,
-      Pick<Profile, "id" | "first_name" | "last_name" | "jersey_number">
+      Pick<Profile, "id" | "first_name" | "last_name" | "nickname" | "jersey_number">
     >();
 
     for (const entry of lineup) {
@@ -184,7 +184,8 @@ export function GameDetailView({
     const player = playerLookup.get(playerId);
     if (!player) return tc("unknownPlayer");
     const numberPrefix = player.jersey_number != null ? `#${player.jersey_number} ` : "";
-    return `${numberPrefix}${player.first_name} ${player.last_name}`;
+    const name = player.nickname || player.last_name || player.first_name;
+    return `${numberPrefix}${name}`;
   };
 
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
@@ -257,15 +258,21 @@ export function GameDetailView({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <HockeyRink
-              lineup={lineup.map((entry) => ({
-                player_id: entry.player_id,
-                designation: entry.designation,
-                position_played: entry.position_played,
-                line_number: entry.line_number,
-                slot_position: entry.slot_position,
-                player: entry.player,
-              })) as RinkPlayer[]}
+            <GameLineupEditor
+              gameId={game.id}
+              readOnly
+              embedded
+              backHref={null}
+              lineup={lineup
+                .filter((entry): entry is GameLineupEntry & { player: Profile } => entry.player !== null)
+                .map((entry) => ({
+                  player_id: entry.player_id,
+                  designation: entry.designation,
+                  position_played: entry.position_played,
+                  line_number: entry.line_number,
+                  slot_position: entry.slot_position,
+                  player: entry.player,
+                })) satisfies ReadOnlyPlayer[]}
             />
           </CardContent>
         </Card>
@@ -370,7 +377,7 @@ export function GameDetailView({
                         {s.player?.jersey_number ?? "-"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {s.player?.first_name} {s.player?.last_name}
+                        {s.player?.nickname || s.player?.last_name || s.player?.first_name}
                       </TableCell>
                       <TableCell className="text-center">{s.goals}</TableCell>
                       <TableCell className="text-center">{s.assists}</TableCell>
@@ -472,7 +479,7 @@ function LineupPlayerRow({
           #{entry.player?.jersey_number ?? "-"}
         </span>
         <span className="text-sm font-medium">
-          {entry.player?.first_name} {entry.player?.last_name}
+          {entry.player?.nickname || entry.player?.last_name || entry.player?.first_name}
         </span>
       </div>
       <div className="flex items-center gap-2">

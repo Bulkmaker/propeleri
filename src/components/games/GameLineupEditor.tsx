@@ -49,18 +49,41 @@ function createEmptyLine(): LineData {
   };
 }
 
+// Exported type for read-only mode (used by public pages)
+export interface ReadOnlyPlayer {
+  player_id: string;
+  designation: LineupDesignation;
+  position_played: PlayerPosition;
+  line_number: number | null;
+  slot_position: SlotPosition | null;
+  player: Profile;
+}
+
 interface GameLineupEditorProps {
   gameId: string;
   embedded?: boolean;
   backHref?: string | null;
   onSaved?: () => void;
+  readOnly?: boolean;
+  lineup?: ReadOnlyPlayer[];
 }
+
+const SLOT_POSITIONS: Record<string, { left: string; top: string }> = {
+  LW: { left: "20%", top: "15%" },
+  C: { left: "50%", top: "33%" },
+  RW: { left: "80%", top: "15%" },
+  LD: { left: "27%", top: "56%" },
+  RD: { left: "73%", top: "56%" },
+  GK: { left: "50%", top: "70%" },
+};
 
 export function GameLineupEditor({
   gameId,
   embedded = false,
   backHref,
   onSaved,
+  readOnly = false,
+  lineup: readOnlyLineup,
 }: GameLineupEditorProps) {
   const t = useTranslations("game");
   const tp = useTranslations("positions");
@@ -80,7 +103,7 @@ export function GameLineupEditor({
   const [isTournamentGame, setIsTournamentGame] = useState(false);
   const [registeredPlayersCount, setRegisteredPlayersCount] = useState<number | null>(null);
 
-  // Drag state
+  // Drag state (only used in edit mode)
   const [dragSource, setDragSource] = useState<{
     type: "goalie" | "line" | "available";
     lineIndex?: number;
@@ -91,7 +114,52 @@ export function GameLineupEditor({
 
   const supabase = useMemo(() => createClient(), []);
 
+  // Read-only mode: build state from props
   useEffect(() => {
+    if (!readOnly || !readOnlyLineup) return;
+
+    const goalies: SlotAssignment[] = [];
+    const lineMap = new Map<number, LineData>();
+    const playersList: Profile[] = [];
+
+    for (const entry of readOnlyLineup) {
+      playersList.push(entry.player);
+
+      if (entry.slot_position === "GK" || (entry.position_played === "goalie" && !entry.slot_position)) {
+        goalies.push({
+          playerId: entry.player_id,
+          designation: entry.designation,
+        });
+      } else if (entry.slot_position) {
+        const lineNum = entry.line_number ?? 1;
+        if (!lineMap.has(lineNum)) lineMap.set(lineNum, createEmptyLine());
+        const line = lineMap.get(lineNum)!;
+        const slot = entry.slot_position as keyof LineData["slots"];
+        if (slot in line.slots) {
+          line.slots[slot] = {
+            playerId: entry.player_id,
+            designation: entry.designation,
+          };
+        }
+      }
+    }
+
+    while (goalies.length < 1) goalies.push({ ...EMPTY_SLOT });
+    setGoalieSlots(goalies);
+
+    const sortedLineNums = [...lineMap.keys()].sort((a, b) => a - b);
+    const loadedLines = sortedLineNums.map((n) => lineMap.get(n)!);
+    if (loadedLines.length === 0) loadedLines.push(createEmptyLine());
+    setLines(loadedLines);
+
+    setPlayers(playersList);
+    setLoading(false);
+  }, [readOnly, readOnlyLineup]);
+
+  // Edit mode: load from Supabase
+  useEffect(() => {
+    if (readOnly) return;
+
     async function load() {
       const [gameRes, lineupRes] = await Promise.all([
         supabase
@@ -234,7 +302,7 @@ export function GameLineupEditor({
       });
     }
     load();
-  }, [gameId, supabase]);
+  }, [gameId, supabase, readOnly]);
 
   // Get all assigned player IDs
   const assignedPlayerIds = useCallback(() => {
@@ -382,7 +450,6 @@ export function GameLineupEditor({
     if (!source) return;
     setDragSource(source);
     e.dataTransfer.effectAllowed = "move";
-    // Store the player ID for reference
     const pid =
       source.type === "available"
         ? source.playerId
@@ -400,9 +467,7 @@ export function GameLineupEditor({
     const playerId = e.dataTransfer.getData("text/plain");
     if (!playerId || !dragSource) return;
 
-    // First, remove from source
     if (dragSource.type === "goalie" && dragSource.goalieIndex !== undefined) {
-      // Get the player currently in target for swap
       let targetPlayerId: string | null = null;
       if (target.type === "goalie" && target.goalieIndex !== undefined) {
         targetPlayerId = goalieSlots[target.goalieIndex]?.playerId ?? null;
@@ -410,7 +475,6 @@ export function GameLineupEditor({
         targetPlayerId = lines[target.lineIndex]?.slots[target.slot as keyof LineData["slots"]]?.playerId ?? null;
       }
       clearGoalie(dragSource.goalieIndex);
-      // If swapping, place target player in source
       if (targetPlayerId) {
         assignGoalie(dragSource.goalieIndex, targetPlayerId);
       }
@@ -426,9 +490,7 @@ export function GameLineupEditor({
         assignLineSlot(dragSource.lineIndex, dragSource.slot as keyof LineData["slots"], targetPlayerId);
       }
     }
-    // available source: nothing to clear
 
-    // Then, assign to target
     if (target.type === "goalie" && target.goalieIndex !== undefined) {
       assignGoalie(target.goalieIndex, playerId);
     } else if (target.type === "line" && target.lineIndex !== undefined && target.slot) {
@@ -505,8 +567,9 @@ export function GameLineupEditor({
     }
   }
 
-  // Auto-save on lineup changes
+  // Auto-save on lineup changes (edit mode only)
   useEffect(() => {
+    if (readOnly) return;
     if (!initialLoadDone.current || loading) return;
 
     const timer = setTimeout(() => {
@@ -515,7 +578,7 @@ export function GameLineupEditor({
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goalieSlots, lines]);
+  }, [goalieSlots, lines, readOnly]);
 
   if (loading) {
     return (
@@ -526,12 +589,14 @@ export function GameLineupEditor({
   }
 
   const totalAssigned = assignedPlayerIds().size;
-
   const resolvedBackHref = backHref === undefined ? `/games/${gameId}` : backHref;
+
+  // Check if second goalie slot has a player (for read-only, hide empty second slot)
+  const hasSecondGoalie = goalieSlots.length > 1 && goalieSlots[1].playerId;
 
   return (
     <div className={embedded ? "w-full" : "container mx-auto px-4 py-8 max-w-4xl"}>
-      {!embedded && resolvedBackHref && (
+      {!embedded && resolvedBackHref && !readOnly && (
         <Link
           href={resolvedBackHref}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
@@ -541,14 +606,16 @@ export function GameLineupEditor({
         </Link>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t("selectLineup")}</h1>
-        <Badge variant="secondary" className="text-sm">
-          {totalAssigned} {t("lineup").toLowerCase()}
-        </Badge>
-      </div>
+      {!readOnly && (
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">{t("selectLineup")}</h1>
+          <Badge variant="secondary" className="text-sm">
+            {totalAssigned} {t("lineup").toLowerCase()}
+          </Badge>
+        </div>
+      )}
 
-      {isTournamentGame && (
+      {!readOnly && isTournamentGame && (
         <p className="text-xs text-muted-foreground mb-4">
           {registeredPlayersCount && registeredPlayersCount > 0
             ? `Tournament roster: ${registeredPlayersCount} players`
@@ -557,7 +624,7 @@ export function GameLineupEditor({
       )}
 
       {/* Line tabs */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center justify-center gap-2 mb-4">
         {lines.map((_, i) => (
           <button
             key={i}
@@ -568,31 +635,35 @@ export function GameLineupEditor({
                 : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
             }`}
           >
-            {t("line")} {i + 1}
+            {readOnly ? `${i + 1} ${t("line").toLowerCase()}` : i + 1}
           </button>
         ))}
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-full border-dashed border-border/60 text-muted-foreground hover:text-foreground"
-          onClick={addLine}
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          {t("addLine")}
-        </Button>
-        {lines.length > 1 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-full text-muted-foreground hover:text-destructive ml-auto"
-            onClick={() => {
-              removeLine(activeLineIndex);
-              if (activeLineIndex >= lines.length - 1) setActiveLineIndex(Math.max(0, activeLineIndex - 1));
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-1" />
-            {t("removeLine")}
-          </Button>
+        {!readOnly && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full border-dashed border-border/60 text-muted-foreground hover:text-foreground"
+              onClick={addLine}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              {t("addLine")}
+            </Button>
+            {lines.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-muted-foreground hover:text-destructive ml-auto"
+                onClick={() => {
+                  removeLine(activeLineIndex);
+                  if (activeLineIndex >= lines.length - 1) setActiveLineIndex(Math.max(0, activeLineIndex - 1));
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                {t("removeLine")}
+              </Button>
+            )}
+          </>
         )}
       </div>
 
@@ -654,15 +725,6 @@ export function GameLineupEditor({
           const line = lines[lineIndex];
           if (!line) return null;
 
-          const SLOT_POSITIONS: Record<string, { left: string; top: string }> = {
-            LW: { left: "20%", top: "15%" },
-            C: { left: "50%", top: "33%" },
-            RW: { left: "80%", top: "15%" },
-            LD: { left: "27%", top: "56%" },
-            RD: { left: "73%", top: "56%" },
-            GK: { left: "50%", top: "70%" },
-          };
-
           return (
             <>
               {/* Line slot positions */}
@@ -680,6 +742,7 @@ export function GameLineupEditor({
                     availablePlayers={sortedPlayersForSlot(slotKey)}
                     positionTranslations={tp}
                     gameTranslations={t}
+                    readOnly={readOnly}
                     onAssign={(pid) => assignLineSlot(lineIndex, slotKey, pid)}
                     onClear={() => clearLineSlot(lineIndex, slotKey)}
                     onToggleDesignation={() => toggleDesignation("line", lineIndex, slotKey)}
@@ -703,6 +766,7 @@ export function GameLineupEditor({
                   availablePlayers={sortedPlayersForSlot("GK")}
                   positionTranslations={tp}
                   gameTranslations={t}
+                  readOnly={readOnly}
                   onAssign={(pid) => assignGoalie(0, pid)}
                   onClear={() => clearGoalie(0)}
                   onToggleDesignation={() => toggleDesignation("goalie", 0, undefined, 0)}
@@ -716,17 +780,18 @@ export function GameLineupEditor({
         })()}
       </div>
 
-      {/* Second goalie */}
-      {goalieSlots.length > 1 && (
+      {/* Second goalie (edit mode: always show; read-only: only if filled) */}
+      {(readOnly ? hasSecondGoalie : goalieSlots.length > 1) && (
         <div className="flex justify-center mb-6">
           <PositionSlot
             slotPosition="GK"
             label={`${t("gk")} 2`}
             assignment={goalieSlots[1]}
-            player={getPlayer(goalieSlots[1].playerId)}
+            player={getPlayer(goalieSlots[1]?.playerId)}
             availablePlayers={sortedPlayersForSlot("GK")}
             positionTranslations={tp}
             gameTranslations={t}
+            readOnly={readOnly}
             onAssign={(pid) => assignGoalie(1, pid)}
             onClear={() => clearGoalie(1)}
             onToggleDesignation={() => toggleDesignation("goalie", 0, undefined, 1)}
@@ -737,8 +802,8 @@ export function GameLineupEditor({
         </div>
       )}
 
-      {/* Available Players Pool */}
-      {availablePlayers.length > 0 && (
+      {/* Available Players Pool (edit mode only) */}
+      {!readOnly && availablePlayers.length > 0 && (
         <Card className="border-border/40 mb-6">
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-base">
@@ -763,7 +828,7 @@ export function GameLineupEditor({
                     #{player.jersey_number ?? "-"}
                   </span>
                   <span className="text-xs font-medium">
-                    {player.first_name?.[0]}. {player.last_name}
+                    {player.nickname || player.last_name || player.first_name}
                   </span>
                   <Badge
                     variant="secondary"
@@ -778,8 +843,8 @@ export function GameLineupEditor({
         </Card>
       )}
 
-      {/* Auto-save indicator */}
-      {autoSaveStatus !== "idle" && (
+      {/* Auto-save indicator (edit mode only) */}
+      {!readOnly && autoSaveStatus !== "idle" && (
         <div className="flex justify-center">
           {autoSaveStatus === "saving" && (
             <span className="text-xs text-muted-foreground flex items-center gap-1.5 py-2">
@@ -809,6 +874,7 @@ interface PositionSlotProps {
   availablePlayers: Profile[];
   positionTranslations: ReturnType<typeof useTranslations>;
   gameTranslations: ReturnType<typeof useTranslations>;
+  readOnly?: boolean;
   onAssign: (playerId: string) => void;
   onClear: () => void;
   onToggleDesignation: () => void;
@@ -825,6 +891,7 @@ function PositionSlot({
   availablePlayers,
   positionTranslations: tp,
   gameTranslations: t,
+  readOnly = false,
   onAssign,
   onClear,
   onToggleDesignation,
@@ -841,6 +908,108 @@ function PositionSlot({
   const matchingPlayers = availablePlayers.filter((p) => p.position === targetPosition);
   const otherPlayersList = availablePlayers.filter((p) => p.position !== targetPosition);
 
+  const displayName = player
+    ? (player.nickname || player.last_name || player.first_name || "")
+    : "";
+
+  const nameLabel = (
+    <div className="text-center">
+      {!isEmpty && player ? (
+        <p className="inline-block px-3 py-1 rounded-full bg-team-navy/80 text-[11px] sm:text-xs font-semibold text-white whitespace-nowrap">
+          #{player.jersey_number ?? ""} {displayName}
+        </p>
+      ) : (
+        <p className="text-[10px] font-medium text-team-navy/50">{label}</p>
+      )}
+    </div>
+  );
+
+  // Player circle content (shared between readOnly and edit modes)
+  const playerCircle = (
+    <div
+      className={`relative w-18 h-18 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all ${
+        isEmpty
+          ? readOnly
+            ? "border-2 border-dashed border-team-navy/20 bg-white/40"
+            : "border-2 border-dashed border-team-navy/30 bg-white/60 hover:border-primary/50 hover:bg-white/80 cursor-pointer"
+          : readOnly
+            ? "border-[3px] border-solid"
+            : "border-[3px] border-solid hover:scale-105 active:cursor-grabbing cursor-pointer"
+      }`}
+      style={
+        isEmpty
+          ? undefined
+          : {
+              borderColor: color,
+              backgroundColor: `${color}10`,
+            }
+      }
+    >
+      {isEmpty ? (
+        <>
+          <span
+            className="text-lg font-bold"
+            style={{ color }}
+          >
+            {label}
+          </span>
+          {!readOnly && (
+            <span className="text-[9px] text-team-navy/50 mt-0.5">
+              {t("emptySlot")}
+            </span>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Designation badge */}
+          {assignment.designation !== "player" && (
+            <div
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white z-10"
+              style={{ backgroundColor: "#e8732a" }}
+              onClick={readOnly ? undefined : (e) => {
+                e.stopPropagation();
+                onToggleDesignation();
+              }}
+            >
+              {assignment.designation === "captain" ? "C" : "A"}
+            </div>
+          )}
+          {/* Player avatar or initials */}
+          {player?.avatar_url ? (
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={player.avatar_url}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold"
+              style={{ backgroundColor: color }}
+            >
+              {player
+                ? (player.nickname?.[0] ?? player.last_name?.[0] ?? player.first_name?.[0] ?? "?")
+                : "?"}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  // Read-only mode: no Popover, no drag
+  if (readOnly) {
+    return (
+      <div className="flex flex-col items-center gap-1 w-32">
+        {playerCircle}
+        {nameLabel}
+      </div>
+    );
+  }
+
+  // Edit mode: full Popover + drag & drop
   return (
     <div className="flex flex-col items-center gap-1 w-32">
       <Popover open={open} onOpenChange={setOpen}>
@@ -850,69 +1019,8 @@ function PositionSlot({
             onDragStart={isEmpty ? undefined : onDragStart}
             onDrop={onDrop}
             onDragOver={onDragOver}
-            className={`relative w-18 h-18 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
-              isEmpty
-                ? "border-2 border-dashed border-border/60 hover:border-primary/50 hover:bg-primary/5"
-                : "border-[3px] border-solid hover:scale-105 active:cursor-grabbing"
-            }`}
-            style={
-              isEmpty
-                ? undefined
-                : {
-                    borderColor: color,
-                    backgroundColor: `${color}10`,
-                  }
-            }
           >
-            {isEmpty ? (
-              <>
-                <span
-                  className="text-lg font-bold opacity-40"
-                  style={{ color }}
-                >
-                  {label}
-                </span>
-                <span className="text-[9px] text-muted-foreground mt-0.5">
-                  {t("emptySlot")}
-                </span>
-              </>
-            ) : (
-              <>
-                {/* Designation badge */}
-                {assignment.designation !== "player" && (
-                  <div
-                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white z-10"
-                    style={{ backgroundColor: "#e8732a" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleDesignation();
-                    }}
-                  >
-                    {assignment.designation === "captain" ? "C" : "A"}
-                  </div>
-                )}
-                {/* Player avatar or initials */}
-                {player?.avatar_url ? (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={player.avatar_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold"
-                    style={{ backgroundColor: color }}
-                  >
-                    {player
-                      ? `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`
-                      : "?"}
-                  </div>
-                )}
-              </>
-            )}
+            {playerCircle}
           </div>
         </PopoverTrigger>
 
@@ -1004,19 +1112,7 @@ function PositionSlot({
         </PopoverContent>
       </Popover>
 
-      {/* Player name below circle */}
-      <div className="text-center h-8">
-        {!isEmpty && player ? (
-          <>
-            <p className="text-[11px] sm:text-xs font-semibold leading-tight truncate max-w-32">
-              #{player.jersey_number ?? ""} {player.last_name}
-            </p>
-            <p className="text-[9px] text-muted-foreground">{label}</p>
-          </>
-        ) : (
-          <p className="text-[10px] text-muted-foreground font-medium">{label}</p>
-        )}
-      </div>
+      {nameLabel}
     </div>
   );
 }
@@ -1045,7 +1141,7 @@ function PlayerPickerItem({
         #{player.jersey_number ?? "-"}
       </span>
       <span className="flex-1 text-left truncate text-xs">
-        {player.first_name} {player.last_name}
+        {player.nickname || player.last_name || player.first_name}
       </span>
       <Badge
         variant="secondary"

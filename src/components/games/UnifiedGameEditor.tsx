@@ -1150,7 +1150,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-medium truncate">
-                            {player.first_name} {player.last_name}
+                            {player.nickname || player.last_name || player.first_name}
                           </span>
                           {isSelected && <Check className="h-4 w-4 text-primary" />}
                         </div>

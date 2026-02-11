@@ -17,6 +17,7 @@ interface PlayerStatRow {
     player_id: string;
     first_name: string;
     last_name: string;
+    nickname: string | null;
     jersey_number: number | null;
     goals: number;
     assists: number;
@@ -27,8 +28,8 @@ interface PlayerStatRow {
 interface GameLineupEntry {
     player_id: string;
     player:
-    | Pick<Profile, "first_name" | "last_name" | "jersey_number">
-    | Pick<Profile, "first_name" | "last_name" | "jersey_number">[]
+    | Pick<Profile, "first_name" | "last_name" | "nickname" | "jersey_number">
+    | Pick<Profile, "first_name" | "last_name" | "nickname" | "jersey_number">[]
     | null;
 }
 
@@ -68,6 +69,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
                     player_id: entry.player_id,
                     first_name: player?.first_name ?? "",
                     last_name: player?.last_name ?? "",
+                    nickname: player?.nickname ?? null,
                     jersey_number: player?.jersey_number ?? null,
                     goals: existing?.goals ?? 0,
                     assists: existing?.assists ?? 0,
@@ -148,7 +150,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
                                                 {row.jersey_number ?? "-"}
                                             </td>
                                             <td className="py-2 px-2 font-medium">
-                                                {row.first_name} {row.last_name}
+                                                {row.nickname || row.last_name || row.first_name}
                                             </td>
                                             <td className="py-2 px-2">
                                                 <Input
