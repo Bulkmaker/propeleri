@@ -160,7 +160,7 @@ export default async function SchedulePage({
                 <span className="h-1 w-6 bg-primary rounded-full" />
                 {t("thisMonth")}
               </h2>
-              <div className="space-y-3 md:space-y-4">
+              <div className="space-y-10 md:space-y-12">
                 {upcoming.map((item) => (
                   <ScheduleCard key={item.id} item={item} />
                 ))}
@@ -175,7 +175,7 @@ export default async function SchedulePage({
                 <span className="h-1 w-6 bg-muted-foreground/30 rounded-full" />
                 {t("pastEvents")}
               </h2>
-              <div className="space-y-3 md:space-y-4 opacity-70">
+              <div className="space-y-10 md:space-y-12 opacity-70">
                 {past.slice(0, 10).map((item) => (
                   <ScheduleCard key={item.id} item={item} />
                 ))}
@@ -223,9 +223,9 @@ function ScheduleCard({ item }: { item: ScheduleItem }) {
   }
 
   return (
-    <Link href={item.href} className="block max-w-4xl mx-auto px-1 md:px-2">
-      <Card className="border-border/40 card-hover bg-card cursor-pointer">
-        <CardContent className="px-4 py-4 md:px-5 flex items-center justify-between">
+    <Link href={item.href} className="block max-w-4xl mx-auto my-3 px-1 md:px-2">
+      <Card className="border-border/40 card-hover bg-card cursor-pointer py-0">
+        <CardContent className="px-4 py-4 md:px-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-14 w-14 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-400">
               <Dumbbell className="h-6 w-6" />
@@ -249,12 +249,14 @@ function ScheduleCard({ item }: { item: ScheduleItem }) {
             </div>
           </div>
           {item.trainingScoreA != null && item.trainingScoreB != null && (
-            <TrainingScoreView
-              teamAScore={item.trainingScoreA}
-              teamBScore={item.trainingScoreB}
-              teamALabel={tt("teamA")}
-              teamBLabel={tt("teamB")}
-            />
+            <div className="w-full border-t border-border/20 pt-4 sm:border-t-0 sm:pt-0 sm:w-auto flex justify-center">
+              <TrainingScoreView
+                teamAScore={item.trainingScoreA}
+                teamBScore={item.trainingScoreB}
+                teamALabel={tt("teamA")}
+                teamBLabel={tt("teamB")}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

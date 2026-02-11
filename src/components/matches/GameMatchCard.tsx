@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { MapPin } from "lucide-react";
+import { MapPin, Pencil } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ type Props = {
   variant?: Variant;
   badges?: React.ReactNode;
   actions?: React.ReactNode;
+  adminEditUrl?: string;
 };
 
 export function GameMatchCard({
@@ -44,13 +45,14 @@ export function GameMatchCard({
   variant = "poster",
   badges,
   actions,
+  adminEditUrl,
 }: Props) {
   const isPending = teamScore == null || opponentScore == null;
 
   if (variant === "compact") {
     const compactContent = (
       <div className="block">
-        <Card className="border-border/40 bg-card/95 card-hover cursor-pointer">
+        <Card className="border-border/40 bg-card/95 card-hover cursor-pointer py-0">
           <CardContent className="px-2.5 py-2.5 md:px-3.5 md:py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -91,11 +93,17 @@ export function GameMatchCard({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {badges}
-                <Badge className={`text-xs ${resultClassName}`}>{resultLabel}</Badge>
-                {actions}
-              </div>
+              {(badges || !isPending || actions) && (
+                <div className={cn("flex items-center gap-2 shrink-0", isPending && "hidden sm:flex")}>
+                  {badges}
+                  {!isPending && (
+                    <Badge className={cn("text-xs", resultClassName)}>
+                      {resultLabel}
+                    </Badge>
+                  )}
+                  {actions}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -107,92 +115,110 @@ export function GameMatchCard({
   }
 
   const posterContent = (
-    <div className="block max-w-4xl mx-auto px-1 md:px-2 py-0.5 md:py-1">
-      <Card className="border-primary/20 card-hover bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.08),transparent_52%),linear-gradient(135deg,rgba(12,28,59,0.95),rgba(14,26,53,0.96))] cursor-pointer overflow-hidden">
+    <div className="block max-w-4xl mx-auto px-1 md:px-2   my-8">
+      <Card className="border-primary/20 card-hover bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.08),transparent_52%),linear-gradient(135deg,rgba(12,28,59,0.95),rgba(14,26,53,0.96))] cursor-pointer overflow-hidden py-0">
         <CardContent className="px-4 py-4 md:px-6 md:py-4.5 relative">
           <div className="pointer-events-none absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-red-500/20 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-blue-500/25 blur-2xl" />
 
-          <div className="relative space-y-2">
-            <div className="flex items-start justify-between gap-3">
+          <div className="relative space-y-4 md:space-y-2">
+            <div className={cn("flex items-start justify-between gap-3", isPending && "hidden sm:flex")}>
               <div className="min-h-5" />
               <div className="flex items-center gap-2">
-                {location && (
+                {location && !isPending && (
                   <span className="text-xs text-muted-foreground hidden md:flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />
                     {location}
                   </span>
                 )}
                 {badges}
-                <Badge className={`text-xs ${resultClassName}`}>{resultLabel}</Badge>
+                <Badge className={cn("text-xs", resultClassName)}>
+                  {resultLabel}
+                </Badge>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-6">
-              <div className="flex flex-col items-center md:items-start text-center md:text-left gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-[1fr_auto_1fr] items-center gap-y-6 gap-x-3 md:gap-6">
+              {/* Home Team */}
+              <div className="flex flex-col items-center md:items-start text-center md:text-left gap-2 order-1 md:order-none">
                 <Image
                   src="/logo.svg"
                   alt={teamName}
                   width={140}
                   height={140}
-                  className="h-20 w-20 md:h-28 md:w-28 object-contain"
+                  className="h-24 w-24 sm:h-28 sm:w-28 md:h-36 md:w-36 object-contain"
                 />
-                <span className="font-bold text-base md:text-2xl tracking-wide">{teamName.toUpperCase()}</span>
+                <span className="font-bold text-sm sm:text-base md:text-2xl tracking-wide line-clamp-2 md:line-clamp-none">
+                  {teamName.toUpperCase()}
+                </span>
               </div>
 
-              <div className="text-center order-last md:order-none">
-                {isPending ? (
-                  <>
-                    {matchTimeLabel && (
-                      <p className="text-[11px] md:text-sm uppercase tracking-[0.18em] text-muted-foreground mb-1">
-                        {matchTimeLabel}
-                      </p>
-                    )}
-                    <p className="text-5xl md:text-7xl font-black leading-none">{timeLabel}</p>
-                    <p className="mt-1 text-base md:text-2xl font-bold uppercase tracking-wide">
-                      {dateLabel}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-5xl md:text-7xl font-black leading-none">
-                        {teamScore}
-                      </span>
-                      <span className="text-3xl md:text-4xl text-muted-foreground">:</span>
-                      <span className="text-5xl md:text-7xl font-black leading-none">
-                        {opponentScore}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-base md:text-xl font-semibold uppercase tracking-wide">
-                      {dateLabel}
-                    </p>
-                    <p className="text-xl md:text-3xl font-bold leading-none mt-0.5">{timeLabel}</p>
-                  </>
-                )}
-              </div>
-
-              <div className="flex flex-col items-center md:items-end text-center md:text-right gap-2">
+              {/* Away Team (Mobile: Right Column) */}
+              <div className="flex flex-col items-center md:items-end text-center md:text-right gap-2 order-2 md:order-last">
                 <TeamAvatar
                   name={opponentName}
                   logoUrl={opponentLogoUrl}
                   country={opponentCountry}
                   size="lg"
-                  className="h-20 w-20 md:h-28 md:w-28 text-4xl md:text-5xl"
+                  className="h-24 w-24 sm:h-28 sm:w-28 md:h-36 md:w-36 text-3xl sm:text-4xl md:text-5xl"
                 />
-                <div className={cn("font-bold text-base md:text-2xl tracking-wide max-w-[220px] truncate")}>
-                  {opponentName}
+                <div className={cn("font-bold text-sm sm:text-base md:text-2xl tracking-wide max-w-[220px] line-clamp-2 md:truncate")}>
+                  {opponentName.toUpperCase()}
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-center md:justify-end gap-2">
-              {location && (
-                <span className="text-xs text-muted-foreground md:hidden flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {location}
-                </span>
-              )}
+              {/* Main Info Area (Mobile: Below Teams, spans 2 cols) */}
+              <div className="col-span-2 md:col-span-1 text-center order-3 md:order-none">
+                {isPending ? (
+                  <div className="flex flex-col items-center justify-center">
+                    {matchTimeLabel && (
+                      <p className="text-[10px] md:text-sm uppercase tracking-[0.18em] text-muted-foreground mb-1">
+                        {matchTimeLabel}
+                      </p>
+                    )}
+                    <div className="flex flex-col md:block items-center">
+                      <p className="text-4xl md:text-7xl font-black leading-none bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70">
+                        {timeLabel}
+                      </p>
+                      <div className="mt-2 md:mt-1 px-3 py-1 md:px-0 md:py-0 rounded-full bg-primary/10 md:bg-transparent inline-block">
+                        <p className="text-xs md:text-2xl font-bold uppercase tracking-widest text-primary md:text-foreground">
+                          {dateLabel}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="relative group p-4 md:p-0">
+                      <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative flex items-center justify-center gap-3 md:gap-4 px-6 py-2 md:px-0 md:py-0 rounded-xl bg-background/5 md:bg-transparent border border-white/5 md:border-none backdrop-blur-sm md:backdrop-blur-none shadow-2xl md:shadow-none">
+                        <span className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                          {teamScore}
+                        </span>
+                        <div className="flex flex-col items-center gap-0.5 opacity-40">
+                          <div className="h-1 w-1 rounded-full bg-white" />
+                          <div className="h-1 w-1 rounded-full bg-white" />
+                        </div>
+                        <span className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                          {opponentScore}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 md:mt-1.5 flex flex-col md:gap-0.5">
+                      <p className="text-[10px] md:text-xl font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        {dateLabel}
+                      </p>
+                      <p className="text-sm md:text-3xl font-bold tracking-tight text-foreground/90">{timeLabel}</p>
+                      {location && (
+                        <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5 mt-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {location}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
