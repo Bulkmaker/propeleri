@@ -228,10 +228,10 @@ export function GameLineupEditor({
       }
 
       setLoading(false);
-      // Mark initial load as done after a tick so state updates settle
-      setTimeout(() => {
+      // Mark initial load as done after two ticks so React effects settle first
+      requestAnimationFrame(() => {
         initialLoadDone.current = true;
-      }, 0);
+      });
     }
     load();
   }, [gameId, supabase]);

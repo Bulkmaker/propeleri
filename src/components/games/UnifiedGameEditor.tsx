@@ -1171,10 +1171,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
             gameId={gameId}
             embedded
             backHref={null}
-            onSaved={() => {
-              void loadAll();
-              onRefresh?.();
-            }}
           />
         </TabsContent>
 
