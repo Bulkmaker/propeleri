@@ -1,7 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Camera, ImageIcon } from "lucide-react";
 import type { GalleryAlbum } from "@/types/database";
 
@@ -54,10 +55,12 @@ export default async function GalleryPage({
               <Card className="border-border/40 card-hover bg-card cursor-pointer overflow-hidden group">
                 <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
                   {album.cover_image_url ? (
-                    <img
+                    <Image
                       src={album.cover_image_url}
                       alt={getLocalizedField(album, locale)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">

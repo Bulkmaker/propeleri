@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,6 @@ export default function AdminGalleryPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -37,7 +36,7 @@ export default function AdminGalleryPage() {
     description: "",
   });
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   async function loadData() {
     const { data } = await supabase
@@ -59,7 +58,7 @@ export default function AdminGalleryPage() {
     }
 
     void loadInitialData();
-  }, []);
+  }, [supabase]);
 
   async function handleCreateAlbum() {
     setSaving(true);
@@ -116,7 +115,6 @@ export default function AdminGalleryPage() {
     }
 
     setUploading(false);
-    setSelectedAlbum(null);
     loadData();
   }
 

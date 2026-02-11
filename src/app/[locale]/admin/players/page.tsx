@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,9 +30,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, Users, Loader2, Pencil, UserPlus } from "lucide-react";
+import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload } from "lucide-react";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
+import imageCompression from "browser-image-compression";
 
 interface PlayerForm {
   first_name: string;
@@ -67,6 +69,7 @@ export default function AdminPlayersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState("");
   const [editingPlayer, setEditingPlayer] = useState<Profile | null>(null);
   const [activeSort, setActiveSort] = useState<ActivePlayersSort>("name");
@@ -95,7 +98,7 @@ export default function AdminPlayersPage() {
     is_approved: true,
   });
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   async function loadPlayers() {
     const { data } = await supabase
@@ -127,7 +130,7 @@ export default function AdminPlayersPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [supabase]);
 
   async function approvePlayer(id: string) {
     await supabase.from("profiles").update({ is_approved: true }).eq("id", id);
@@ -190,6 +193,52 @@ export default function AdminPlayersPage() {
     setDialogOpen(false);
     setSaving(false);
     loadPlayers();
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editingPlayer) return;
+
+    setUploadingAvatar(true);
+    setError("");
+
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 0.2,
+        maxWidthOrHeight: 400,
+        useWebWorker: true,
+      });
+
+      const ext = compressed.type === "image/png" ? "png" : "jpg";
+      const filePath = `${editingPlayer.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, compressed, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", editingPlayer.id);
+
+      if (updateError) throw updateError;
+
+      setEditingPlayer((prev) => (prev ? { ...prev, avatar_url: publicUrl } : prev));
+      setPlayers((prev) => prev.map((player) => (
+        player.id === editingPlayer.id ? { ...player, avatar_url: publicUrl } : player
+      )));
+    } catch (uploadError: unknown) {
+      setError(uploadError instanceof Error ? uploadError.message : "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
   }
 
 
@@ -305,6 +354,36 @@ export default function AdminPlayersPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {editingPlayer && (
+              <div className="flex flex-col items-center gap-3 border border-border/60 rounded-lg p-4">
+                <Avatar className="h-20 w-20 ring-2 ring-primary/20">
+                  <AvatarImage src={editingPlayer.avatar_url ?? undefined} />
+                  <AvatarFallback className="text-lg font-semibold">
+                    {(editingPlayer.first_name?.[0] ?? "") + (editingPlayer.last_name?.[0] ?? "")}
+                  </AvatarFallback>
+                </Avatar>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={uploadingAvatar}
+                  />
+                  <Button variant="outline" size="sm" asChild disabled={uploadingAvatar}>
+                    <span>
+                      {uploadingAvatar ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="mr-2 h-4 w-4" />
+                      )}
+                      {tpr("changeAvatar")}
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{ta("firstName")}</Label>

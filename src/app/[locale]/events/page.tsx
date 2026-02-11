@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,6 @@ export default async function EventsPage({
   setRequestLocale(locale);
 
   const t = await getTranslations("events");
-  const tc = await getTranslations("common");
 
   const supabase = await createClient();
   const { data: events } = await supabase
@@ -70,9 +70,11 @@ export default async function EventsPage({
                   <div className="flex">
                     {event.cover_image_url && (
                       <div className="w-32 md:w-48 flex-shrink-0">
-                        <img
+                        <Image
                           src={event.cover_image_url}
                           alt={getLocalizedField(event, locale)}
+                          width={192}
+                          height={128}
                           className="w-full h-full object-cover"
                         />
                       </div>

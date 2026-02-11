@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Loader2, Save } from "lucide-react";
 import type { Profile, GameStats } from "@/types/database";
@@ -38,7 +38,7 @@ export default function GameStatsEntryPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function load() {
@@ -76,7 +76,7 @@ export default function GameStatsEntryPage() {
       setLoading(false);
     }
     load();
-  }, [gameId]);
+  }, [gameId, supabase]);
 
   function updateRow(idx: number, field: string, value: number) {
     setRows((prev) =>

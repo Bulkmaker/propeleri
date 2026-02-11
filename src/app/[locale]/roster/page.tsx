@@ -90,7 +90,6 @@ function PositionSection({
 
 function PlayerCard({ player }: { player: Profile }) {
   const tp = useTranslations("positions");
-  const tr = useTranslations("roles");
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
 
   return (

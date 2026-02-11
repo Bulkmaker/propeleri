@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Dumbbell, Swords } from "lucide-react";
+import { CalendarDays, Dumbbell } from "lucide-react";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import type { Game, GameResult, TrainingSession } from "@/types/database";
 import Image from "next/image";
@@ -30,7 +30,6 @@ export default async function SchedulePage({
 
   const t = await getTranslations("schedule");
   const tg = await getTranslations("game");
-  const tc = await getTranslations("common");
   const ts = await getTranslations("training");
 
   const supabase = await createClient();

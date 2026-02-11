@@ -32,7 +32,6 @@ export default async function TrainingDetailPage({
   const t = await getTranslations("training");
   const ts = await getTranslations("stats");
   const tc = await getTranslations("common");
-  const tp = await getTranslations("positions");
 
   const supabase = await createClient();
 

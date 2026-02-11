@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/database";
 import type { User } from "@supabase/supabase-js";
@@ -9,7 +9,7 @@ export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function getUser() {
@@ -42,7 +42,7 @@ export function useUser() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const isAdmin = profile?.app_role === "admin";
   const isTeamLeader =

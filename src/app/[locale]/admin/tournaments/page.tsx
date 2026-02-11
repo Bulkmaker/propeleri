@@ -55,7 +55,7 @@ export default function AdminTournamentsPage() {
     description: "",
   });
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   async function loadData() {
     const [tournamentsRes, seasonsRes] = await Promise.all([
@@ -92,14 +92,14 @@ export default function AdminTournamentsPage() {
       setTournaments(tournamentsRes.data ?? []);
       const allSeasons = seasonsRes.data ?? [];
       setSeasons(allSeasons);
-      if (allSeasons[0] && !form.season_id) {
-        setForm((f) => ({ ...f, season_id: allSeasons[0].id }));
+      if (allSeasons[0]) {
+        setForm((f) => (f.season_id ? f : { ...f, season_id: allSeasons[0].id }));
       }
       setLoading(false);
     }
 
     void loadInitialData();
-  }, []);
+  }, [supabase]);
 
   function openCreateDialog() {
     setEditingId(null);

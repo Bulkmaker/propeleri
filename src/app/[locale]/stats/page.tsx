@@ -164,7 +164,6 @@ export default async function StatsPage({
 }
 
 function TopPlayerCard({
-  rank,
   name,
   number,
   points,
@@ -173,7 +172,6 @@ function TopPlayerCard({
   icon,
   label,
 }: {
-  rank: number;
   name: string;
   number?: number | null;
   points: number;

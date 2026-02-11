@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Save, Upload, User } from "lucide-react";
 import type { Profile, PlayerPosition } from "@/types/database";
@@ -35,7 +35,7 @@ export default function ProfilePage() {
   const [message, setMessage] = useState("");
   const [isApproved, setIsApproved] = useState(true);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function load() {
@@ -61,7 +61,7 @@ export default function ProfilePage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [router, supabase]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

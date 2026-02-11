@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, Loader2, Save, Plus, Trash2, X, GripVertical } from "lucide-react";
+import { ChevronLeft, Loader2, Save, Plus, Trash2, X } from "lucide-react";
 import type { Profile, PlayerPosition, LineupDesignation, SlotPosition, GameLineup } from "@/types/database";
-import { POSITION_COLORS, POSITION_COLORS_HEX, SLOT_TO_POSITION, LINE_SLOTS } from "@/lib/utils/constants";
+import { POSITION_COLORS, POSITION_COLORS_HEX, SLOT_TO_POSITION } from "@/lib/utils/constants";
 
 // A slot holds a player assignment
 interface SlotAssignment {
@@ -76,7 +76,7 @@ export default function LineupPage() {
     playerId?: string;
   } | null>(null);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function load() {
@@ -147,7 +147,7 @@ export default function LineupPage() {
       setLoading(false);
     }
     load();
-  }, [gameId]);
+  }, [gameId, supabase]);
 
   // Get all assigned player IDs
   const assignedPlayerIds = useCallback(() => {
@@ -374,7 +374,7 @@ export default function LineupPage() {
     }[] = [];
 
     // Goalies
-    goalieSlots.forEach((g, _i) => {
+    goalieSlots.forEach((g) => {
       if (g.playerId) {
         entries.push({
           game_id: gameId,
@@ -456,7 +456,6 @@ export default function LineupPage() {
                 assignment={slot}
                 player={getPlayer(slot.playerId)}
                 availablePlayers={sortedPlayersForSlot("GK")}
-                allPlayers={players}
                 positionTranslations={tp}
                 gameTranslations={t}
                 onAssign={(pid) => assignGoalie(i, pid)}
@@ -507,7 +506,6 @@ export default function LineupPage() {
                   assignment={line.slots[slotKey]}
                   player={getPlayer(line.slots[slotKey].playerId)}
                   availablePlayers={sortedPlayersForSlot(slotKey)}
-                  allPlayers={players}
                   positionTranslations={tp}
                   gameTranslations={t}
                   onAssign={(pid) => assignLineSlot(lineIndex, slotKey, pid)}
@@ -543,7 +541,6 @@ export default function LineupPage() {
                   assignment={line.slots[slotKey]}
                   player={getPlayer(line.slots[slotKey].playerId)}
                   availablePlayers={sortedPlayersForSlot(slotKey)}
-                  allPlayers={players}
                   positionTranslations={tp}
                   gameTranslations={t}
                   onAssign={(pid) => assignLineSlot(lineIndex, slotKey, pid)}
@@ -656,7 +653,6 @@ interface PositionSlotProps {
   assignment: SlotAssignment;
   player: Profile | undefined;
   availablePlayers: Profile[];
-  allPlayers: Profile[];
   positionTranslations: ReturnType<typeof useTranslations>;
   gameTranslations: ReturnType<typeof useTranslations>;
   onAssign: (playerId: string) => void;
@@ -673,7 +669,6 @@ function PositionSlot({
   assignment,
   player,
   availablePlayers,
-  allPlayers,
   positionTranslations: tp,
   gameTranslations: t,
   onAssign,

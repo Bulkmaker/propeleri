@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Link } from "@/i18n/navigation";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, X, ChevronRight as ChevronRightIcon, ChevronLeft as ChevronLeftIcon } from "lucide-react";
 import type { GalleryPhoto, GalleryAlbum } from "@/types/database";
@@ -13,7 +13,6 @@ import type { GalleryPhoto, GalleryAlbum } from "@/types/database";
 export default function AlbumDetailPage() {
   const params = useParams();
   const albumId = params.albumId as string;
-  const t = useTranslations("gallery");
   const tc = useTranslations("common");
 
   const [album, setAlbum] = useState<GalleryAlbum | null>(null);
@@ -74,10 +73,12 @@ export default function AlbumDetailPage() {
               className="aspect-square rounded-lg overflow-hidden cursor-pointer group relative"
               onClick={() => setSelectedIndex(idx)}
             >
-              <img
+              <Image
                 src={photo.image_url}
                 alt={photo.caption ?? ""}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                fill
+                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
               />
             </div>
           ))}
@@ -118,9 +119,11 @@ export default function AlbumDetailPage() {
             </Button>
           )}
 
-          <img
+          <Image
             src={photos[selectedIndex].image_url}
             alt={photos[selectedIndex].caption ?? ""}
+            width={1600}
+            height={1200}
             className="max-h-[85vh] max-w-[90vw] object-contain"
           />
 

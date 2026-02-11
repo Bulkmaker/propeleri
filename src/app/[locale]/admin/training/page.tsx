@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export default function AdminTrainingPage() {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   async function loadData() {
     const [sessionsRes, seasonsRes] = await Promise.all([
@@ -81,7 +81,7 @@ export default function AdminTrainingPage() {
     }
 
     void loadInitialData();
-  }, []);
+  }, [supabase]);
 
   function openCreate() {
     setEditingId(null);

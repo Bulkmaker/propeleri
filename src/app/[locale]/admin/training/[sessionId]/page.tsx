@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -35,7 +35,7 @@ export default function TrainingStatsEntryPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function load() {
@@ -72,7 +72,7 @@ export default function TrainingStatsEntryPage() {
       setLoading(false);
     }
     load();
-  }, [sessionId]);
+  }, [sessionId, supabase]);
 
   function toggleAttendance(idx: number) {
     setRows((prev) =>

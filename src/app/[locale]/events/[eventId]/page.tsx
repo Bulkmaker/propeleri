@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, CalendarDays, MapPin } from "lucide-react";
@@ -51,11 +52,13 @@ export default async function EventDetailPage({
       </Link>
 
       {event.cover_image_url && (
-        <div className="rounded-xl overflow-hidden mb-6 aspect-[16/9]">
-          <img
+        <div className="rounded-xl overflow-hidden mb-6 aspect-[16/9] relative">
+          <Image
             src={event.cover_image_url}
             alt={getLocalizedField(event, locale)}
-            className="w-full h-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 768px"
+            className="object-cover"
           />
         </div>
       )}

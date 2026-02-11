@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export default function AdminSeasonsPage() {
     is_current: false,
   });
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   async function loadData() {
     const { data } = await supabase
@@ -56,7 +56,7 @@ export default function AdminSeasonsPage() {
     }
 
     void loadInitialData();
-  }, []);
+  }, [supabase]);
 
   async function handleSave() {
     setSaving(true);
