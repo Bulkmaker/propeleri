@@ -146,6 +146,7 @@
     "goalieTeamA": "Team White Goalie",
     "goalieTeamB": "Team Dark Goalie",
     "goalsTimeline": "Goals",
+    "goalsOptional": "Goal details are optional, fill only what you know",
     "goalScorer": "Goal Scorer",
     "assist": "Assist",
     "goal": "Goal",

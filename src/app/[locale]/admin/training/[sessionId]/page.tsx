@@ -300,15 +300,14 @@ export default function TrainingStatsEntryPage() {
 
     if (structuredMode) {
       for (const event of goalEvents) {
-        if (!event.scorer_player_id) {
-          setError("Для каждого гола нужно выбрать автора.");
-          setSaving(false);
-          return;
-        }
-
         const teamPlayerIds = new Set(
           getPlayersByTeam(event.team).map((player) => player.player_id)
         );
+
+        if (!event.scorer_player_id) {
+          continue;
+        }
+
         if (!teamPlayerIds.has(event.scorer_player_id)) {
           setError("Автор гола должен быть из выбранной команды и отмечен как присутствующий.");
           setSaving(false);
@@ -506,6 +505,7 @@ export default function TrainingStatsEntryPage() {
             {goalEvents.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">{tt("goalsTimeline")}</p>
+                <p className="text-xs text-muted-foreground">{tt("goalsOptional")}</p>
                 <div className="space-y-2">
                   {goalEvents.map((event, idx) => {
                     const players = getPlayersByTeam(event.team);
@@ -597,7 +597,6 @@ export default function TrainingStatsEntryPage() {
                     <th className="text-left py-2 px-2">#</th>
                     <th className="text-left py-2 px-2">Igrac</th>
                     <th className="text-center py-2 px-2">{tt("teams")}</th>
-                    <th className="text-center py-2 px-2">{tt("attendance")}</th>
                     <th className="text-center py-2 px-2">{ts("goals")}</th>
                     <th className="text-center py-2 px-2">{ts("assists")}</th>
                   </tr>
@@ -609,7 +608,28 @@ export default function TrainingStatsEntryPage() {
                         {row.jersey_number ?? "-"}
                       </td>
                       <td className="py-2 px-2 font-medium">
-                        {row.first_name} {row.last_name}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => toggleAttendance(idx)}
+                            className={`h-7 w-7 p-0 ${
+                              row.attended
+                                ? "text-green-400 hover:text-green-300"
+                                : "text-red-400 hover:text-red-300"
+                            }`}
+                            aria-label={tt("attendance")}
+                          >
+                            {row.attended ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <span>
+                            {row.first_name} {row.last_name}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-2 px-2">
                         <div className="flex items-center justify-center gap-1">
@@ -642,24 +662,6 @@ export default function TrainingStatsEntryPage() {
                             B
                           </Button>
                         </div>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleAttendance(idx)}
-                          className={
-                            row.attended
-                              ? "text-green-400 hover:text-green-300"
-                              : "text-red-400 hover:text-red-300"
-                          }
-                        >
-                          {row.attended ? (
-                            <CheckCircle className="h-5 w-5" />
-                          ) : (
-                            <XCircle className="h-5 w-5" />
-                          )}
-                        </Button>
                       </td>
                       <td className="py-2 px-2">
                         <Input
