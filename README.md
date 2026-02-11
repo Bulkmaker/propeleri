@@ -1,55 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HC Propeleri Novi Sad
+
+Hockey team website for HC Propeleri Novi Sad — a full-featured team management platform with public-facing pages and an admin panel.
+
+## Features
+
+- **Roster** — player profiles with positions, stats, avatars
+- **Games** — game management with lineups, ice rink visualization, and detailed game notes (goals, assists, goalie reports)
+- **Tournaments** — cup/placement/round-robin formats with group stages, playoff brackets, and standings
+- **Training** — training session tracking with attendance, intra-squad match scoring
+- **Statistics** — per-season player stats aggregated from games and training
+- **Schedule** — combined view of upcoming games and training sessions
+- **Events** — team events with multilingual content
+- **Gallery** — photo albums linked to events
+- **Admin Panel** — role-based access for team management (captains, assistant captains, admins)
+- **i18n** — three languages: Serbian (default), Russian, English
+
+## Tech Stack
+
+- [Next.js 16](https://nextjs.org/) (App Router) + React 19 + TypeScript
+- [Supabase](https://supabase.com/) — PostgreSQL, Auth, Storage
+- [next-intl](https://next-intl.dev/) — internationalization
+- [Tailwind CSS v4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) — dark theme
+- [Playwright](https://playwright.dev/) — e2e testing
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+
+- Supabase project (or local Supabase instance)
+
+### Environment Variables
+
+Create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Testing
-
-This project uses [Playwright](https://playwright.dev/) for end-to-end testing.
-
-### Running Tests
+### Install & Run
 
 ```bash
-# Run all tests
-npx playwright test
-
-# Run tests in UI mode
-npx playwright test --ui
-
-# Run tests for a specific project (e.g., Mobile Safari)
-npx playwright test --project="Mobile Safari"
+npm install
+npm run dev       # Start dev server on port 3100
 ```
 
-Tests are located in the `tests/` directory.
+Open [http://localhost:3100](http://localhost:3100) to see the app.
+
+### Other Commands
+
+```bash
+npm run build     # Production build
+npm run start     # Start production server
+npm run lint      # ESLint
+npx playwright test        # Run e2e tests
+npx playwright test --ui   # Tests with interactive UI
+```
+
+## Database
+
+The app uses Supabase PostgreSQL. Migration files are in `supabase/migrations/`. Key tables include `profiles`, `teams`, `seasons`, `games`, `game_lineups`, `game_stats`, `training_sessions`, `tournaments`, `tournament_matches`, `events`, `gallery_albums`, and more.
+
+TypeScript types for all tables are defined in `src/types/database.ts`.
+
+## Project Structure
+
+```
+src/
+├── app/[locale]/     # Pages (12 route groups + admin panel)
+├── components/       # 17 component directories (ui, games, matches, etc.)
+├── lib/              # Supabase clients + utility functions
+├── i18n/             # next-intl configuration
+├── messages/         # Translation files (sr, ru, en)
+└── types/            # TypeScript type definitions
+```
+
+## Deployment
+
+Deploy on [Vercel](https://vercel.com/) with environment variables configured. The app uses `as-needed` locale prefix strategy — Serbian URLs have no prefix, other languages are prefixed (`/ru/...`, `/en/...`).
