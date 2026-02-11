@@ -22,7 +22,7 @@ interface HockeyRinkProps {
 }
 
 const SLOT_COORDS: Record<string, { x: number; y: number }> = {
-  GK: { x: 300, y: 410 },
+  GK: { x: 300, y: 345 },
   LD: { x: 155, y: 300 },
   RD: { x: 445, y: 300 },
   C: { x: 300, y: 160 },
@@ -188,20 +188,20 @@ export default function HockeyRink({ lineup, interactive, onPlayerClick }: Hocke
           <line x1="25" y1="120" x2="575" y2="120" stroke="#2563eb" strokeWidth="4" opacity="0.8" />
 
           {/* Faceoff circles */}
-          <circle cx="180" cy="310" r="40" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5" />
-          <circle cx="180" cy="310" r="4" fill="#dc2626" opacity="0.6" />
-          <circle cx="420" cy="310" r="40" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5" />
-          <circle cx="420" cy="310" r="4" fill="#dc2626" opacity="0.6" />
+          <circle cx="180" cy="310" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
+          <circle cx="180" cy="310" r="4" fill="#dc2626" opacity="0.3" />
+          <circle cx="420" cy="310" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
+          <circle cx="420" cy="310" r="4" fill="#dc2626" opacity="0.3" />
 
           {/* Goal crease */}
           <path
-            d="M 265 455 Q 265 425 300 425 Q 335 425 335 455"
+            d="M 265 445 Q 265 415 300 415 Q 335 415 335 445"
             fill="rgba(37, 99, 235, 0.15)"
             stroke="#2563eb"
             strokeWidth="2"
             opacity="0.7"
           />
-          <line x1="245" y1="455" x2="355" y2="455" stroke="#dc2626" strokeWidth="3" opacity="0.6" />
+          <line x1="245" y1="445" x2="355" y2="445" stroke="#dc2626" strokeWidth="3" opacity="0.6" />
 
           {/* Players */}
           {onIce.map(({ player: entry, x, y }) => {
@@ -211,6 +211,7 @@ export default function HockeyRink({ lineup, interactive, onPlayerClick }: Hocke
             const isCaptain = entry.designation === "captain";
             const isAssistant = entry.designation === "assistant_captain";
             const label = `#${p.jersey_number ?? ""} ${p.last_name}`;
+            const clipId = `avatar-clip-${entry.player_id}`;
 
             return (
               <g
@@ -218,48 +219,70 @@ export default function HockeyRink({ lineup, interactive, onPlayerClick }: Hocke
                 className={interactive ? "cursor-pointer" : ""}
                 onClick={() => interactive && onPlayerClick?.(entry.player_id)}
               >
+                <defs>
+                  <clipPath id={clipId}>
+                    <circle cx={x} cy={y} r="35" />
+                  </clipPath>
+                </defs>
                 {/* Glow */}
                 <circle cx={x} cy={y} r="44" fill={color} opacity="0.15" />
-                {/* Main circle */}
+                {/* Avatar or fallback */}
+                {p.avatar_url ? (
+                  <>
+                    <circle cx={x} cy={y} r="35" fill={color} />
+                    <image
+                      href={p.avatar_url}
+                      x={x - 35}
+                      y={y - 35}
+                      width="70"
+                      height="70"
+                      clipPath={`url(#${clipId})`}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <circle cx={x} cy={y} r="35" fill={color} opacity="0.95" />
+                    <text
+                      x={x}
+                      y={y + 1}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="white"
+                      fontSize="18"
+                      fontWeight="bold"
+                      fontFamily="system-ui"
+                    >
+                      {initials}
+                    </text>
+                  </>
+                )}
+                {/* Position color ring */}
                 <circle
                   cx={x}
                   cy={y}
-                  r="35"
-                  fill={color}
-                  stroke="white"
+                  r="36"
+                  fill="none"
+                  stroke={color}
                   strokeWidth="3"
-                  opacity="0.95"
                 />
-                {/* Initials */}
-                <text
-                  x={x}
-                  y={y + 1}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fill="white"
-                  fontSize="18"
-                  fontWeight="bold"
-                  fontFamily="system-ui"
-                >
-                  {initials}
-                </text>
                 {/* Name badge background */}
                 <rect
-                  x={x - 48}
+                  x={x - 56}
                   y={y + 40}
-                  width="96"
-                  height="22"
-                  rx="11"
-                  fill="rgba(15, 23, 42, 0.85)"
+                  width="112"
+                  height="26"
+                  rx="13"
+                  fill="rgba(15, 23, 42, 0.9)"
                 />
                 {/* Name badge text */}
                 <text
                   x={x}
-                  y={y + 53}
+                  y={y + 55}
                   textAnchor="middle"
                   dominantBaseline="central"
                   fill="white"
-                  fontSize="11"
+                  fontSize="13"
                   fontWeight="600"
                   fontFamily="system-ui"
                 >
@@ -271,7 +294,7 @@ export default function HockeyRink({ lineup, interactive, onPlayerClick }: Hocke
                     <circle
                       cx={x + 26}
                       cy={y - 26}
-                      r="11"
+                      r="12"
                       fill="#e8732a"
                       stroke="white"
                       strokeWidth="1.5"

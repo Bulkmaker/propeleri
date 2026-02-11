@@ -14,6 +14,8 @@
     "admin": "Admin",
     "profile": "Profile",
     "save": "Save",
+    "saving": "Saving...",
+    "autoSaved": "Saved",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",

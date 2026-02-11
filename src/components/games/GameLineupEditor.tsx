@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, Loader2, Save, Plus, Trash2, X } from "lucide-react";
+import { ChevronLeft, Loader2, Plus, Trash2, X, Check } from "lucide-react";
 import type { Profile, PlayerPosition, LineupDesignation, SlotPosition, GameLineup } from "@/types/database";
 import { POSITION_COLORS, POSITION_COLORS_HEX, SLOT_TO_POSITION } from "@/lib/utils/constants";
 
@@ -73,9 +73,10 @@ export function GameLineupEditor({
   ]);
   const [lines, setLines] = useState<LineData[]>([createEmptyLine()]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [activeLineIndex, setActiveLineIndex] = useState(0);
+  const initialLoadDone = useRef(false);
+  const isSavingRef = useRef(false);
   const [isTournamentGame, setIsTournamentGame] = useState(false);
   const [registeredPlayersCount, setRegisteredPlayersCount] = useState<number | null>(null);
 
@@ -227,6 +228,10 @@ export function GameLineupEditor({
       }
 
       setLoading(false);
+      // Mark initial load as done after a tick so state updates settle
+      setTimeout(() => {
+        initialLoadDone.current = true;
+      }, 0);
     }
     load();
   }, [gameId, supabase]);
@@ -438,14 +443,8 @@ export function GameLineupEditor({
     e.dataTransfer.dropEffect = "move";
   }
 
-  // Save
-  async function handleSave() {
-    setSaving(true);
-    setMessage("");
-
-    // Delete existing lineup
-    await supabase.from("game_lineups").delete().eq("game_id", gameId);
-
+  // Build save entries from current state
+  function buildSaveEntries() {
     const entries: {
       game_id: string;
       player_id: string;
@@ -455,7 +454,6 @@ export function GameLineupEditor({
       slot_position: SlotPosition;
     }[] = [];
 
-    // Goalies
     goalieSlots.forEach((g) => {
       if (g.playerId) {
         entries.push({
@@ -469,7 +467,6 @@ export function GameLineupEditor({
       }
     });
 
-    // Lines
     lines.forEach((line, lineIndex) => {
       for (const [slotKey, assignment] of Object.entries(line.slots)) {
         if (assignment.playerId) {
@@ -485,14 +482,40 @@ export function GameLineupEditor({
       }
     });
 
-    if (entries.length > 0) {
-      await supabase.from("game_lineups").insert(entries);
-    }
-
-    setMessage("Postava sacuvana!");
-    setSaving(false);
-    onSaved?.();
+    return entries;
   }
+
+  // Auto-save
+  async function doSave() {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+    setAutoSaveStatus("saving");
+
+    try {
+      await supabase.from("game_lineups").delete().eq("game_id", gameId);
+      const entries = buildSaveEntries();
+      if (entries.length > 0) {
+        await supabase.from("game_lineups").insert(entries);
+      }
+      setAutoSaveStatus("saved");
+      onSaved?.();
+      setTimeout(() => setAutoSaveStatus("idle"), 2000);
+    } finally {
+      isSavingRef.current = false;
+    }
+  }
+
+  // Auto-save on lineup changes
+  useEffect(() => {
+    if (!initialLoadDone.current || loading) return;
+
+    const timer = setTimeout(() => {
+      void doSave();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalieSlots, lines]);
 
   if (loading) {
     return (
@@ -611,18 +634,18 @@ export function GameLineupEditor({
           </g>
           <line x1="15" y1="12" x2="585" y2="12" stroke="#dc2626" strokeWidth="5" />
           <line x1="25" y1="140" x2="575" y2="140" stroke="#2563eb" strokeWidth="4" opacity="0.8" />
-          <circle cx="180" cy="340" r="40" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5" />
-          <circle cx="180" cy="340" r="4" fill="#dc2626" opacity="0.6" />
-          <circle cx="420" cy="340" r="40" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5" />
-          <circle cx="420" cy="340" r="4" fill="#dc2626" opacity="0.6" />
+          <circle cx="180" cy="340" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
+          <circle cx="180" cy="340" r="4" fill="#dc2626" opacity="0.3" />
+          <circle cx="420" cy="340" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
+          <circle cx="420" cy="340" r="4" fill="#dc2626" opacity="0.3" />
           <path
-            d="M 265 495 Q 265 465 300 465 Q 335 465 335 495"
+            d="M 265 480 Q 265 450 300 450 Q 335 450 335 480"
             fill="rgba(37, 99, 235, 0.15)"
             stroke="#2563eb"
             strokeWidth="2"
             opacity="0.7"
           />
-          <line x1="245" y1="495" x2="355" y2="495" stroke="#dc2626" strokeWidth="3" opacity="0.6" />
+          <line x1="245" y1="480" x2="355" y2="480" stroke="#dc2626" strokeWidth="3" opacity="0.6" />
         </svg>
 
         {/* Overlaid position slots */}
@@ -637,7 +660,7 @@ export function GameLineupEditor({
             RW: { left: "80%", top: "15%" },
             LD: { left: "27%", top: "56%" },
             RD: { left: "73%", top: "56%" },
-            GK: { left: "50%", top: "76%" },
+            GK: { left: "50%", top: "70%" },
           };
 
           return (
@@ -755,26 +778,23 @@ export function GameLineupEditor({
         </Card>
       )}
 
-      {/* Save */}
-      {message && (
-        <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2 mb-4">
-          {message}
-        </p>
+      {/* Auto-save indicator */}
+      {autoSaveStatus !== "idle" && (
+        <div className="flex justify-center">
+          {autoSaveStatus === "saving" && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5 py-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              {tc("saving")}
+            </span>
+          )}
+          {autoSaveStatus === "saved" && (
+            <span className="text-xs text-green-400 flex items-center gap-1.5 py-2">
+              <Check className="h-3 w-3" />
+              {tc("autoSaved")}
+            </span>
+          )}
+        </div>
       )}
-
-      <Button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full bg-primary"
-        size="lg"
-      >
-        {saving ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Save className="mr-2 h-4 w-4" />
-        )}
-        {tc("save")}
-      </Button>
     </div>
   );
 }
@@ -822,7 +842,7 @@ function PositionSlot({
   const otherPlayersList = availablePlayers.filter((p) => p.position !== targetPosition);
 
   return (
-    <div className="flex flex-col items-center gap-1 w-28">
+    <div className="flex flex-col items-center gap-1 w-32">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div
@@ -830,17 +850,17 @@ function PositionSlot({
             onDragStart={isEmpty ? undefined : onDragStart}
             onDrop={onDrop}
             onDragOver={onDragOver}
-            className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
+            className={`relative w-18 h-18 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
               isEmpty
                 ? "border-2 border-dashed border-border/60 hover:border-primary/50 hover:bg-primary/5"
-                : "border-2 border-solid hover:scale-105 active:cursor-grabbing"
+                : "border-[3px] border-solid hover:scale-105 active:cursor-grabbing"
             }`}
             style={
               isEmpty
                 ? undefined
                 : {
                     borderColor: color,
-                    backgroundColor: `${color}15`,
+                    backgroundColor: `${color}10`,
                   }
             }
           >
@@ -861,7 +881,7 @@ function PositionSlot({
                 {/* Designation badge */}
                 {assignment.designation !== "player" && (
                   <div
-                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white z-10"
                     style={{ backgroundColor: "#e8732a" }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -871,18 +891,25 @@ function PositionSlot({
                     {assignment.designation === "captain" ? "C" : "A"}
                   </div>
                 )}
-                {/* Player initials */}
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                  style={{ backgroundColor: color }}
-                >
-                  {player
-                    ? `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`
-                    : "?"}
-                </div>
-                <span className="text-[10px] font-bold text-primary mt-0.5">
-                  #{player?.jersey_number ?? ""}
-                </span>
+                {/* Player avatar or initials */}
+                {player?.avatar_url ? (
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden">
+                    <img
+                      src={player.avatar_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold"
+                    style={{ backgroundColor: color }}
+                  >
+                    {player
+                      ? `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`
+                      : "?"}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -980,8 +1007,8 @@ function PositionSlot({
       <div className="text-center h-8">
         {!isEmpty && player ? (
           <>
-            <p className="text-[11px] font-medium leading-tight truncate max-w-28">
-              {player.last_name}
+            <p className="text-[11px] sm:text-xs font-semibold leading-tight truncate max-w-32">
+              #{player.jersey_number ?? ""} {player.last_name}
             </p>
             <p className="text-[9px] text-muted-foreground">{label}</p>
           </>
