@@ -46,6 +46,7 @@ import imageCompression from "browser-image-compression";
 import type {
   Tournament,
   Team,
+  Profile,
   TournamentTeam,
   TournamentGroup,
   TournamentGroupTeam,
@@ -160,6 +161,8 @@ export default function AdminTournamentDetailPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [opponents, setOpponents] = useState<Opponent[]>([]);
+  const [players, setPlayers] = useState<Profile[]>([]);
+  const [registeredPlayerIds, setRegisteredPlayerIds] = useState<string[]>([]);
   const [tournamentTeamJunctions, setTournamentTeamJunctions] = useState<TournamentTeam[]>([]);
   const [groups, setGroups] = useState<TournamentGroup[]>([]);
   const [groupTeams, setGroupTeams] = useState<TournamentGroupTeam[]>([]);
@@ -228,6 +231,8 @@ export default function AdminTournamentDetailPage() {
       tournamentRes,
       junctionsRes,
       allTeamsRes,
+      playersRes,
+      registrationsRes,
       groupsRes,
       groupTeamsRes,
       matchesRes,
@@ -240,6 +245,17 @@ export default function AdminTournamentDetailPage() {
         .eq("tournament_id", tournamentId)
         .order("sort_order"),
       supabase.from("teams").select("*").order("name"),
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_approved", true)
+        .eq("is_guest", false)
+        .order("jersey_number", { ascending: true }),
+      supabase
+        .from("tournament_player_registrations")
+        .select("player_id")
+        .eq("tournament_id", tournamentId),
       supabase
         .from("tournament_groups")
         .select("*")
@@ -289,6 +305,10 @@ export default function AdminTournamentDetailPage() {
 
     setTournamentTeamJunctions(junctions);
     setAllTeams(globalTeams);
+    setPlayers((playersRes.data ?? []) as Profile[]);
+    setRegisteredPlayerIds(
+      ((registrationsRes.data ?? []) as { player_id: string }[]).map((row) => row.player_id)
+    );
 
     const teamIds = new Set(junctions.map((j) => j.team_id));
     setTeams(globalTeams.filter((team) => teamIds.has(team.id)));
@@ -512,6 +532,32 @@ export default function AdminTournamentDetailPage() {
 
     await supabase.from("tournament_teams").delete().eq("id", junction.id);
     await loadAll();
+  }
+
+  async function toggleRegisteredPlayer(playerId: string) {
+    setSaving(true);
+    setError("");
+
+    const isRegistered = registeredPlayerIds.includes(playerId);
+
+    const result = isRegistered
+      ? await supabase
+          .from("tournament_player_registrations")
+          .delete()
+          .eq("tournament_id", tournamentId)
+          .eq("player_id", playerId)
+      : await supabase
+          .from("tournament_player_registrations")
+          .insert({ tournament_id: tournamentId, player_id: playerId });
+
+    if (result.error) {
+      setError(result.error.message);
+      setSaving(false);
+      return;
+    }
+
+    await loadAll();
+    setSaving(false);
   }
 
   // --- GROUPS ---
@@ -759,6 +805,11 @@ export default function AdminTournamentDetailPage() {
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [allTeams]);
 
+  const registeredPlayerIdSet = useMemo(
+    () => new Set(registeredPlayerIds),
+    [registeredPlayerIds]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -807,6 +858,10 @@ export default function AdminTournamentDetailPage() {
             <TabsTrigger value="teams" className="gap-2">
               <Users className="h-4 w-4" />
               {tt("teams")}
+            </TabsTrigger>
+            <TabsTrigger value="players" className="gap-2">
+              <Check className="h-4 w-4" />
+              Players
             </TabsTrigger>
             <TabsTrigger value="groups" className="gap-2">
               <Layers className="h-4 w-4" />
@@ -1163,6 +1218,54 @@ export default function AdminTournamentDetailPage() {
                 </div>
               </DialogContent>
             </Dialog>
+          </TabsContent>
+
+          <TabsContent value="players">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Tournament roster</h2>
+              <Badge className="bg-primary/20 text-primary">
+                {registeredPlayerIds.length} selected
+              </Badge>
+            </div>
+
+            {players.length === 0 ? (
+              <p className="text-muted-foreground text-center py-10">No active players found</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {players.map((player) => {
+                  const isSelected = registeredPlayerIdSet.has(player.id);
+                  const playerLabel = player.nickname
+                    ? `${player.first_name} "${player.nickname}" ${player.last_name}`
+                    : `${player.first_name} ${player.last_name}`;
+
+                  return (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => void toggleRegisteredPlayer(player.id)}
+                      disabled={saving}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        isSelected
+                          ? "border-primary/50 bg-primary/10"
+                          : "border-border/40 hover:border-primary/30"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium truncate">{playerLabel}</span>
+                        {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        #{player.jersey_number ?? "—"} · {player.position}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-3">
+              Only selected players will be shown first when setting lineup for tournament games.
+            </p>
           </TabsContent>
 
           <TabsContent value="groups">

@@ -28,8 +28,10 @@ export interface TrainingMatchData {
 export interface Profile {
   id: string;
   email: string;
+  username: string | null;
   first_name: string;
   last_name: string;
+  nickname: string | null;
   jersey_number: number | null;
   position: PlayerPosition;
   team_role: PlayerRole;
@@ -41,6 +43,7 @@ export interface Profile {
   height: number | null;
   weight: number | null;
   default_training_team: TrainingTeam | null;
+  is_guest: boolean;
   is_active: boolean;
   is_approved: boolean;
   created_at: string;
@@ -116,6 +119,7 @@ export interface TrainingStats {
   session_id: string;
   player_id: string;
   attended: boolean;
+  is_guest: boolean;
   goals: number;
   assists: number;
   training_team: TrainingTeam | null;
@@ -201,6 +205,13 @@ export interface TournamentMatch {
   updated_at: string;
   team_a?: Team;
   team_b?: Team;
+}
+
+export interface TournamentPlayerRegistration {
+  id: string;
+  tournament_id: string;
+  player_id: string;
+  created_at: string;
 }
 
 export interface GroupStandingRow {

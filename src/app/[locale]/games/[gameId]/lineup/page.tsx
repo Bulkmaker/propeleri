@@ -67,6 +67,8 @@ export default function LineupPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [activeLineIndex, setActiveLineIndex] = useState(0);
+  const [isTournamentGame, setIsTournamentGame] = useState(false);
+  const [registeredPlayersCount, setRegisteredPlayersCount] = useState<number | null>(null);
 
   // Drag state
   const [dragSource, setDragSource] = useState<{
@@ -81,13 +83,12 @@ export default function LineupPage() {
 
   useEffect(() => {
     async function load() {
-      const [playersRes, lineupRes] = await Promise.all([
+      const [gameRes, lineupRes] = await Promise.all([
         supabase
-          .from("profiles")
-          .select("*")
-          .eq("is_active", true)
-          .eq("is_approved", true)
-          .order("jersey_number"),
+          .from("games")
+          .select("tournament_id")
+          .eq("id", gameId)
+          .maybeSingle(),
         supabase
           .from("game_lineups")
           .select("*, player:profiles(*)")
@@ -95,10 +96,81 @@ export default function LineupPage() {
           .order("line_number")
           .order("slot_position"),
       ]);
+      const tournamentId = gameRes.data?.tournament_id ?? null;
+      setIsTournamentGame(Boolean(tournamentId));
 
-      setPlayers(playersRes.data ?? []);
+      let selectablePlayers: Profile[] = [];
+
+      if (tournamentId) {
+        const { data: registrations } = await supabase
+          .from("tournament_player_registrations")
+          .select("player_id")
+          .eq("tournament_id", tournamentId);
+
+        const declaredPlayerIds = ((registrations ?? []) as { player_id: string }[]).map(
+          (row) => row.player_id
+        );
+        setRegisteredPlayersCount(declaredPlayerIds.length);
+
+        if (declaredPlayerIds.length > 0) {
+          const { data: declaredPlayers } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("is_active", true)
+            .eq("is_approved", true)
+            .in("id", declaredPlayerIds)
+            .order("jersey_number");
+
+          selectablePlayers = (declaredPlayers ?? []) as Profile[];
+        } else {
+          const { data: fallbackPlayers } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("is_active", true)
+            .eq("is_approved", true)
+            .order("jersey_number");
+
+          selectablePlayers = (fallbackPlayers ?? []) as Profile[];
+        }
+      } else {
+        const { data: allPlayers } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("is_active", true)
+          .eq("is_approved", true)
+          .order("jersey_number");
+
+        selectablePlayers = (allPlayers ?? []) as Profile[];
+        setRegisteredPlayersCount(null);
+      }
 
       const entries = (lineupRes.data ?? []) as SavedLineupEntry[];
+
+      const lineupPlayers = entries
+        .map((entry) => {
+          const candidate = entry.player as unknown;
+          if (Array.isArray(candidate)) {
+            return (candidate[0] ?? null) as Profile | null;
+          }
+          return candidate as Profile | null;
+        })
+        .filter((player): player is Profile => Boolean(player));
+
+      const mergedPlayers = new Map<string, Profile>();
+      for (const player of selectablePlayers) mergedPlayers.set(player.id, player);
+      for (const player of lineupPlayers) mergedPlayers.set(player.id, player);
+
+      setPlayers(
+        Array.from(mergedPlayers.values()).sort((a, b) => {
+          const aNumber = a.jersey_number ?? 999;
+          const bNumber = b.jersey_number ?? 999;
+          if (aNumber !== bNumber) return aNumber - bNumber;
+          return `${a.first_name} ${a.last_name}`.localeCompare(
+            `${b.first_name} ${b.last_name}`
+          );
+        })
+      );
+
       if (entries.length > 0) {
         // Rebuild state from saved data
         const goalies: SlotAssignment[] = [];
@@ -438,6 +510,14 @@ export default function LineupPage() {
           {totalAssigned} {t("lineup").toLowerCase()}
         </Badge>
       </div>
+
+      {isTournamentGame && (
+        <p className="text-xs text-muted-foreground mb-4">
+          {registeredPlayersCount && registeredPlayersCount > 0
+            ? `Tournament roster: ${registeredPlayersCount} players`
+            : "Tournament roster is not selected yet. Showing all active players."}
+        </p>
+      )}
 
       {/* Line tabs */}
       <div className="flex items-center gap-2 mb-4">
