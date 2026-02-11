@@ -4,21 +4,46 @@ import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { CalendarDays, Dumbbell } from "lucide-react";
 import { RESULT_COLORS } from "@/lib/utils/constants";
-import type { Game, GameResult, TrainingSession } from "@/types/database";
-import Image from "next/image";
+import type {
+  Game,
+  GameResult,
+  Opponent,
+  Team,
+  TrainingSession,
+  TrainingSessionStatus,
+} from "@/types/database";
+import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 
 type ScheduleItem = {
   id: string;
   type: "game" | "training";
   date: string;
   title: string;
+  opponentName?: string;
+  opponentLogoUrl?: string | null;
+  opponentCountry?: string | null;
+  teamScore?: number;
+  opponentScore?: number;
   subtitle?: string;
   result?: GameResult;
+  status?: TrainingSessionStatus;
   location?: string;
   href: string;
 };
+
+function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
+  if (status === "completed" || status === "canceled") return status;
+  return "planned";
+}
+
+function statusBadgeClass(status: TrainingSessionStatus) {
+  if (status === "completed") return "bg-green-500/10 text-green-500 border-green-500/20";
+  if (status === "canceled") return "bg-red-500/10 text-red-500 border-red-500/20";
+  return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+}
 
 export default async function SchedulePage({
   params,
@@ -35,33 +60,50 @@ export default async function SchedulePage({
   const supabase = await createClient();
 
   // Get upcoming games
-  const { data: games } = await supabase
-    .from("games")
-    .select("*")
-    .order("game_date", { ascending: true });
+  const [gamesRes, trainingsRes, teamsRes, opponentsRes] = await Promise.all([
+    supabase
+      .from("games")
+      .select("*")
+      .order("game_date", { ascending: true }),
+    supabase
+      .from("training_sessions")
+      .select("*")
+      .order("session_date", { ascending: true }),
+    supabase.from("teams").select("*"),
+    supabase.from("opponents").select("*").eq("is_active", true),
+  ]);
 
-  // Get upcoming training sessions
-  const { data: trainings } = await supabase
-    .from("training_sessions")
-    .select("*")
-    .order("session_date", { ascending: true });
+  const games = (gamesRes.data ?? []) as Game[];
+  const trainings = (trainingsRes.data ?? []) as TrainingSession[];
+  const teams = (teamsRes.data ?? []) as Team[];
+  const opponents = (opponentsRes.data ?? []) as Opponent[];
+  const opponentVisuals = buildOpponentVisualLookup(teams, opponents);
 
   const items: ScheduleItem[] = [
-    ...((games ?? []) as Game[]).map((g) => ({
-      id: g.id,
-      type: "game" as const,
-      date: g.game_date,
-      title: `Propeleri vs ${g.opponent}`,
-      subtitle: g.is_home ? tg("home") : tg("away"),
-      result: g.result,
-      location: g.location,
-      href: `/games/${g.id}`,
-    })),
-    ...((trainings ?? []) as TrainingSession[]).map((session) => ({
+    ...games.map((game) => {
+      const visual = resolveOpponentVisual(game, opponentVisuals);
+      return {
+        id: game.id,
+        type: "game" as const,
+        date: game.game_date,
+        title: `Propeleri vs ${game.opponent}`,
+        opponentName: game.opponent,
+        opponentLogoUrl: visual.logoUrl,
+        opponentCountry: visual.country,
+        teamScore: game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score,
+        opponentScore: game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score,
+        subtitle: game.is_home ? tg("home") : tg("away"),
+        result: game.result,
+        location: game.location ?? undefined,
+        href: `/games/${game.id}`,
+      };
+    }),
+    ...trainings.map((session) => ({
       id: session.id,
       type: "training" as const,
       date: session.session_date,
       title: session.title || ts("session"),
+      status: normalizeStatus(session.status),
       location: session.location ?? undefined,
       href: `/training/${session.id}`,
     })),
@@ -94,7 +136,7 @@ export default async function SchedulePage({
                 <span className="h-1 w-6 bg-primary rounded-full" />
                 {t("thisMonth")}
               </h2>
-              <div className="space-y-2.5">
+              <div className="space-y-3 md:space-y-4">
                 {upcoming.map((item) => (
                   <ScheduleCard key={item.id} item={item} />
                 ))}
@@ -109,7 +151,7 @@ export default async function SchedulePage({
                 <span className="h-1 w-6 bg-muted-foreground/30 rounded-full" />
                 {t("pastEvents")}
               </h2>
-              <div className="space-y-2.5 opacity-70">
+              <div className="space-y-3 md:space-y-4 opacity-70">
                 {past.slice(0, 10).map((item) => (
                   <ScheduleCard key={item.id} item={item} />
                 ))}
@@ -124,43 +166,65 @@ export default async function SchedulePage({
 
 function ScheduleCard({ item }: { item: ScheduleItem }) {
   const tg = useTranslations("game");
+  const tt = useTranslations("training");
   const date = new Date(item.date);
+  const dateLabel = date.toLocaleDateString("sr-Latn", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  const timeLabel = date.toLocaleTimeString("sr-Latn", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (item.type === "game" && item.result && item.opponentName) {
+    return (
+      <GameMatchCard
+        href={item.href}
+        teamName="Propeleri"
+        opponentName={item.opponentName}
+        opponentLogoUrl={item.opponentLogoUrl}
+        opponentCountry={item.opponentCountry}
+        teamScore={item.teamScore}
+        opponentScore={item.opponentScore}
+        dateLabel={dateLabel}
+        timeLabel={timeLabel}
+        location={item.location}
+        resultLabel={tg(`result.${item.result}`)}
+        resultClassName={RESULT_COLORS[item.result as GameResult]}
+        matchTimeLabel={tg("matchTime")}
+        variant="poster"
+      />
+    );
+  }
 
   return (
-    <Link href={item.href} className="block">
+    <Link href={item.href} className="block max-w-4xl mx-auto px-1 md:px-2">
       <Card className="border-border/40 card-hover bg-card cursor-pointer">
         <CardContent className="px-4 py-4 md:px-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {item.type === "game" ? (
-              <div className="h-14 w-14 rounded-xl flex items-center justify-center bg-primary/10">
-                <Image src="/logo.svg" alt="HC Propeleri" width={40} height={40} />
-              </div>
-            ) : (
-              <div className="h-14 w-14 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-400">
-                <Dumbbell className="h-6 w-6" />
-              </div>
-            )}
+            <div className="h-14 w-14 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-400">
+              <Dumbbell className="h-6 w-6" />
+            </div>
             <div>
-              <p className="font-bold text-lg leading-tight">{item.title}</p>
+              <p className="font-bold text-lg leading-tight flex items-center gap-2">
+                {item.title}
+                {item.status && (
+                  <Badge
+                    variant="outline"
+                    className={statusBadgeClass(item.status)}
+                  >
+                    {tt(`status.${item.status}`)}
+                  </Badge>
+                )}
+              </p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {date.toLocaleDateString("sr-Latn", {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                })}{" "}
-                {date.toLocaleTimeString("sr-Latn", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {dateLabel} {timeLabel}
                 {item.location && ` — ${item.location}`}
               </p>
             </div>
           </div>
-          {item.result && (
-            <Badge className={`text-sm px-2.5 py-1 ${RESULT_COLORS[item.result as GameResult]}`}>
-              {tg(`result.${item.result}`)}
-            </Badge>
-          )}
         </CardContent>
       </Card>
     </Link>

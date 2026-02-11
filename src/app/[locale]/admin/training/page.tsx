@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,8 +23,43 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
-import { CalendarDays, Plus, Loader2, Pencil } from "lucide-react";
-import type { TrainingSession, Season } from "@/types/database";
+import { CalendarDays, Plus, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react";
+import type { TrainingSession, Season, TrainingSessionStatus } from "@/types/database";
+
+const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
+const WEEKDAY_OPTIONS = [
+  { value: 1, key: "monday" },
+  { value: 2, key: "tuesday" },
+  { value: 3, key: "wednesday" },
+  { value: 4, key: "thursday" },
+  { value: 5, key: "friday" },
+  { value: 6, key: "saturday" },
+  { value: 0, key: "sunday" },
+] as const;
+
+function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
+  if (status === "completed" || status === "canceled") return status;
+  return "planned";
+}
+
+function statusBadgeClass(status: TrainingSessionStatus) {
+  if (status === "completed") return "bg-green-500/10 text-green-500 border-green-500/20";
+  if (status === "canceled") return "bg-red-500/10 text-red-500 border-red-500/20";
+  return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+}
+
+function dateMinuteKey(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value.slice(0, 16);
+  return `${Math.floor(parsed.getTime() / 60000)}`;
+}
+
+function formatDateISO(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function AdminTrainingPage() {
   const t = useTranslations("admin");
@@ -35,6 +71,7 @@ export default function AdminTrainingPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -42,8 +79,25 @@ export default function AdminTrainingPage() {
     title: "",
     session_date: "",
     location: "",
+    status: "planned" as TrainingSessionStatus,
+    notes: "",
   });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    season_id: "",
+    title: "",
+    location: "",
+    status: "planned" as TrainingSessionStatus,
+    start_date: "",
+    end_date: "",
+    time: "",
+    weekdays: [1, 3, 5] as number[],
+  });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState("");
+  const [scheduleResult, setScheduleResult] = useState<{ created: number; skipped: number } | null>(
+    null
+  );
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -56,14 +110,18 @@ export default function AdminTrainingPage() {
       supabase.from("seasons").select("*").order("start_date", { ascending: false }),
     ]);
     setSessions(sessionsRes.data ?? []);
-    setSeasons(seasonsRes.data ?? []);
-    if (seasonsRes.data?.[0]) {
-      setForm((f) => ({ ...f, season_id: seasonsRes.data![0].id }));
+    const loadedSeasons = seasonsRes.data ?? [];
+    setSeasons(loadedSeasons);
+    if (loadedSeasons[0]) {
+      setForm((f) => ({ ...f, season_id: f.season_id || loadedSeasons[0].id }));
+      setScheduleForm((f) => ({ ...f, season_id: f.season_id || loadedSeasons[0].id }));
     }
     setLoading(false);
   }
 
   useEffect(() => {
+    let active = true;
+
     async function loadInitialData() {
       const [sessionsRes, seasonsRes] = await Promise.all([
         supabase
@@ -72,15 +130,22 @@ export default function AdminTrainingPage() {
           .order("session_date", { ascending: false }),
         supabase.from("seasons").select("*").order("start_date", { ascending: false }),
       ]);
+      if (!active) return;
+
       setSessions(sessionsRes.data ?? []);
-      setSeasons(seasonsRes.data ?? []);
-      if (seasonsRes.data?.[0]) {
-        setForm((f) => ({ ...f, season_id: seasonsRes.data![0].id }));
+      const loadedSeasons = seasonsRes.data ?? [];
+      setSeasons(loadedSeasons);
+      if (loadedSeasons[0]) {
+        setForm((f) => ({ ...f, season_id: f.season_id || loadedSeasons[0].id }));
+        setScheduleForm((f) => ({ ...f, season_id: f.season_id || loadedSeasons[0].id }));
       }
       setLoading(false);
     }
 
     void loadInitialData();
+    return () => {
+      active = false;
+    };
   }, [supabase]);
 
   function openCreate() {
@@ -91,6 +156,8 @@ export default function AdminTrainingPage() {
       title: "",
       session_date: "",
       location: "",
+      status: "planned",
+      notes: "",
     });
     setDialogOpen(true);
   }
@@ -103,6 +170,8 @@ export default function AdminTrainingPage() {
       title: session.title ?? "",
       session_date: session.session_date.slice(0, 16),
       location: session.location ?? "",
+      status: normalizeStatus(session.status),
+      notes: session.notes ?? "",
     });
     setDialogOpen(true);
   }
@@ -114,6 +183,7 @@ export default function AdminTrainingPage() {
       ...form,
       title: form.title || null,
       location: form.location || null,
+      notes: form.notes.trim() || null,
     };
 
     const res = editingId
@@ -128,7 +198,148 @@ export default function AdminTrainingPage() {
 
     setDialogOpen(false);
     setSaving(false);
-    loadData();
+    void loadData();
+  }
+
+  function toggleWeekday(day: number) {
+    setScheduleForm((prev) => {
+      const hasDay = prev.weekdays.includes(day);
+      const next = hasDay
+        ? prev.weekdays.filter((item) => item !== day)
+        : [...prev.weekdays, day].sort((a, b) => a - b);
+      return { ...prev, weekdays: next };
+    });
+  }
+
+  async function generateSchedule() {
+    setScheduleError("");
+    setScheduleResult(null);
+
+    if (
+      !scheduleForm.season_id ||
+      !scheduleForm.start_date ||
+      !scheduleForm.end_date ||
+      !scheduleForm.time ||
+      scheduleForm.weekdays.length === 0
+    ) {
+      setScheduleError(tt("validationRequired"));
+      return;
+    }
+
+    const start = new Date(`${scheduleForm.start_date}T00:00`);
+    const end = new Date(`${scheduleForm.end_date}T23:59:59`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+      setScheduleError(tt("validationRange"));
+      return;
+    }
+
+    setScheduleSaving(true);
+
+    const { data: existingRows, error: existingError } = await supabase
+      .from("training_sessions")
+      .select("session_date")
+      .eq("season_id", scheduleForm.season_id)
+      .gte("session_date", `${scheduleForm.start_date}T00:00`)
+      .lte("session_date", `${scheduleForm.end_date}T23:59:59`);
+
+    if (existingError) {
+      setScheduleError(existingError.message);
+      setScheduleSaving(false);
+      return;
+    }
+
+    const existingKeys = new Set(
+      (existingRows ?? []).map((row: Pick<TrainingSession, "session_date">) =>
+        dateMinuteKey(row.session_date)
+      )
+    );
+
+    const weekdays = new Set(scheduleForm.weekdays);
+    const payload: {
+      season_id: string;
+      title: string | null;
+      session_date: string;
+      location: string | null;
+      status: TrainingSessionStatus;
+      notes: string | null;
+    }[] = [];
+    let skipped = 0;
+
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      if (weekdays.has(cursor.getDay())) {
+        const localDate = formatDateISO(cursor);
+        const sessionDate = `${localDate}T${scheduleForm.time}`;
+        const key = dateMinuteKey(sessionDate);
+        if (existingKeys.has(key)) {
+          skipped += 1;
+        } else {
+          payload.push({
+            season_id: scheduleForm.season_id,
+            title: scheduleForm.title.trim() || null,
+            session_date: sessionDate,
+            location: scheduleForm.location.trim() || null,
+            status: scheduleForm.status,
+            notes: null,
+          });
+          existingKeys.add(key);
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (payload.length === 0) {
+      setScheduleResult({ created: 0, skipped });
+      setScheduleSaving(false);
+      return;
+    }
+
+    const insertRes = await supabase.from("training_sessions").insert(payload);
+    if (insertRes.error) {
+      setScheduleError(insertRes.error.message);
+      setScheduleSaving(false);
+      return;
+    }
+
+    setScheduleResult({ created: payload.length, skipped });
+    setScheduleSaving(false);
+    void loadData();
+  }
+
+  async function handleDeleteSession(sessionId: string) {
+    if (!window.confirm("Удалить тренировку и всю связанную статистику?")) return;
+
+    setDeletingId(sessionId);
+    setError("");
+
+    const statsDeleteRes = await supabase
+      .from("training_stats")
+      .delete()
+      .eq("session_id", sessionId);
+
+    if (statsDeleteRes.error) {
+      setError(statsDeleteRes.error.message);
+      setDeletingId(null);
+      return;
+    }
+
+    const sessionDeleteRes = await supabase
+      .from("training_sessions")
+      .delete()
+      .eq("id", sessionId);
+
+    if (sessionDeleteRes.error) {
+      setError(sessionDeleteRes.error.message);
+      setDeletingId(null);
+      return;
+    }
+
+    if (editingId === sessionId) {
+      setDialogOpen(false);
+    }
+
+    await loadData();
+    setDeletingId(null);
   }
 
   if (loading) {
@@ -209,6 +420,35 @@ export default function AdminTrainingPage() {
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label>{tt("sessionStatus")}</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) =>
+                    setForm({ ...form, status: normalizeStatus(v) })
+                  }
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SESSION_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {tt(`status.${status}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("report")}</Label>
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  placeholder={tt("reportPlaceholder")}
+                  className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
               {error && (
                 <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
                   {error}
@@ -227,15 +467,159 @@ export default function AdminTrainingPage() {
         </Dialog>
       </div>
 
-      <div className="p-6 space-y-2">
+      <div className="p-6 space-y-6">
+        <Card className="border-border/40">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <p className="font-medium">{tt("scheduleGenerator")}</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Sezona</Label>
+                <Select
+                  value={scheduleForm.season_id}
+                  onValueChange={(v) => setScheduleForm({ ...scheduleForm, season_id: v })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seasons.map((season) => (
+                      <SelectItem key={season.id} value={season.id}>
+                        {season.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("sessionStatus")}</Label>
+                <Select
+                  value={scheduleForm.status}
+                  onValueChange={(v) =>
+                    setScheduleForm({ ...scheduleForm, status: normalizeStatus(v) })
+                  }
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SESSION_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {tt(`status.${status}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>{tt("startDate")}</Label>
+                <Input
+                  type="date"
+                  value={scheduleForm.start_date}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, start_date: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("endDate")}</Label>
+                <Input
+                  type="date"
+                  value={scheduleForm.end_date}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, end_date: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("time")}</Label>
+                <Input
+                  type="time"
+                  value={scheduleForm.time}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Naziv (opciono)</Label>
+                <Input
+                  value={scheduleForm.title}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Lokacija (opciono)</Label>
+                <Input
+                  value={scheduleForm.location}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{tt("weekdays")}</Label>
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAY_OPTIONS.map((day) => {
+                  const active = scheduleForm.weekdays.includes(day.value);
+                  return (
+                    <Button
+                      key={day.value}
+                      type="button"
+                      size="sm"
+                      variant={active ? "default" : "outline"}
+                      onClick={() => toggleWeekday(day.value)}
+                    >
+                      {tt(day.key)}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            {scheduleError && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                {scheduleError}
+              </p>
+            )}
+            {scheduleResult && (
+              <div className="rounded-md border border-border/50 px-3 py-2 text-sm space-y-1">
+                {scheduleResult.created > 0 ? (
+                  <p>{tt("createdCount", { count: scheduleResult.created })}</p>
+                ) : (
+                  <p>{tt("noGeneratedSessions")}</p>
+                )}
+                {scheduleResult.skipped > 0 && (
+                  <p className="text-muted-foreground">
+                    {tt("skippedDuplicates", { count: scheduleResult.skipped })}
+                  </p>
+                )}
+              </div>
+            )}
+            <Button onClick={generateSchedule} disabled={scheduleSaving} className="w-full md:w-auto">
+              {scheduleSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {tt("generateSchedule")}
+            </Button>
+          </CardContent>
+        </Card>
+
         {sessions.map((session) => (
           <Card key={session.id} className="border-border/40">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <CalendarDays className="h-5 w-5 text-blue-400" />
                 <div>
-                  <p className="font-medium text-sm">
+                  <p className="font-medium text-sm flex items-center gap-2">
                     {session.title || tt("session")}
+                    <Badge
+                      variant="outline"
+                      className={statusBadgeClass(normalizeStatus(session.status))}
+                    >
+                      {tt(`status.${normalizeStatus(session.status)}`)}
+                    </Badge>
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(session.session_date).toLocaleDateString("sr-Latn", {
@@ -246,6 +630,11 @@ export default function AdminTrainingPage() {
                     })}
                     {session.location && ` — ${session.location}`}
                   </p>
+                  {session.notes && (
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
+                      {session.notes}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -257,6 +646,19 @@ export default function AdminTrainingPage() {
                     Stats
                   </Button>
                 </Link>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDeleteSession(session.id)}
+                  disabled={deletingId === session.id}
+                  className="text-destructive hover:text-destructive"
+                >
+                  {deletingId === session.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>

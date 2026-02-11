@@ -2,8 +2,20 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { CalendarDays, MapPin, Users } from "lucide-react";
-import type { TrainingSession } from "@/types/database";
+import type { TrainingSession, TrainingSessionStatus } from "@/types/database";
+
+function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
+  if (status === "completed" || status === "canceled") return status;
+  return "planned";
+}
+
+function statusBadgeClass(status: TrainingSessionStatus) {
+  if (status === "completed") return "bg-green-500/10 text-green-500 border-green-500/20";
+  if (status === "canceled") return "bg-red-500/10 text-red-500 border-red-500/20";
+  return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+}
 
 export default async function TrainingPage({
   params,
@@ -50,8 +62,14 @@ export default async function TrainingPage({
                         <CalendarDays className="h-5 w-5 text-blue-400" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm">
+                        <p className="font-semibold text-sm flex items-center gap-2">
                           {session.title || t("session")}
+                          <Badge
+                            variant="outline"
+                            className={statusBadgeClass(normalizeStatus(session.status))}
+                          >
+                            {t(`status.${normalizeStatus(session.status)}`)}
+                          </Badge>
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(session.session_date).toLocaleDateString(
@@ -64,6 +82,11 @@ export default async function TrainingPage({
                             }
                           )}
                         </p>
+                        {session.notes && (
+                          <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
+                            {session.notes}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {session.location && (

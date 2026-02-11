@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import type { TournamentMatch, Team } from "@/types/database";
 
 interface Props {
@@ -115,13 +116,21 @@ function BracketMatchCard({
             winner === match.team_a_id ? "bg-green-500/5" : ""
           }`}
         >
-          <span
-            className={`text-sm truncate ${
-              winner === match.team_a_id ? "font-bold text-green-400" : ""
-            } ${teamA?.is_propeleri ? "text-primary" : ""}`}
-          >
-            {teamA?.name ?? "?"}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <TeamAvatar
+              name={teamA?.name ?? "Team A"}
+              logoUrl={teamA?.logo_url}
+              country={teamA?.country}
+              size="xs"
+            />
+            <span
+              className={`text-sm truncate ${
+                winner === match.team_a_id ? "font-bold text-green-400" : ""
+              } ${teamA?.is_propeleri ? "text-primary" : ""}`}
+            >
+              {teamA?.name ?? "?"}
+            </span>
+          </div>
           <span className="text-sm font-bold tabular-nums ml-2">
             {match.score_a}
           </span>
@@ -131,13 +140,21 @@ function BracketMatchCard({
             winner === match.team_b_id ? "bg-green-500/5" : ""
           }`}
         >
-          <span
-            className={`text-sm truncate ${
-              winner === match.team_b_id ? "font-bold text-green-400" : ""
-            } ${teamB?.is_propeleri ? "text-primary" : ""}`}
-          >
-            {teamB?.name ?? "?"}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <TeamAvatar
+              name={teamB?.name ?? "Team B"}
+              logoUrl={teamB?.logo_url}
+              country={teamB?.country}
+              size="xs"
+            />
+            <span
+              className={`text-sm truncate ${
+                winner === match.team_b_id ? "font-bold text-green-400" : ""
+              } ${teamB?.is_propeleri ? "text-primary" : ""}`}
+            >
+              {teamB?.name ?? "?"}
+            </span>
+          </div>
           <span className="text-sm font-bold tabular-nums ml-2">
             {match.score_b}
           </span>

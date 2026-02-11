@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import type { TournamentMatch, Team } from "@/types/database";
 
 interface Props {
@@ -45,7 +46,15 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
                       : ""
                   } ${teamA?.is_propeleri ? "text-primary" : ""}`}
                 >
-                  <span className="text-sm">{teamA?.name ?? "?"}</span>
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-sm">{teamA?.name ?? "?"}</span>
+                    <TeamAvatar
+                      name={teamA?.name ?? "Team A"}
+                      logoUrl={teamA?.logo_url}
+                      country={teamA?.country}
+                      size="xs"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-lg font-bold tabular-nums">
@@ -63,7 +72,15 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
                       : ""
                   } ${teamB?.is_propeleri ? "text-primary" : ""}`}
                 >
-                  <span className="text-sm">{teamB?.name ?? "?"}</span>
+                  <div className="inline-flex items-center gap-2">
+                    <TeamAvatar
+                      name={teamB?.name ?? "Team B"}
+                      logoUrl={teamB?.logo_url}
+                      country={teamB?.country}
+                      size="xs"
+                    />
+                    <span className="text-sm">{teamB?.name ?? "?"}</span>
+                  </div>
                 </div>
               </div>
               {match.is_completed && (

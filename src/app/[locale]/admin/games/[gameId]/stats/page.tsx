@@ -24,7 +24,10 @@ interface PlayerStatRow {
 
 interface GameLineupEntry {
   player_id: string;
-  player: Pick<Profile, "first_name" | "last_name" | "jersey_number"> | null;
+  player:
+    | Pick<Profile, "first_name" | "last_name" | "jersey_number">
+    | Pick<Profile, "first_name" | "last_name" | "jersey_number">[]
+    | null;
 }
 
 export default function GameStatsEntryPage() {
@@ -59,12 +62,13 @@ export default function GameStatsEntryPage() {
       );
 
       const playerRows: PlayerStatRow[] = ((lineup ?? []) as GameLineupEntry[]).map((entry) => {
+        const player = Array.isArray(entry.player) ? entry.player[0] : entry.player;
         const existing = statsMap.get(entry.player_id);
         return {
           player_id: entry.player_id,
-          first_name: entry.player?.first_name ?? "",
-          last_name: entry.player?.last_name ?? "",
-          jersey_number: entry.player?.jersey_number,
+          first_name: player?.first_name ?? "",
+          last_name: player?.last_name ?? "",
+          jersey_number: player?.jersey_number ?? null,
           goals: existing?.goals ?? 0,
           assists: existing?.assists ?? 0,
           penalty_minutes: existing?.penalty_minutes ?? 0,

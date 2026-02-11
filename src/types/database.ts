@@ -7,7 +7,23 @@ export type GameResult = "win" | "loss" | "draw" | "pending";
 export type TournamentFormat = "cup" | "placement" | "round_robin" | "custom";
 export type TournamentMatchStage = "group" | "playoff";
 export type TrainingTeam = "team_a" | "team_b";
+export type TrainingSessionStatus = "planned" | "completed" | "canceled";
 export type SlotPosition = "LW" | "C" | "RW" | "LD" | "RD" | "GK";
+
+export interface TrainingGoalEvent {
+  team: TrainingTeam;
+  scorer_player_id: string;
+  assist_player_id: string | null;
+}
+
+export interface TrainingMatchData {
+  version: 1;
+  team_a_score: number;
+  team_b_score: number;
+  team_a_goalie_player_id: string | null;
+  team_b_goalie_player_id: string | null;
+  goal_events: TrainingGoalEvent[];
+}
 
 export interface Profile {
   id: string;
@@ -44,6 +60,7 @@ export interface Game {
   id: string;
   season_id: string;
   tournament_id: string | null;
+  opponent_id: string | null;
   opponent: string;
   location: string | null;
   game_date: string;
@@ -51,6 +68,7 @@ export interface Game {
   away_score: number;
   is_home: boolean;
   result: GameResult;
+  auto_generated_from_tournament: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -85,8 +103,10 @@ export interface TrainingSession {
   season_id: string;
   title: string | null;
   session_date: string;
+  status: TrainingSessionStatus;
   location: string | null;
   notes: string | null;
+  match_data: TrainingMatchData | null;
   created_at: string;
   updated_at: string;
 }
@@ -118,12 +138,24 @@ export interface Tournament {
 
 export interface Team {
   id: string;
+  opponent_id: string | null;
   name: string;
   city: string | null;
   country: string | null;
   logo_url: string | null;
   is_propeleri: boolean;
   created_at: string;
+}
+
+export interface Opponent {
+  id: string;
+  name: string;
+  normalized_name: string;
+  city: string | null;
+  country: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TournamentTeam {

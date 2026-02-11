@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import { Award, MapPin, Calendar } from "lucide-react";
 import { GroupStandingsTable } from "@/components/tournament/GroupStandingsTable";
 import { PlacementView } from "@/components/tournament/PlacementView";
@@ -217,27 +218,43 @@ export default async function TournamentDetailPage({
                             {match.bracket_label}
                           </Badge>
                         )}
-                        <span
-                          className={`text-sm ${
-                            winner === match.team_a_id
-                              ? "font-bold text-green-400"
-                              : ""
-                          } ${teamA?.is_propeleri ? "text-primary" : ""}`}
-                        >
-                          {teamA?.name ?? "?"}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <TeamAvatar
+                            name={teamA?.name ?? "Team A"}
+                            logoUrl={teamA?.logo_url}
+                            country={teamA?.country}
+                            size="xs"
+                          />
+                          <span
+                            className={`text-sm truncate ${
+                              winner === match.team_a_id
+                                ? "font-bold text-green-400"
+                                : ""
+                            } ${teamA?.is_propeleri ? "text-primary" : ""}`}
+                          >
+                            {teamA?.name ?? "?"}
+                          </span>
+                        </div>
                         <span className="text-sm font-bold tabular-nums">
                           {match.score_a} : {match.score_b}
                         </span>
-                        <span
-                          className={`text-sm ${
-                            winner === match.team_b_id
-                              ? "font-bold text-green-400"
-                              : ""
-                          } ${teamB?.is_propeleri ? "text-primary" : ""}`}
-                        >
-                          {teamB?.name ?? "?"}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <TeamAvatar
+                            name={teamB?.name ?? "Team B"}
+                            logoUrl={teamB?.logo_url}
+                            country={teamB?.country}
+                            size="xs"
+                          />
+                          <span
+                            className={`text-sm truncate ${
+                              winner === match.team_b_id
+                                ? "font-bold text-green-400"
+                                : ""
+                            } ${teamB?.is_propeleri ? "text-primary" : ""}`}
+                          >
+                            {teamB?.name ?? "?"}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {match.is_completed && (

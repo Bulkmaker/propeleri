@@ -13,13 +13,77 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle } from "lucide-react";
+import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle, Swords } from "lucide-react";
 import { POSITION_COLORS } from "@/lib/utils/constants";
-import type { PlayerPosition, Profile, TrainingStats } from "@/types/database";
+import type {
+  PlayerPosition,
+  Profile,
+  TrainingMatchData,
+  TrainingSessionStatus,
+  TrainingStats,
+} from "@/types/database";
 
 type TrainingStatWithPlayer = TrainingStats & {
   player: Profile | null;
 };
+
+function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
+  if (status === "completed" || status === "canceled") return status;
+  return "planned";
+}
+
+function statusBadgeClass(status: TrainingSessionStatus) {
+  if (status === "completed") return "bg-green-500/10 text-green-500 border-green-500/20";
+  if (status === "canceled") return "bg-red-500/10 text-red-500 border-red-500/20";
+  return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+}
+
+function parseTrainingMatchData(raw: unknown): TrainingMatchData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Partial<TrainingMatchData>;
+  const events = Array.isArray(value.goal_events)
+    ? value.goal_events
+        .map((event) => {
+          if (!event || typeof event !== "object") return null;
+          const team: "team_a" | "team_b" | null =
+            event.team === "team_b" ? "team_b" : event.team === "team_a" ? "team_a" : null;
+          if (!team || typeof event.scorer_player_id !== "string") return null;
+          return {
+            team,
+            scorer_player_id: event.scorer_player_id,
+            assist_player_id:
+              typeof event.assist_player_id === "string" ? event.assist_player_id : null,
+          };
+        })
+        .filter(
+          (
+            event
+          ): event is { team: "team_a" | "team_b"; scorer_player_id: string; assist_player_id: string | null } =>
+            Boolean(event)
+        )
+    : [];
+
+  return {
+    version: 1,
+    team_a_score:
+      typeof value.team_a_score === "number" && value.team_a_score >= 0
+        ? value.team_a_score
+        : 0,
+    team_b_score:
+      typeof value.team_b_score === "number" && value.team_b_score >= 0
+        ? value.team_b_score
+        : 0,
+    team_a_goalie_player_id:
+      typeof value.team_a_goalie_player_id === "string"
+        ? value.team_a_goalie_player_id
+        : null,
+    team_b_goalie_player_id:
+      typeof value.team_b_goalie_player_id === "string"
+        ? value.team_b_goalie_player_id
+        : null,
+    goal_events: events,
+  };
+}
 
 export default async function TrainingDetailPage({
   params,
@@ -49,6 +113,7 @@ export default async function TrainingDetailPage({
     .eq("session_id", sessionId)
     .order("goals", { ascending: false });
   const stats = (statsRaw ?? []) as TrainingStatWithPlayer[];
+  const matchData = parseTrainingMatchData(session.match_data);
 
   const date = new Date(session.session_date);
 
@@ -56,6 +121,42 @@ export default async function TrainingDetailPage({
   const teamA = stats.filter((s) => s.training_team === "team_a");
   const teamB = stats.filter((s) => s.training_team === "team_b");
   const noTeam = stats.filter((s) => !s.training_team);
+
+  const playerLookup = new Map<string, Pick<Profile, "id" | "first_name" | "last_name" | "jersey_number">>();
+  for (const stat of stats) {
+    if (stat.player) {
+      playerLookup.set(stat.player.id, stat.player);
+    }
+  }
+
+  const matchPlayerIds = Array.from(
+    new Set(
+      [
+        ...(matchData?.goal_events.map((event) => event.scorer_player_id) ?? []),
+        ...(matchData?.goal_events.map((event) => event.assist_player_id).filter(Boolean) ?? []),
+        matchData?.team_a_goalie_player_id,
+        matchData?.team_b_goalie_player_id,
+      ].filter(Boolean) as string[]
+    )
+  );
+  const missingPlayerIds = matchPlayerIds.filter((playerId) => !playerLookup.has(playerId));
+  if (missingPlayerIds.length > 0) {
+    const { data: missingPlayers } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name, jersey_number")
+      .in("id", missingPlayerIds);
+    for (const player of missingPlayers ?? []) {
+      playerLookup.set(player.id, player);
+    }
+  }
+
+  function getPlayerName(playerId: string | null) {
+    if (!playerId) return "—";
+    const player = playerLookup.get(playerId);
+    if (!player) return "Игрок";
+    const number = player.jersey_number != null ? `#${player.jersey_number} ` : "";
+    return `${number}${player.first_name} ${player.last_name}`;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -69,9 +170,15 @@ export default async function TrainingDetailPage({
 
       {/* Session Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">
-          {session.title || t("session")}
-        </h1>
+        <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-3xl font-bold">{session.title || t("session")}</h1>
+          <Badge
+            variant="outline"
+            className={statusBadgeClass(normalizeStatus(session.status))}
+          >
+            {t(`status.${normalizeStatus(session.status)}`)}
+          </Badge>
+        </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <CalendarDays className="h-4 w-4" />
@@ -90,6 +197,67 @@ export default async function TrainingDetailPage({
           )}
         </div>
       </div>
+
+      {session.notes && (
+        <Card className="border-border/40 mb-6">
+          <CardHeader>
+            <CardTitle>{t("report")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{session.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {matchData && (
+        <Card className="border-border/40 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Swords className="h-5 w-5 text-primary" />
+              {t("trainingMatch")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-3 items-center">
+              <div className="rounded-md border border-border/60 px-3 py-2 text-center">
+                <p className="text-xs text-muted-foreground">{t("teamA")}</p>
+                <p className="text-2xl font-bold">{matchData.team_a_score}</p>
+              </div>
+              <p className="text-center text-muted-foreground">:</p>
+              <div className="rounded-md border border-border/60 px-3 py-2 text-center">
+                <p className="text-xs text-muted-foreground">{t("teamB")}</p>
+                <p className="text-2xl font-bold">{matchData.team_b_score}</p>
+              </div>
+            </div>
+
+            {(matchData.team_a_goalie_player_id || matchData.team_b_goalie_player_id) && (
+              <div className="grid md:grid-cols-2 gap-2 text-sm">
+                <p>
+                  <span className="text-muted-foreground">{t("goalieTeamA")}: </span>
+                  {getPlayerName(matchData.team_a_goalie_player_id)}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">{t("goalieTeamB")}: </span>
+                  {getPlayerName(matchData.team_b_goalie_player_id)}
+                </p>
+              </div>
+            )}
+
+            {matchData.goal_events.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{t("goalsTimeline")}</p>
+                {matchData.goal_events.map((event, idx) => (
+                  <p key={`${event.team}-${event.scorer_player_id}-${idx}`} className="text-sm text-muted-foreground">
+                    {idx + 1}. {event.team === "team_a" ? t("teamA") : t("teamB")} ·{" "}
+                    {getPlayerName(event.scorer_player_id)}
+                    {event.assist_player_id ? ` (${t("assist")}: ${getPlayerName(event.assist_player_id)})` : ""}
+                  </p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Teams Display */}
       {hasTeams && (teamA.length > 0 || teamB.length > 0) ? (

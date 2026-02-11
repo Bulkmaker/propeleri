@@ -6,10 +6,26 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Loader2, Save, CheckCircle, XCircle, Wand2 } from "lucide-react";
-import type { Profile, TrainingStats, TrainingTeam } from "@/types/database";
+import type {
+  Profile,
+  TrainingGoalEvent,
+  TrainingMatchData,
+  TrainingSession,
+  TrainingStats,
+  TrainingTeam,
+} from "@/types/database";
+
+const NONE_OPTION = "__none__";
 
 interface TrainingRow {
   player_id: string;
@@ -23,6 +39,77 @@ interface TrainingRow {
   training_team: TrainingTeam | null;
 }
 
+interface GoalEventForm {
+  team: TrainingTeam;
+  scorer_player_id: string;
+  assist_player_id: string;
+}
+
+function parseTrainingMatchData(raw: unknown): TrainingMatchData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Partial<TrainingMatchData>;
+  const events = Array.isArray(value.goal_events)
+    ? value.goal_events
+        .map((event) => {
+          if (!event || typeof event !== "object") return null;
+          const eventValue = event as Partial<TrainingGoalEvent>;
+          if (eventValue.team !== "team_a" && eventValue.team !== "team_b") return null;
+          if (typeof eventValue.scorer_player_id !== "string") return null;
+          return {
+            team: eventValue.team,
+            scorer_player_id: eventValue.scorer_player_id,
+            assist_player_id:
+              typeof eventValue.assist_player_id === "string"
+                ? eventValue.assist_player_id
+                : null,
+          } satisfies TrainingGoalEvent;
+        })
+        .filter((event): event is TrainingGoalEvent => Boolean(event))
+    : [];
+
+  return {
+    version: 1,
+    team_a_score:
+      typeof value.team_a_score === "number" && value.team_a_score >= 0
+        ? value.team_a_score
+        : 0,
+    team_b_score:
+      typeof value.team_b_score === "number" && value.team_b_score >= 0
+        ? value.team_b_score
+        : 0,
+    team_a_goalie_player_id:
+      typeof value.team_a_goalie_player_id === "string"
+        ? value.team_a_goalie_player_id
+        : null,
+    team_b_goalie_player_id:
+      typeof value.team_b_goalie_player_id === "string"
+        ? value.team_b_goalie_player_id
+        : null,
+    goal_events: events,
+  };
+}
+
+function createEmptyGoalEvent(team: TrainingTeam): GoalEventForm {
+  return {
+    team,
+    scorer_player_id: "",
+    assist_player_id: "",
+  };
+}
+
+function normalizeGoalEventsCount(
+  events: GoalEventForm[],
+  teamAScore: number,
+  teamBScore: number
+) {
+  const targetCount = Math.max(0, teamAScore) + Math.max(0, teamBScore);
+  const next = events.slice(0, targetCount);
+  while (next.length < targetCount) {
+    next.push(createEmptyGoalEvent(next.length < teamAScore ? "team_a" : "team_b"));
+  }
+  return next;
+}
+
 export default function TrainingStatsEntryPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
@@ -34,22 +121,30 @@ export default function TrainingStatsEntryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [session, setSession] = useState<TrainingSession | null>(null);
+
+  const [matchScoreA, setMatchScoreA] = useState(0);
+  const [matchScoreB, setMatchScoreB] = useState(0);
+  const [teamAGoalieId, setTeamAGoalieId] = useState("");
+  const [teamBGoalieId, setTeamBGoalieId] = useState("");
+  const [goalEvents, setGoalEvents] = useState<GoalEventForm[]>([]);
 
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function load() {
-      const { data: players } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("is_active", true)
-        .eq("is_approved", true)
-        .order("jersey_number");
-
-      const { data: existing } = await supabase
-        .from("training_stats")
-        .select("*")
-        .eq("session_id", sessionId);
+      const [{ data: sessionData }, { data: players }, { data: existing }] =
+        await Promise.all([
+          supabase.from("training_sessions").select("*").eq("id", sessionId).single(),
+          supabase
+            .from("profiles")
+            .select("*")
+            .eq("is_active", true)
+            .eq("is_approved", true)
+            .order("jersey_number"),
+          supabase.from("training_stats").select("*").eq("session_id", sessionId),
+        ]);
 
       const statsMap = new Map((existing ?? []).map((s: TrainingStats) => [s.player_id, s]));
 
@@ -69,20 +164,59 @@ export default function TrainingStatsEntryPage() {
       });
 
       setRows(playerRows);
+
+      const loadedSession = (sessionData ?? null) as TrainingSession | null;
+      setSession(loadedSession);
+
+      const parsedMatch = parseTrainingMatchData(loadedSession?.match_data);
+      if (parsedMatch) {
+        setMatchScoreA(parsedMatch.team_a_score);
+        setMatchScoreB(parsedMatch.team_b_score);
+        setTeamAGoalieId(parsedMatch.team_a_goalie_player_id ?? "");
+        setTeamBGoalieId(parsedMatch.team_b_goalie_player_id ?? "");
+        setGoalEvents(
+          normalizeGoalEventsCount(
+            parsedMatch.goal_events.map((event) => ({
+              team: event.team,
+              scorer_player_id: event.scorer_player_id,
+              assist_player_id: event.assist_player_id ?? "",
+            })),
+            parsedMatch.team_a_score,
+            parsedMatch.team_b_score
+          )
+        );
+      } else {
+        const teamAGoals = playerRows
+          .filter((row) => row.attended && row.training_team === "team_a")
+          .reduce((acc, row) => acc + row.goals, 0);
+        const teamBGoals = playerRows
+          .filter((row) => row.attended && row.training_team === "team_b")
+          .reduce((acc, row) => acc + row.goals, 0);
+        setMatchScoreA(teamAGoals);
+        setMatchScoreB(teamBGoals);
+        setGoalEvents(normalizeGoalEventsCount([], teamAGoals, teamBGoals));
+      }
+
       setLoading(false);
     }
-    load();
+    void load();
   }, [sessionId, supabase]);
+
+  function setMatchScores(teamAScore: number, teamBScore: number) {
+    const nextA = Math.max(0, teamAScore);
+    const nextB = Math.max(0, teamBScore);
+    setMatchScoreA(nextA);
+    setMatchScoreB(nextB);
+    setGoalEvents((prev) => normalizeGoalEventsCount(prev, nextA, nextB));
+  }
 
   function toggleAttendance(idx: number) {
     setRows((prev) =>
-      prev.map((row, i) =>
-        i === idx ? { ...row, attended: !row.attended } : row
-      )
+      prev.map((row, i) => (i === idx ? { ...row, attended: !row.attended } : row))
     );
   }
 
-  function updateRow(idx: number, field: string, value: number) {
+  function updateRow(idx: number, field: "goals" | "assists", value: number) {
     setRows((prev) =>
       prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row))
     );
@@ -103,25 +237,164 @@ export default function TrainingStatsEntryPage() {
     );
   }
 
+  const attendedTeamA = useMemo(
+    () =>
+      rows
+        .filter((row) => row.attended && row.training_team === "team_a")
+        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+    [rows]
+  );
+  const attendedTeamB = useMemo(
+    () =>
+      rows
+        .filter((row) => row.attended && row.training_team === "team_b")
+        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+    [rows]
+  );
+
+  function getPlayersByTeam(team: TrainingTeam) {
+    return team === "team_a" ? attendedTeamA : attendedTeamB;
+  }
+
+  function updateGoalEvent(
+    idx: number,
+    field: "team" | "scorer_player_id" | "assist_player_id",
+    value: string
+  ) {
+    setGoalEvents((prev) =>
+      prev.map((event, eventIdx) => {
+        if (eventIdx !== idx) return event;
+
+        const next = { ...event };
+        if (field === "team") {
+          const nextTeam = value === "team_b" ? "team_b" : "team_a";
+          next.team = nextTeam;
+          const teamPlayerIds = new Set(getPlayersByTeam(nextTeam).map((player) => player.player_id));
+          if (!teamPlayerIds.has(next.scorer_player_id)) next.scorer_player_id = "";
+          if (!teamPlayerIds.has(next.assist_player_id)) next.assist_player_id = "";
+          return next;
+        }
+
+        if (field === "scorer_player_id") {
+          next.scorer_player_id = value;
+          if (next.assist_player_id === value) next.assist_player_id = "";
+          return next;
+        }
+
+        next.assist_player_id = value;
+        if (next.assist_player_id === next.scorer_player_id) next.assist_player_id = "";
+        return next;
+      })
+    );
+  }
+
   async function handleSave() {
     setSaving(true);
     setMessage("");
+    setError("");
 
-    for (const row of rows) {
-      await supabase.from("training_stats").upsert(
-        {
-          session_id: sessionId,
-          player_id: row.player_id,
-          attended: row.attended,
-          goals: row.goals,
-          assists: row.assists,
-          training_team: row.training_team,
-        },
-        { onConflict: "session_id,player_id" }
-      );
+    const structuredMode = matchScoreA + matchScoreB > 0;
+    const goalsByPlayer = new Map<string, number>();
+    const assistsByPlayer = new Map<string, number>();
+    const normalizedGoalEvents: TrainingGoalEvent[] = [];
+
+    if (structuredMode) {
+      for (const event of goalEvents) {
+        if (!event.scorer_player_id) {
+          setError("Для каждого гола нужно выбрать автора.");
+          setSaving(false);
+          return;
+        }
+
+        const teamPlayerIds = new Set(
+          getPlayersByTeam(event.team).map((player) => player.player_id)
+        );
+        if (!teamPlayerIds.has(event.scorer_player_id)) {
+          setError("Автор гола должен быть из выбранной команды и отмечен как присутствующий.");
+          setSaving(false);
+          return;
+        }
+
+        if (
+          event.assist_player_id &&
+          (!teamPlayerIds.has(event.assist_player_id) ||
+            event.assist_player_id === event.scorer_player_id)
+        ) {
+          setError("Ассист должен быть из той же команды и не совпадать с автором гола.");
+          setSaving(false);
+          return;
+        }
+
+        goalsByPlayer.set(
+          event.scorer_player_id,
+          (goalsByPlayer.get(event.scorer_player_id) ?? 0) + 1
+        );
+
+        if (event.assist_player_id) {
+          assistsByPlayer.set(
+            event.assist_player_id,
+            (assistsByPlayer.get(event.assist_player_id) ?? 0) + 1
+          );
+        }
+
+        normalizedGoalEvents.push({
+          team: event.team,
+          scorer_player_id: event.scorer_player_id,
+          assist_player_id: event.assist_player_id || null,
+        });
+      }
     }
 
-    setMessage("Statistika sacuvana!");
+    const rowsToUpsert = rows.map((row) => ({
+      session_id: sessionId,
+      player_id: row.player_id,
+      attended: row.attended,
+      training_team: row.training_team,
+      goals: structuredMode ? goalsByPlayer.get(row.player_id) ?? 0 : row.goals,
+      assists: structuredMode ? assistsByPlayer.get(row.player_id) ?? 0 : row.assists,
+    }));
+
+    const statsRes = await supabase
+      .from("training_stats")
+      .upsert(rowsToUpsert, { onConflict: "session_id,player_id" });
+
+    if (statsRes.error) {
+      setError(statsRes.error.message);
+      setSaving(false);
+      return;
+    }
+
+    const hasMatchData =
+      structuredMode ||
+      Boolean(teamAGoalieId) ||
+      Boolean(teamBGoalieId) ||
+      matchScoreA > 0 ||
+      matchScoreB > 0;
+
+    const matchData: TrainingMatchData | null = hasMatchData
+      ? {
+          version: 1,
+          team_a_score: matchScoreA,
+          team_b_score: matchScoreB,
+          team_a_goalie_player_id: teamAGoalieId || null,
+          team_b_goalie_player_id: teamBGoalieId || null,
+          goal_events: normalizedGoalEvents,
+        }
+      : null;
+
+    const sessionRes = await supabase
+      .from("training_sessions")
+      .update({ match_data: matchData })
+      .eq("id", sessionId);
+
+    if (sessionRes.error) {
+      setError(sessionRes.error.message);
+      setSaving(false);
+      return;
+    }
+
+    setSession((prev) => (prev ? { ...prev, match_data: matchData } : prev));
+    setMessage("Статистика и матч сохранены.");
     setSaving(false);
   }
 
@@ -145,7 +418,7 @@ export default function TrainingStatsEntryPage() {
         </Link>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">
-            {tt("attendance")} & {ts("title")}
+            {session?.title || tt("session")} · {tt("attendance")} & {ts("title")}
           </h1>
           <Button
             variant="outline"
@@ -159,130 +432,285 @@ export default function TrainingStatsEntryPage() {
         </div>
       </div>
 
-      <div className="p-6">
-      <Card className="border-border/40">
-        <CardContent className="p-4">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 px-2">#</th>
-                  <th className="text-left py-2 px-2">Igrac</th>
-                  <th className="text-center py-2 px-2">{tt("teams")}</th>
-                  <th className="text-center py-2 px-2">{tt("attendance")}</th>
-                  <th className="text-center py-2 px-2">{ts("goals")}</th>
-                  <th className="text-center py-2 px-2">{ts("assists")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => (
-                  <tr key={row.player_id} className="border-b border-border/50">
-                    <td className="py-2 px-2 text-primary font-bold">
-                      {row.jersey_number ?? "-"}
-                    </td>
-                    <td className="py-2 px-2 font-medium">
-                      {row.first_name} {row.last_name}
-                    </td>
-                    <td className="py-2 px-2">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          size="sm"
-                          variant={row.training_team === "team_a" ? "default" : "ghost"}
-                          className={`h-7 w-7 p-0 text-xs font-bold ${
-                            row.training_team === "team_a"
-                              ? "bg-white text-black hover:bg-white/90"
-                              : "text-muted-foreground"
-                          }`}
-                          onClick={() =>
-                            setTeam(idx, row.training_team === "team_a" ? null : "team_a")
+      <div className="p-6 space-y-4">
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle>{tt("trainingMatch")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{tt("teamA")}</p>
+                <Input
+                  type="number"
+                  min={0}
+                  value={matchScoreA}
+                  onChange={(e) =>
+                    setMatchScores(Number(e.target.value) || 0, matchScoreB)
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{tt("teamB")}</p>
+                <Input
+                  type="number"
+                  min={0}
+                  value={matchScoreB}
+                  onChange={(e) =>
+                    setMatchScores(matchScoreA, Number(e.target.value) || 0)
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{tt("goalieTeamA")}</p>
+                <Select
+                  value={teamAGoalieId || NONE_OPTION}
+                  onValueChange={(value) => setTeamAGoalieId(value === NONE_OPTION ? "" : value)}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_OPTION}>-</SelectItem>
+                    {attendedTeamA.map((player) => (
+                      <SelectItem key={player.player_id} value={player.player_id}>
+                        {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
+                          `${player.first_name} ${player.last_name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{tt("goalieTeamB")}</p>
+                <Select
+                  value={teamBGoalieId || NONE_OPTION}
+                  onValueChange={(value) => setTeamBGoalieId(value === NONE_OPTION ? "" : value)}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_OPTION}>-</SelectItem>
+                    {attendedTeamB.map((player) => (
+                      <SelectItem key={player.player_id} value={player.player_id}>
+                        {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
+                          `${player.first_name} ${player.last_name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {goalEvents.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{tt("goalsTimeline")}</p>
+                <div className="space-y-2">
+                  {goalEvents.map((event, idx) => {
+                    const players = getPlayersByTeam(event.team);
+                    return (
+                      <div key={`${event.team}-${idx}`} className="grid gap-2 md:grid-cols-4">
+                        <Select
+                          value={event.team}
+                          onValueChange={(value) => updateGoalEvent(idx, "team", value)}
+                        >
+                          <SelectTrigger className="bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="team_a">{tt("teamA")}</SelectItem>
+                            <SelectItem value="team_b">{tt("teamB")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Select
+                          value={event.scorer_player_id || NONE_OPTION}
+                          onValueChange={(value) =>
+                            updateGoalEvent(
+                              idx,
+                              "scorer_player_id",
+                              value === NONE_OPTION ? "" : value
+                            )
                           }
                         >
-                          A
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={row.training_team === "team_b" ? "default" : "ghost"}
-                          className={`h-7 w-7 p-0 text-xs font-bold ${
-                            row.training_team === "team_b"
-                              ? "bg-gray-700 text-white hover:bg-gray-600"
-                              : "text-muted-foreground"
-                          }`}
-                          onClick={() =>
-                            setTeam(idx, row.training_team === "team_b" ? null : "team_b")
+                          <SelectTrigger className="bg-background">
+                            <SelectValue placeholder={tt("goalScorer")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION}>-</SelectItem>
+                            {players.map((player) => (
+                              <SelectItem key={player.player_id} value={player.player_id}>
+                                {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
+                                  `${player.first_name} ${player.last_name}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select
+                          value={event.assist_player_id || NONE_OPTION}
+                          onValueChange={(value) =>
+                            updateGoalEvent(
+                              idx,
+                              "assist_player_id",
+                              value === NONE_OPTION ? "" : value
+                            )
                           }
                         >
-                          B
-                        </Button>
+                          <SelectTrigger className="bg-background">
+                            <SelectValue placeholder={tt("assist")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION}>-</SelectItem>
+                            {players
+                              .filter((player) => player.player_id !== event.scorer_player_id)
+                              .map((player) => (
+                                <SelectItem key={player.player_id} value={player.player_id}>
+                                  {(player.jersey_number != null ? `#${player.jersey_number} ` : "") +
+                                    `${player.first_name} ${player.last_name}`}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+
+                        <div className="flex items-center text-sm text-muted-foreground px-2">
+                          {tt("goal")} #{idx + 1}
+                        </div>
                       </div>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => toggleAttendance(idx)}
-                        className={
-                          row.attended
-                            ? "text-green-400 hover:text-green-300"
-                            : "text-red-400 hover:text-red-300"
-                        }
-                      >
-                        {row.attended ? (
-                          <CheckCircle className="h-5 w-5" />
-                        ) : (
-                          <XCircle className="h-5 w-5" />
-                        )}
-                      </Button>
-                    </td>
-                    <td className="py-2 px-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={row.goals}
-                        onChange={(e) =>
-                          updateRow(idx, "goals", parseInt(e.target.value) || 0)
-                        }
-                        className="w-16 h-8 text-center bg-background mx-auto"
-                        disabled={!row.attended}
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={row.assists}
-                        onChange={(e) =>
-                          updateRow(idx, "assists", parseInt(e.target.value) || 0)
-                        }
-                        className="w-16 h-8 text-center bg-background mx-auto"
-                        disabled={!row.attended}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {message && (
-            <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2 mt-4">
-              {message}
-            </p>
-          )}
-
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="mt-4 bg-primary"
-          >
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    );
+                  })}
+                </div>
+              </div>
             ) : (
-              <Save className="mr-2 h-4 w-4" />
+              <p className="text-sm text-muted-foreground">{tt("setScoreFirst")}</p>
             )}
-            {tc("save")}
-          </Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/40">
+          <CardContent className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-2">#</th>
+                    <th className="text-left py-2 px-2">Igrac</th>
+                    <th className="text-center py-2 px-2">{tt("teams")}</th>
+                    <th className="text-center py-2 px-2">{tt("attendance")}</th>
+                    <th className="text-center py-2 px-2">{ts("goals")}</th>
+                    <th className="text-center py-2 px-2">{ts("assists")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, idx) => (
+                    <tr key={row.player_id} className="border-b border-border/50">
+                      <td className="py-2 px-2 text-primary font-bold">
+                        {row.jersey_number ?? "-"}
+                      </td>
+                      <td className="py-2 px-2 font-medium">
+                        {row.first_name} {row.last_name}
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="sm"
+                            variant={row.training_team === "team_a" ? "default" : "ghost"}
+                            className={`h-7 w-7 p-0 text-xs font-bold ${
+                              row.training_team === "team_a"
+                                ? "bg-white text-black hover:bg-white/90"
+                                : "text-muted-foreground"
+                            }`}
+                            onClick={() =>
+                              setTeam(idx, row.training_team === "team_a" ? null : "team_a")
+                            }
+                          >
+                            A
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={row.training_team === "team_b" ? "default" : "ghost"}
+                            className={`h-7 w-7 p-0 text-xs font-bold ${
+                              row.training_team === "team_b"
+                                ? "bg-gray-700 text-white hover:bg-gray-600"
+                                : "text-muted-foreground"
+                            }`}
+                            onClick={() =>
+                              setTeam(idx, row.training_team === "team_b" ? null : "team_b")
+                            }
+                          >
+                            B
+                          </Button>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleAttendance(idx)}
+                          className={
+                            row.attended
+                              ? "text-green-400 hover:text-green-300"
+                              : "text-red-400 hover:text-red-300"
+                          }
+                        >
+                          {row.attended ? (
+                            <CheckCircle className="h-5 w-5" />
+                          ) : (
+                            <XCircle className="h-5 w-5" />
+                          )}
+                        </Button>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.goals}
+                          onChange={(e) => updateRow(idx, "goals", parseInt(e.target.value) || 0)}
+                          className="w-16 h-8 text-center bg-background mx-auto"
+                          disabled={!row.attended || matchScoreA + matchScoreB > 0}
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.assists}
+                          onChange={(e) =>
+                            updateRow(idx, "assists", parseInt(e.target.value) || 0)
+                          }
+                          className="w-16 h-8 text-center bg-background mx-auto"
+                          disabled={!row.attended || matchScoreA + matchScoreB > 0}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {error && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2 mt-4">
+                {error}
+              </p>
+            )}
+
+            {message && (
+              <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2 mt-4">
+                {message}
+              </p>
+            )}
+
+            <Button onClick={handleSave} disabled={saving} className="mt-4 bg-primary">
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {tc("save")}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

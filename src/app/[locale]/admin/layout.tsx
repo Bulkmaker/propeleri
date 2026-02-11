@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import {
   Users,
+  Shield,
   Swords,
   CalendarDays,
   Trophy,
@@ -18,6 +19,7 @@ import Image from "next/image";
 const adminLinks = [
   { href: "/admin", icon: LayoutDashboard, key: "dashboard" },
   { href: "/admin/players", icon: Users, key: "managePlayers" },
+  { href: "/admin/teams", icon: Shield, key: "manageTeams" },
   { href: "/admin/games", icon: Swords, key: "manageGames" },
   { href: "/admin/training", icon: CalendarDays, key: "manageTraining" },
   { href: "/admin/seasons", icon: Trophy, key: "manageSeasons" },
