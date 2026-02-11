@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, MapPin, CalendarDays, Swords } from "lucide-react";
+import { ChevronLeft, Shield, Swords } from "lucide-react";
 import { RESULT_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
 import type {
   GameResult,
@@ -21,9 +22,12 @@ import type {
   GameLineup,
   GameStats,
   SlotPosition,
+  Team,
+  Opponent,
 } from "@/types/database";
 import HockeyRink from "@/components/games/HockeyRink";
 import type { RinkPlayer } from "@/components/games/HockeyRink";
+import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 
 type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
   line_number: number | null;
@@ -34,6 +38,102 @@ type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "playe
 type GameStatEntry = Omit<GameStats, "player"> & {
   player: Profile | null;
 };
+
+type GoalEventInput = {
+  scorer_player_id: string;
+  assist_1_player_id: string;
+  assist_2_player_id: string;
+  period: GoalPeriod;
+  goal_time: string;
+};
+
+type GoalPeriod = "1" | "2" | "3" | "OT" | "SO";
+type GoaliePerformance = "excellent" | "good" | "average" | "bad";
+
+type GoalieReportInput = {
+  goalie_player_id: string;
+  performance: GoaliePerformance;
+};
+
+type GameNotesPayload = {
+  version: 1;
+  goal_events: GoalEventInput[];
+  goalie_report: GoalieReportInput | null;
+};
+
+const GOALIE_PERFORMANCE_LABELS: Record<GoaliePerformance, string> = {
+  excellent: "Отлично",
+  good: "Хорошо",
+  average: "Нормально",
+  bad: "Слабо",
+};
+const GOAL_PERIOD_LABELS: Record<GoalPeriod, string> = {
+  "1": "1 период",
+  "2": "2 период",
+  "3": "3 период",
+  OT: "ОТ",
+  SO: "Буллиты",
+};
+const GOAL_PERIOD_VALUES = Object.keys(GOAL_PERIOD_LABELS) as GoalPeriod[];
+
+function normalizeGoalClock(value: string): string {
+  const cleaned = value.trim();
+  if (!cleaned) return "";
+
+  const normalized = cleaned.replace(/\./g, ":");
+  if (!/^\d{1,2}:\d{2}$/.test(normalized)) return "";
+
+  const [minutesRaw, secondsRaw] = normalized.split(":");
+  const minutes = Number(minutesRaw);
+  const seconds = Number(secondsRaw);
+  if (Number.isNaN(minutes) || Number.isNaN(seconds) || seconds >= 60) return "";
+  return `${minutes}:${secondsRaw}`;
+}
+
+function parseGameNotesPayload(notes: string | null): GameNotesPayload | null {
+  if (!notes) return null;
+
+  try {
+    const parsed = JSON.parse(notes) as Partial<GameNotesPayload>;
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const normalizedEvents = Array.isArray(parsed.goal_events)
+      ? parsed.goal_events.map((event) => ({
+          scorer_player_id: typeof event?.scorer_player_id === "string" ? event.scorer_player_id : "",
+          assist_1_player_id:
+            typeof event?.assist_1_player_id === "string" ? event.assist_1_player_id : "",
+          assist_2_player_id:
+            typeof event?.assist_2_player_id === "string" ? event.assist_2_player_id : "",
+          period:
+            typeof event?.period === "string" &&
+            GOAL_PERIOD_VALUES.includes(event.period as GoalPeriod)
+              ? (event.period as GoalPeriod)
+              : "1",
+          goal_time:
+            typeof event?.goal_time === "string" ? normalizeGoalClock(event.goal_time) : "",
+        }))
+      : [];
+
+    const goalieReport =
+      parsed.goalie_report &&
+      typeof parsed.goalie_report === "object" &&
+      typeof parsed.goalie_report.goalie_player_id === "string" &&
+      ["excellent", "good", "average", "bad"].includes(parsed.goalie_report.performance ?? "")
+        ? {
+            goalie_player_id: parsed.goalie_report.goalie_player_id,
+            performance: parsed.goalie_report.performance as GoaliePerformance,
+          }
+        : null;
+
+    return {
+      version: 1,
+      goal_events: normalizedEvents,
+      goalie_report: goalieReport,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default async function GameDetailPage({
   params,
@@ -57,21 +157,98 @@ export default async function GameDetailPage({
     .single();
 
   if (!game) notFound();
+  const notes = parseGameNotesPayload(game.notes);
 
-  const { data: lineupRaw } = await supabase
-    .from("game_lineups")
-    .select("*, player:profiles(*)")
-    .eq("game_id", gameId);
-  const lineup = (lineupRaw ?? []) as GameLineupEntry[];
+  const [lineupRes, statsRes, teamsRes, opponentsRes] = await Promise.all([
+    supabase
+      .from("game_lineups")
+      .select("*, player:profiles(*)")
+      .eq("game_id", gameId),
+    supabase
+      .from("game_stats")
+      .select("*, player:profiles(*)")
+      .eq("game_id", gameId)
+      .order("goals", { ascending: false }),
+    supabase.from("teams").select("*"),
+    supabase.from("opponents").select("*").eq("is_active", true),
+  ]);
 
-  const { data: statsRaw } = await supabase
-    .from("game_stats")
-    .select("*, player:profiles(*)")
-    .eq("game_id", gameId)
-    .order("goals", { ascending: false });
-  const stats = (statsRaw ?? []) as GameStatEntry[];
+  const lineup = (lineupRes.data ?? []) as GameLineupEntry[];
+  const stats = (statsRes.data ?? []) as GameStatEntry[];
+  const teams = (teamsRes.data ?? []) as Team[];
+  const opponents = (opponentsRes.data ?? []) as Opponent[];
+  const goalEvents = notes?.goal_events ?? [];
+  const goalieReport = notes?.goalie_report ?? null;
+  const notePlayerIds = Array.from(
+    new Set(
+      goalEvents.flatMap((event) =>
+        [event.scorer_player_id, event.assist_1_player_id, event.assist_2_player_id].filter(
+          Boolean
+        )
+      )
+    )
+  );
+  if (goalieReport?.goalie_player_id) {
+    notePlayerIds.push(goalieReport.goalie_player_id);
+  }
+
+  const uniquePlayerIds = Array.from(new Set(notePlayerIds));
+  const notePlayersRes =
+    uniquePlayerIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, jersey_number")
+          .in("id", uniquePlayerIds)
+      : { data: [] };
+
+  const notePlayers = (notePlayersRes.data ?? []) as Pick<
+    Profile,
+    "id" | "first_name" | "last_name" | "jersey_number"
+  >[];
+  const playerLookup = new Map<
+    string,
+    Pick<Profile, "id" | "first_name" | "last_name" | "jersey_number">
+  >();
+
+  for (const player of notePlayers) {
+    playerLookup.set(player.id, player);
+  }
+  for (const entry of lineup) {
+    if (entry.player) {
+      playerLookup.set(entry.player.id, entry.player);
+    }
+  }
+  for (const entry of stats) {
+    if (entry.player) {
+      playerLookup.set(entry.player.id, entry.player);
+    }
+  }
+
+  function getPlayerName(playerId: string) {
+    const player = playerLookup.get(playerId);
+    if (!player) return "Игрок";
+    const numberPrefix = player.jersey_number != null ? `#${player.jersey_number} ` : "";
+    return `${numberPrefix}${player.first_name} ${player.last_name}`;
+  }
+
+  const opponentVisual = resolveOpponentVisual(
+    game,
+    buildOpponentVisualLookup(teams, opponents)
+  );
 
   const date = new Date(game.game_date);
+  const dateLabel = date.toLocaleDateString("sr-Latn", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const timeLabel = date.toLocaleTimeString("sr-Latn", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const teamScore = game.is_home ? game.home_score : game.away_score;
+  const opponentScore = game.is_home ? game.away_score : game.home_score;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -83,55 +260,28 @@ export default async function GameDetailPage({
         {tc("back")}
       </Link>
 
-      {/* Score Header */}
-      <Card className="border-primary/20 orange-glow mb-8">
-        <CardContent className="p-8">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-              <CalendarDays className="h-4 w-4" />
-              {date.toLocaleDateString("sr-Latn", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-              {game.location && (
-                <>
-                  <span className="mx-2">|</span>
-                  <MapPin className="h-4 w-4" />
-                  {game.location}
-                </>
-              )}
-            </div>
-
-            <div className="flex items-center gap-8">
-              <div className="text-center">
-                <p className="text-xl font-bold">Propeleri</p>
-                <Badge variant="outline" className="mt-1 text-xs">
-                  {game.is_home ? t("home") : t("away")}
-                </Badge>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-5xl font-black">
-                  {game.is_home ? game.home_score : game.away_score}
-                </span>
-                <span className="text-2xl text-muted-foreground">:</span>
-                <span className="text-5xl font-black">
-                  {game.is_home ? game.away_score : game.home_score}
-                </span>
-              </div>
-
-              <div className="text-center">
-                <p className="text-xl font-bold">{game.opponent}</p>
-                <Badge className={`mt-1 text-xs ${RESULT_COLORS[game.result as GameResult]}`}>
-                  {t(`result.${game.result}`)}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-8">
+        <GameMatchCard
+          teamName="Propeleri"
+          opponentName={game.opponent}
+          opponentLogoUrl={opponentVisual.logoUrl}
+          opponentCountry={opponentVisual.country}
+          teamScore={game.result === "pending" ? undefined : teamScore}
+          opponentScore={game.result === "pending" ? undefined : opponentScore}
+          dateLabel={dateLabel}
+          timeLabel={timeLabel}
+          location={game.location}
+          resultLabel={t(`result.${game.result}`)}
+          resultClassName={RESULT_COLORS[game.result as GameResult]}
+          matchTimeLabel={t("matchTime")}
+          variant="poster"
+          badges={
+            <Badge variant="outline" className="text-xs">
+              {game.is_home ? t("home") : t("away")}
+            </Badge>
+          }
+        />
+      </div>
 
       {/* Hockey Rink Visualization */}
       {lineup.length > 0 && (
@@ -148,9 +298,60 @@ export default async function GameDetailPage({
                 player_id: entry.player_id,
                 designation: entry.designation,
                 position_played: entry.position_played,
+                line_number: entry.line_number,
+                slot_position: entry.slot_position,
                 player: entry.player,
               })) as RinkPlayer[]}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {(goalEvents.length > 0 || goalieReport) && (
+        <Card className="border-border/40 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Голевые действия и вратарь
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {goalEvents.length > 0 && (
+              <div className="space-y-2">
+                {goalEvents.map((event, index) => (
+                  <div
+                    key={`${event.scorer_player_id}-${index}`}
+                    className="rounded-md border border-border/40 p-3"
+                  >
+                    <p className="text-sm font-semibold">
+                      Гол {index + 1}: {getPlayerName(event.scorer_player_id)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {GOAL_PERIOD_LABELS[event.period]}
+                      {event.goal_time ? `, ${event.goal_time}` : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ассисты:{" "}
+                      {[event.assist_1_player_id, event.assist_2_player_id]
+                        .filter(Boolean)
+                        .map((playerId) => getPlayerName(playerId))
+                        .join(", ") || "без ассиста"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {goalieReport && (
+              <div className="rounded-md border border-border/40 p-3">
+                <p className="text-sm font-semibold">
+                  Вратарь: {getPlayerName(goalieReport.goalie_player_id)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Оценка игры: {GOALIE_PERFORMANCE_LABELS[goalieReport.performance]}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
