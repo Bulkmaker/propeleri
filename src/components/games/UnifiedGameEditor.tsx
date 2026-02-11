@@ -359,6 +359,38 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       : teams;
   const scopedTeamBOptions = scopedTeams.filter((team) => team.id !== form.team_a_id);
 
+  async function saveGameFields() {
+    if (!game) return;
+
+    setSavingAction("match");
+    setError("");
+    setSuccess("");
+
+    const { error: updateError } = await supabase
+      .from("games")
+      .update({
+        opponent: game.opponent,
+        location: game.location,
+        game_date: game.game_date,
+        home_score: game.home_score,
+        away_score: game.away_score,
+        is_home: game.is_home,
+        result: game.result,
+      })
+      .eq("id", gameId);
+
+    if (updateError) {
+      setError(updateError.message);
+      setSavingAction(null);
+      return;
+    }
+
+    await loadAll();
+    setSavingAction(null);
+    setSuccess("Матч сохранён");
+    onRefresh?.();
+  }
+
   async function saveMatch() {
     if (!match) return;
 
@@ -565,13 +597,129 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         <TabsContent value="match" className="space-y-4">
           <Card className="border-border/40">
             <CardContent className="p-4 space-y-4">
-              {!isTournamentMatch && (
-                <p className="text-sm text-muted-foreground border-l-4 border-yellow-500 pl-3 py-2">
-                  Турнирные поля доступны только для матчей в турнирах
-                </p>
-              )}
+              {!isTournamentMatch ? (
+                // Обычный матч - редактирование базовых полей game
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Соперник</Label>
+                      <Input
+                        value={game.opponent}
+                        onChange={(e) => setGame({ ...game, opponent: e.target.value })}
+                      />
+                    </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Место проведения</Label>
+                      <Input
+                        value={game.location || ""}
+                        onChange={(e) => setGame({ ...game, location: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Дата и время</Label>
+                      <Input
+                        type="datetime-local"
+                        value={toDateTimeLocalInput(game.game_date)}
+                        onChange={(e) => {
+                          const utcDate = belgradeDateTimeLocalInputToUtcIso(e.target.value);
+                          if (utcDate) {
+                            setGame({ ...game, game_date: utcDate });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Дома/В гостях</Label>
+                      <Select
+                        value={game.is_home ? "home" : "away"}
+                        onValueChange={(value) => setGame({ ...game, is_home: value === "home" })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="home">Дома</SelectItem>
+                          <SelectItem value="away">В гостях</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>Счёт (мы)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={game.is_home ? game.home_score : game.away_score}
+                        onChange={(e) => {
+                          const score = parseInt(e.target.value, 10) || 0;
+                          if (game.is_home) {
+                            setGame({ ...game, home_score: score });
+                          } else {
+                            setGame({ ...game, away_score: score });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Счёт (соперник)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={game.is_home ? game.away_score : game.home_score}
+                        onChange={(e) => {
+                          const score = parseInt(e.target.value, 10) || 0;
+                          if (game.is_home) {
+                            setGame({ ...game, away_score: score });
+                          } else {
+                            setGame({ ...game, home_score: score });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Результат</Label>
+                      <Select
+                        value={game.result}
+                        onValueChange={(value: any) => setGame({ ...game, result: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="win">Победа</SelectItem>
+                          <SelectItem value="loss">Поражение</SelectItem>
+                          <SelectItem value="draw">Ничья</SelectItem>
+                          <SelectItem value="pending">Ожидается</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => void saveGameFields()}
+                    disabled={savingAction === "match"}
+                  >
+                    {savingAction === "match" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    {tc("save")}
+                  </Button>
+                </>
+              ) : (
+                // Турнирный матч - турнирные поля
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>{tt("stage")}</Label>
                   <Select
@@ -738,17 +886,19 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                 </div>
               </div>
 
-              <Button
-                onClick={() => void saveMatch()}
-                disabled={!isTournamentMatch || savingAction === "match"}
-              >
-                {savingAction === "match" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                {tc("save")}
-              </Button>
+                  <Button
+                    onClick={() => void saveMatch()}
+                    disabled={!isTournamentMatch || savingAction === "match"}
+                  >
+                    {savingAction === "match" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    {tc("save")}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
