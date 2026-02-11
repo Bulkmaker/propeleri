@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-headline: var(--font-exo-2);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -97,6 +98,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -111,13 +113,16 @@ html {
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--background);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--muted-foreground);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
 }
@@ -126,12 +131,15 @@ html {
 .hero-gradient {
   background: linear-gradient(135deg, #0b1120 0%, #1a2744 50%, #0e1a30 100%);
 }
+
 .orange-glow {
   box-shadow: 0 0 40px rgba(232, 115, 42, 0.15);
 }
+
 .card-hover {
   transition: transform 0.2s, box-shadow 0.2s;
 }
+
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(232, 115, 42, 0.1);
@@ -156,13 +164,11 @@ html {
   pointer-events: none;
   opacity: 0.16;
   background:
-    repeating-linear-gradient(
-      118deg,
+    repeating-linear-gradient(118deg,
       rgba(255, 255, 255, 0.12) 0px,
       rgba(255, 255, 255, 0.12) 1px,
       transparent 1px,
-      transparent 44px
-    );
+      transparent 44px);
 }
 
 .club-home__noise {
@@ -263,8 +269,15 @@ html {
 }
 
 .club-hero__copy {
-  padding: 28px;
-  padding-right: clamp(110px, 18vw, 210px);
+  padding: 20px;
+  padding-right: clamp(20px, 5vw, 210px);
+}
+
+@media (min-width: 768px) {
+  .club-hero__copy {
+    padding: 32px;
+    padding-right: clamp(32px, 8vw, 210px);
+  }
 }
 
 .club-hero__copy::after {
@@ -384,10 +397,17 @@ html {
 .club-hero__stats {
   margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
   position: relative;
   z-index: 2;
+}
+
+@media (min-width: 640px) {
+  .club-hero__stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
 }
 
 .club-hero-stat {
@@ -521,7 +541,7 @@ html {
   color: #f8fafc;
 }
 
-.club-matchday__teams > span {
+.club-matchday__teams>span {
   font-size: 12px;
   color: #94a3b8;
   text-transform: uppercase;
@@ -755,18 +775,18 @@ html {
   padding: 8px 10px;
 }
 
-.club-scorer-line > span {
+.club-scorer-line>span {
   color: #94a3b8;
   font-size: 12px;
 }
 
-.club-scorer-line > p {
+.club-scorer-line>p {
   margin: 0;
   color: #e2e8f0;
   font-size: 14px;
 }
 
-.club-scorer-line > strong {
+.club-scorer-line>strong {
   color: #fb923c;
   font-size: 13px;
 }
@@ -934,6 +954,7 @@ html {
 }
 
 @media (max-width: 720px) {
+
   .club-hero__copy,
   .club-matchday,
   .club-section,
@@ -950,26 +971,20 @@ html {
     justify-content: space-between;
   }
 
-  .club-hero__stats {
-    grid-template-columns: 1fr;
-  }
-
   .club-hero__crest {
     width: 78px;
     top: 12px;
     right: 12px;
   }
-
-  .club-hero__copy {
-    padding-right: 104px;
-  }
 }
 
 @keyframes club-float {
+
   0%,
   100% {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   50% {
     transform: translate3d(0, 18px, 0) scale(1.03);
   }

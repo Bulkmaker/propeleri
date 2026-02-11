@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Swords, Award } from "lucide-react";
@@ -8,6 +9,8 @@ import type { Game, GameResult, Opponent, Team, Tournament } from "@/types/datab
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 import { formatInBelgrade } from "@/lib/utils/datetime";
+
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function GamesPage({
   params,
@@ -21,21 +24,38 @@ export default async function GamesPage({
   const tt = await getTranslations("tournament");
   const tg = await getTranslations("game");
 
-  const supabase = await createClient();
-  const [gamesRes, tournamentsRes, opponentsRes, teamsRes] = await Promise.all([
-    supabase.from("games").select("*").order("game_date", { ascending: false }),
-    supabase
-      .from("tournaments")
-      .select("*")
-      .order("start_date", { ascending: false }),
-    supabase.from("opponents").select("*").eq("is_active", true),
-    supabase.from("teams").select("*"),
-  ]);
+  let allGames: Game[] = [];
+  let allTournaments: Tournament[] = [];
+  let opponents: Opponent[] = [];
+  let teams: Team[] = [];
+  let error: string | null = null;
 
-  const allGames = (gamesRes.data ?? []) as Game[];
-  const allTournaments = (tournamentsRes.data ?? []) as Tournament[];
-  const opponents = (opponentsRes.data ?? []) as Opponent[];
-  const teams = (teamsRes.data ?? []) as Team[];
+  try {
+    const supabase = await createClient();
+    const [gamesRes, tournamentsRes, opponentsRes, teamsRes] = await Promise.all([
+      supabase.from("games").select("*").order("game_date", { ascending: false }),
+      supabase
+        .from("tournaments")
+        .select("*")
+        .order("start_date", { ascending: false }),
+      supabase.from("opponents").select("*").eq("is_active", true),
+      supabase.from("teams").select("*"),
+    ]);
+
+    if (gamesRes.error) throw gamesRes.error;
+    if (tournamentsRes.error) throw tournamentsRes.error;
+    if (opponentsRes.error) throw opponentsRes.error;
+    if (teamsRes.error) throw teamsRes.error;
+
+    allGames = (gamesRes.data ?? []) as Game[];
+    allTournaments = (tournamentsRes.data ?? []) as Tournament[];
+    opponents = (opponentsRes.data ?? []) as Opponent[];
+    teams = (teamsRes.data ?? []) as Team[];
+  } catch (err: any) {
+    console.error("Error loading games page data:", err);
+    error = err.message || "Failed to load games";
+  }
+
   const opponentVisuals = buildOpponentVisualLookup(teams, opponents);
 
   // Group games by tournament
@@ -71,14 +91,18 @@ export default async function GamesPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-          <Swords className="h-5 w-5 text-primary" />
-        </div>
-        <h1 className="text-3xl font-bold">{tc("games")}</h1>
-      </div>
+      <PageHeader title={tc("games")} icon={Swords} />
 
-      {allGames.length === 0 ? (
+      {error ? (
+        <div className="flex flex-col items-center justify-center py-20 text-destructive text-center">
+          <p className="mb-4">{error}</p>
+          <Link href="/games">
+            <Button variant="outline" className="border-destructive/30 hover:bg-destructive/10">
+              {tc("retry")}
+            </Button>
+          </Link>
+        </div>
+      ) : allGames.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <Swords className="h-12 w-12 mx-auto mb-4 opacity-30" />
           <p>{tc("noData")}</p>

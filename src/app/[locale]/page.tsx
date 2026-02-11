@@ -30,6 +30,8 @@ const headlineFont = Exo_2({
   weight: ["600", "700", "800"],
 });
 
+export const revalidate = 300; // ISR: revalidate every 5 minutes
+
 function toIntlLocale(locale: string) {
   return locale === "sr" ? "sr-Latn" : locale;
 }
@@ -71,31 +73,31 @@ export default async function HomePage({
       .select("*", { count: "exact", head: true }),
     supabase
       .from("games")
-      .select("*")
+      .select("id, opponent, opponent_id, game_date, home_score, away_score, is_home, result, location")
       .eq("result", "pending")
       .gte("game_date", new Date().toISOString())
       .order("game_date", { ascending: true })
       .limit(1),
     supabase
       .from("games")
-      .select("*")
+      .select("id, opponent, opponent_id, game_date, home_score, away_score, is_home, result, location")
       .neq("result", "pending")
       .order("game_date", { ascending: false })
       .limit(5),
     supabase
       .from("player_game_totals")
-      .select("*")
+      .select("player_id, first_name, last_name, total_goals, total_assists, total_points")
       .order("total_points", { ascending: false })
       .limit(6),
     supabase
       .from("events")
-      .select("*")
+      .select("id, title, title_ru, title_en, event_date, location")
       .eq("is_published", true)
       .gte("event_date", new Date().toISOString())
       .order("event_date", { ascending: true })
       .limit(4),
-    supabase.from("teams").select("*"),
-    supabase.from("opponents").select("*").eq("is_active", true),
+    supabase.from("teams").select("name, logo_url, country, is_propeleri, opponent_id"),
+    supabase.from("opponents").select("id, name, country").eq("is_active", true),
   ]);
 
   const nextGame = (nextGameData?.[0] ?? null) as Game | null;
@@ -177,7 +179,7 @@ export default async function HomePage({
               <div className="club-matchday__header">
                 <div>
                   <p className="club-matchday__label">{t("nextGame")}</p>
-                  <p className={`${headlineFont.className} club-matchday__title`}>Game Day</p>
+                  <p className={`${headlineFont.className} club-matchday__title`}>{t("gameDay")}</p>
                 </div>
                 <Link href="/games" className="club-matchday__link">
                   {tc("viewAll")}
@@ -207,7 +209,7 @@ export default async function HomePage({
           <div className="club-pulse__wrap">
             <p className="club-pulse__title">
               <Trophy className="h-4 w-4" />
-              Club Pulse
+              {t("clubPulse")}
             </p>
             <div className="club-pulse__items">
               {recentGames.length > 0 ? (
@@ -323,9 +325,9 @@ export default async function HomePage({
 
         <section className="club-banner">
           <div>
-            <p className="club-banner__eyebrow">HC PROPELERI</p>
+            <p className="club-banner__eyebrow">{t("hero.title")}</p>
             <p className={`${headlineFont.className} club-banner__title`}>
-              Home ice. Fast shifts. One team.
+              {t("heroTagline")}
             </p>
           </div>
           <div className="club-banner__actions">
@@ -397,13 +399,13 @@ function MatchdayPoster({
         <span>vs</span>
         <div className="club-team-mark">
           <TeamAvatar
-            name={game.opponent?.trim() || "Opponent"}
+            name={game.opponent.trim() || "Opponent"}
             logoUrl={opponentLogoUrl}
             country={opponentCountry}
             size="md"
             className="h-12 w-12 text-xl mx-auto"
           />
-          <p>{game.opponent?.trim() || "TBD"}</p>
+          <p>{game.opponent.trim() || "TBD"}</p>
         </div>
       </div>
 

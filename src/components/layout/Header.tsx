@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/hooks/use-user";
-import { createClient } from "@/lib/supabase/client";
 import { Menu, User, Shield, LogOut } from "lucide-react";
 import Image from "next/image";
 
@@ -38,16 +37,17 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const { user, profile, loading, isAdmin, isTeamLeader } = useUser();
+  const { user, profile, loading, isAdmin, isTeamLeader, supabase } = useUser();
 
   const initials = profile
     ? `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`
-    : "";
+    : user?.email?.[0]?.toUpperCase() ?? "";
+
+  const displayName = profile?.first_name || user?.email?.split("@")[0] || "";
 
   async function handleLogout() {
-    const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/");
+    router.push("/login");
     router.refresh();
   }
 
@@ -76,11 +76,10 @@ export function Header() {
               <Link
                 key={link.key}
                 href={link.href}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isActive
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
               >
                 {t(link.key)}
               </Link>
@@ -94,18 +93,22 @@ export function Header() {
 
           {/* Desktop auth */}
           <div className="hidden md:block">
-            {loading ? null : user && profile ? (
+            {loading ? (
+              <Button variant="outline" size="sm" disabled className="border-primary/30">
+                {t("login")}
+              </Button>
+            ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2 hover:bg-accent">
                     <Avatar className="h-7 w-7">
-                      <AvatarImage src={profile.avatar_url ?? undefined} />
+                      <AvatarImage src={profile?.avatar_url ?? undefined} />
                       <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-sm font-medium max-w-30 truncate">
-                      {profile.first_name}
+                      {displayName}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -159,18 +162,17 @@ export function Header() {
                       key={link.key}
                       href={link.href}
                       onClick={() => setOpen(false)}
-                      className={`px-4 py-3 text-sm font-medium rounded-md transition-colors ${
-                        isActive
-                          ? "text-primary bg-primary/10"
-                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                      }`}
+                      className={`px-4 py-3 text-sm font-medium rounded-md transition-colors ${isActive
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                        }`}
                     >
                       {t(link.key)}
                     </Link>
                   );
                 })}
                 <div className="border-t border-border my-2" />
-                {user && profile ? (
+                {user ? (
                   <>
                     <Link
                       href="/profile"

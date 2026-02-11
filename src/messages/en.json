@@ -47,7 +47,10 @@
     "topScorers": "Top Scorers",
     "upcoming": "Upcoming Events",
     "teamStats": "Team Stats",
-    "noUpcoming": "No upcoming games"
+    "noUpcoming": "No upcoming games",
+    "gameDay": "Game Day",
+    "heroTagline": "Home ice. Fast shifts. One team.",
+    "clubPulse": "Club Pulse"
   },
   "roster": {
     "title": "Team Roster",
@@ -272,7 +275,8 @@
     "active": "Active",
     "inactive": "Inactive",
     "approved": "Approved",
-    "minPasswordChars": "Minimum 6 characters"
+    "minPasswordChars": "Minimum 6 characters",
+    "goToManagePlayers": "Go to \"Manage Players\" to approve"
   },
   "tournament": {
     "title": "Tournaments",

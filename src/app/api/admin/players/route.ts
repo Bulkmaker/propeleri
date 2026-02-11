@@ -7,6 +7,10 @@ import {
   loginToEmail,
   normalizeLogin,
 } from "@/lib/auth/login";
+import { isAdminRole } from "@/lib/auth/roles";
+import { rateLimit } from "@/lib/rate-limit";
+
+const limiter = rateLimit({ windowMs: 60_000, max: 10 });
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -24,12 +28,7 @@ async function requireAdmin() {
     .eq("id", user.id)
     .single();
 
-  const isAdmin =
-    profile?.app_role === "admin" ||
-    profile?.team_role === "captain" ||
-    profile?.team_role === "assistant_captain";
-
-  if (!isAdmin) {
+  if (!isAdminRole(profile)) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) } as const;
   }
 
@@ -71,10 +70,25 @@ function mapAuthAdminError(message: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const { success, resetMs } = limiter.check(`post:${ip}`);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(resetMs / 1000)) } }
+    );
+  }
+
   const adminCheck = await requireAdmin();
   if ("error" in adminCheck) return adminCheck.error;
 
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { login, password, first_name, last_name, nickname, jersey_number, position, is_guest } = body;
   const normalizedFirstName = typeof first_name === "string" ? first_name.trim() : "";
   const normalizedLastName = typeof last_name === "string" ? last_name.trim() : "";
@@ -85,6 +99,18 @@ export async function POST(request: NextRequest) {
       { error: "First name is required" },
       { status: 400 }
     );
+  }
+
+  // Валидация jersey_number
+  let parsedJerseyNumber: number | null = null;
+  if (jersey_number != null && jersey_number !== "") {
+    parsedJerseyNumber = parseInt(String(jersey_number), 10);
+    if (isNaN(parsedJerseyNumber) || parsedJerseyNumber < 0 || parsedJerseyNumber > 99) {
+      return NextResponse.json(
+        { error: "Jersey number must be a number between 0 and 99" },
+        { status: 400 }
+      );
+    }
   }
 
   const credentials = normalizeCredentials(login, password);
@@ -120,7 +146,7 @@ export async function POST(request: NextRequest) {
       first_name: normalizedFirstName,
       last_name: normalizedLastName,
       nickname: typeof nickname === "string" && nickname.trim().length > 0 ? nickname.trim() : null,
-      jersey_number: jersey_number ? parseInt(jersey_number) : null,
+      jersey_number: parsedJerseyNumber,
       position: position || "forward",
       is_guest: normalizedIsGuest,
       is_approved: true,
@@ -136,10 +162,25 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const { success, resetMs } = limiter.check(`patch:${ip}`);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(resetMs / 1000)) } }
+    );
+  }
+
   const adminCheck = await requireAdmin();
   if ("error" in adminCheck) return adminCheck.error;
 
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { id, login, password } = body as {
     id?: string;
     login?: string;

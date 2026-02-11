@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Users } from "lucide-react";
 import type { Profile } from "@/types/database";
 import RosterClient from "@/components/roster/RosterClient";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function RosterPage({
   params,
@@ -26,12 +27,7 @@ export default async function RosterPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-          <Users className="h-5 w-5 text-primary" />
-        </div>
-        <h1 className="text-3xl font-bold">{t("title")}</h1>
-      </div>
+      <PageHeader title={t("title")} icon={Users} />
 
       {allPlayers.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
@@ -40,7 +36,8 @@ export default async function RosterPage({
         </div>
       ) : (
         <RosterClient players={allPlayers} />
-      )}
+      )
+      }
     </div>
   );
 }

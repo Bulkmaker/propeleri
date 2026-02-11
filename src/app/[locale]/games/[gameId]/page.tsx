@@ -24,6 +24,7 @@ import type {
   SlotPosition,
   Team,
   Opponent,
+  Tournament,
 } from "@/types/database";
 import HockeyRink from "@/components/games/HockeyRink";
 import type { RinkPlayer } from "@/components/games/HockeyRink";
@@ -100,30 +101,30 @@ function parseGameNotesPayload(notes: string | null): GameNotesPayload | null {
 
     const normalizedEvents = Array.isArray(parsed.goal_events)
       ? parsed.goal_events.map((event) => ({
-          scorer_player_id: typeof event?.scorer_player_id === "string" ? event.scorer_player_id : "",
-          assist_1_player_id:
-            typeof event?.assist_1_player_id === "string" ? event.assist_1_player_id : "",
-          assist_2_player_id:
-            typeof event?.assist_2_player_id === "string" ? event.assist_2_player_id : "",
-          period:
-            typeof event?.period === "string" &&
+        scorer_player_id: typeof event?.scorer_player_id === "string" ? event.scorer_player_id : "",
+        assist_1_player_id:
+          typeof event?.assist_1_player_id === "string" ? event.assist_1_player_id : "",
+        assist_2_player_id:
+          typeof event?.assist_2_player_id === "string" ? event.assist_2_player_id : "",
+        period:
+          typeof event?.period === "string" &&
             GOAL_PERIOD_VALUES.includes(event.period as GoalPeriod)
-              ? (event.period as GoalPeriod)
-              : "1",
-          goal_time:
-            typeof event?.goal_time === "string" ? normalizeGoalClock(event.goal_time) : "",
-        }))
+            ? (event.period as GoalPeriod)
+            : "1",
+        goal_time:
+          typeof event?.goal_time === "string" ? normalizeGoalClock(event.goal_time) : "",
+      }))
       : [];
 
     const goalieReport =
       parsed.goalie_report &&
-      typeof parsed.goalie_report === "object" &&
-      typeof parsed.goalie_report.goalie_player_id === "string" &&
-      ["excellent", "good", "average", "bad"].includes(parsed.goalie_report.performance ?? "")
+        typeof parsed.goalie_report === "object" &&
+        typeof parsed.goalie_report.goalie_player_id === "string" &&
+        ["excellent", "good", "average", "bad"].includes(parsed.goalie_report.performance ?? "")
         ? {
-            goalie_player_id: parsed.goalie_report.goalie_player_id,
-            performance: parsed.goalie_report.performance as GoaliePerformance,
-          }
+          goalie_player_id: parsed.goalie_report.goalie_player_id,
+          performance: parsed.goalie_report.performance as GoaliePerformance,
+        }
         : null;
 
     return {
@@ -160,7 +161,7 @@ export default async function GameDetailPage({
   if (!game) notFound();
   const notes = parseGameNotesPayload(game.notes);
 
-  const [lineupRes, statsRes, teamsRes, opponentsRes] = await Promise.all([
+  const [lineupRes, statsRes, teamsRes, opponentsRes, tournamentsRes] = await Promise.all([
     supabase
       .from("game_lineups")
       .select("*, player:profiles(*)")
@@ -172,12 +173,15 @@ export default async function GameDetailPage({
       .order("goals", { ascending: false }),
     supabase.from("teams").select("*"),
     supabase.from("opponents").select("*").eq("is_active", true),
+    supabase.from("tournaments").select("*"),
   ]);
 
   const lineup = (lineupRes.data ?? []) as GameLineupEntry[];
   const stats = (statsRes.data ?? []) as GameStatEntry[];
   const teams = (teamsRes.data ?? []) as Team[];
   const opponents = (opponentsRes.data ?? []) as Opponent[];
+  const tournaments = (tournamentsRes.data ?? []) as Tournament[];
+  const tournament = tournaments.find((t) => t.id === game.tournament_id);
   const goalEvents = notes?.goal_events ?? [];
   const goalieReport = notes?.goalie_report ?? null;
   const notePlayerIds = Array.from(
@@ -197,9 +201,9 @@ export default async function GameDetailPage({
   const notePlayersRes =
     uniquePlayerIds.length > 0
       ? await supabase
-          .from("profiles")
-          .select("id, first_name, last_name, jersey_number")
-          .in("id", uniquePlayerIds)
+        .from("profiles")
+        .select("id, first_name, last_name, jersey_number")
+        .in("id", uniquePlayerIds)
       : { data: [] };
 
   const notePlayers = (notePlayersRes.data ?? []) as Pick<
@@ -276,9 +280,16 @@ export default async function GameDetailPage({
           matchTimeLabel={t("matchTime")}
           variant="poster"
           badges={
-            <Badge variant="outline" className="text-xs">
-              {game.is_home ? t("home") : t("away")}
-            </Badge>
+            <>
+              {tournament && (
+                <Badge variant="outline" className="text-xs mr-2 border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
+                  {tournament.name}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs">
+                {game.is_home ? t("home") : t("away")}
+              </Badge>
+            </>
           }
         />
       </div>

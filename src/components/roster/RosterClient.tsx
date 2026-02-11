@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -18,9 +20,12 @@ import {
 import type { Profile, PlayerPosition } from "@/types/database";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import { formatPlayerName } from "@/lib/utils/player-name";
+import { LayoutGrid, List } from "lucide-react";
+import { PlayerTable } from "./PlayerTable";
 
 type RosterSort = "name" | "number";
 type SortDirection = "asc" | "desc";
+type ViewMode = "grid" | "table";
 
 function normalizeSearchValue(value: string) {
   return value
@@ -37,6 +42,7 @@ export default function RosterClient({ players }: { players: Profile[] }) {
   const [sortBy, setSortBy] = useState<RosterSort>("number");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const normalizedSearchQuery = useMemo(
@@ -96,8 +102,8 @@ export default function RosterClient({ players }: { players: Profile[] }) {
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
-        <div className="space-y-2">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2 w-full lg:max-w-xs">
           <Label htmlFor="roster-search">{tc("search")}</Label>
           <Input
             id="roster-search"
@@ -107,32 +113,58 @@ export default function RosterClient({ players }: { players: Profile[] }) {
             className="bg-background"
           />
         </div>
-        <div className="space-y-2">
-          <Label>{t("sortBy")}</Label>
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as RosterSort)}>
-            <SelectTrigger className="w-[190px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="number">{t("sortByNumber")}</SelectItem>
-              <SelectItem value="name">{t("sortByName")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>{t("sortDirection")}</Label>
-          <Select
-            value={sortDirection}
-            onValueChange={(value) => setSortDirection(value as SortDirection)}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asc">{t("sortAsc")}</SelectItem>
-              <SelectItem value="desc">{t("sortDesc")}</SelectItem>
-            </SelectContent>
-          </Select>
+
+        <div className="flex flex-col sm:flex-row gap-4 sm:items-end justify-between">
+          <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
+            <div className="space-y-2">
+              <Label>{t("sortBy")}</Label>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as RosterSort)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="number">{t("sortByNumber")}</SelectItem>
+                  <SelectItem value="name">{t("sortByName")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("sortDirection")}</Label>
+              <Select
+                value={sortDirection}
+                onValueChange={(value) => setSortDirection(value as SortDirection)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">{t("sortAsc")}</SelectItem>
+                  <SelectItem value="desc">{t("sortDesc")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg self-start sm:self-end">
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn("h-8 w-8 px-0", viewMode === "grid" && "bg-background shadow-sm")}
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="sr-only">Grid View</span>
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn("h-8 w-8 px-0", viewMode === "table" && "bg-background shadow-sm")}
+              onClick={() => setViewMode("table")}
+            >
+              <List className="h-4 w-4" />
+              <span className="sr-only">Table View</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -141,17 +173,23 @@ export default function RosterClient({ players }: { players: Profile[] }) {
           <p>{tc("noData")}</p>
         </div>
       ) : (
-        <div className="space-y-10">
-          {forwards.length > 0 && (
-            <PositionSection title={tp("forward")} players={forwards} />
+        <>
+          {viewMode === "grid" ? (
+            <div className="space-y-10">
+              {forwards.length > 0 && (
+                <PositionSection title={tp("forward")} players={forwards} />
+              )}
+              {defense.length > 0 && (
+                <PositionSection title={tp("defense")} players={defense} />
+              )}
+              {goalies.length > 0 && (
+                <PositionSection title={tp("goalie")} players={goalies} />
+              )}
+            </div>
+          ) : (
+            <PlayerTable players={sortedPlayers} />
           )}
-          {defense.length > 0 && (
-            <PositionSection title={tp("defense")} players={defense} />
-          )}
-          {goalies.length > 0 && (
-            <PositionSection title={tp("goalie")} players={goalies} />
-          )}
-        </div>
+        </>
       )}
     </div>
   );

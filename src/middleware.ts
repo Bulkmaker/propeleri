@@ -44,7 +44,13 @@ export default async function middleware(request: NextRequest) {
     pathname.includes("/profile") || pathname.includes("/admin");
 
   if (isProtectedRoute && !user) {
-    const loginUrl = new URL("/login", request.url);
+    const segments = pathname.split("/");
+    const localeSegment = segments[1];
+    const availableLocales = routing.locales;
+    const hasLocale = availableLocales.includes(localeSegment as any);
+    const locale = hasLocale ? localeSegment : routing.defaultLocale;
+
+    const loginUrl = new URL(hasLocale ? `/${locale}/login` : "/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     const redirectResponse = NextResponse.redirect(loginUrl);
     supabaseCookies.forEach(({ name, value, options }) => {

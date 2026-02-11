@@ -156,6 +156,34 @@ export default function ProfilePage() {
     );
   }
 
+  if (!profile && !loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <Card className="w-full max-w-md border-border/40">
+          <CardContent className="pt-8 text-center text-card-foreground">
+            <User className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">{tc("noData")}</h2>
+            <p className="text-muted-foreground text-sm mb-6">
+              {t("title") === "Moj profil"
+                ? "Profil nije pronađen. Molimo pokušajte ponovo kasnije."
+                : "Профиль не найден. Пожалуйста, попробуйте войти снова."}
+            </p>
+            <Button
+              variant="outline"
+              className="border-primary/30"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push("/login");
+              }}
+            >
+              {tc("logout")}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!profile) return null;
 
   const initials = `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`;
@@ -343,11 +371,10 @@ export default function ProfilePage() {
 
             {message && (
               <p
-                className={`text-sm px-3 py-2 rounded-md ${
-                  message === t("saved")
+                className={`text-sm px-3 py-2 rounded-md ${message === t("saved")
                     ? "text-green-400 bg-green-400/10 border border-green-400/20"
                     : "text-destructive bg-destructive/10 border border-destructive/20"
-                }`}
+                  }`}
               >
                 {message}
               </p>

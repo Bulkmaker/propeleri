@@ -13,27 +13,40 @@ export function useUser() {
 
   useEffect(() => {
     async function loadProfile(userId: string) {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      setProfile(data ?? null);
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
+
+        if (error) {
+          console.warn("Could not load profile for user:", userId, error.message);
+        }
+        setProfile(data ?? null);
+      } catch (err) {
+        console.error("Critical error loading profile:", err);
+        setProfile(null);
+      }
     }
 
     async function getUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setUser(user);
 
-      if (user) {
-        await loadProfile(user.id);
-      } else {
-        setProfile(null);
+        if (user) {
+          await loadProfile(user.id);
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error("Error loading user:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     getUser();
@@ -41,13 +54,19 @@ export function useUser() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const nextUser = session?.user ?? null;
-      setUser(nextUser);
+      try {
+        const nextUser = session?.user ?? null;
+        setUser(nextUser);
 
-      if (nextUser) {
-        await loadProfile(nextUser.id);
-      } else {
-        setProfile(null);
+        if (nextUser) {
+          await loadProfile(nextUser.id);
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error("Error in onAuthStateChange:", err);
+      } finally {
+        setLoading(false);
       }
     });
 
@@ -60,5 +79,5 @@ export function useUser() {
     profile?.team_role === "captain" ||
     profile?.team_role === "assistant_captain";
 
-  return { user, profile, loading, isAdmin, isTeamLeader };
+  return { user, profile, loading, isAdmin, isTeamLeader, supabase };
 }

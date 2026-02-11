@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import { Exo_2 } from "next/font/google";
 import "@/app/globals.css";
+
+const exo2 = Exo_2({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-exo-2",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -23,7 +30,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="sr" className="dark" suppressHydrationWarning>
-      <body className="font-sans antialiased min-h-screen flex flex-col">
+      <body className={`${exo2.variable} font-sans antialiased min-h-screen flex flex-col`}>
         {children}
       </body>
     </html>

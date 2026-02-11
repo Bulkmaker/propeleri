@@ -302,3 +302,25 @@ export interface PlayerSeasonStats {
   pim: number;
   plus_minus: number;
 }
+
+export type GoalPeriod = "1" | "2" | "3" | "OT" | "SO";
+export type GoaliePerformance = "excellent" | "good" | "average" | "bad";
+
+export interface GoalEventInput {
+  scorer_player_id: string;
+  assist_1_player_id: string;
+  assist_2_player_id: string;
+  period: GoalPeriod;
+  goal_time: string;
+}
+
+export interface GoalieReportInput {
+  goalie_player_id: string;
+  performance: GoaliePerformance;
+}
+
+export interface GameNotesPayload {
+  version: 1;
+  goal_events: GoalEventInput[];
+  goalie_report: GoalieReportInput | null;
+}

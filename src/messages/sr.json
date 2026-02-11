@@ -47,7 +47,10 @@
     "topScorers": "Najbolji strelci",
     "upcoming": "Predstojecci dogadjaji",
     "teamStats": "Statistika tima",
-    "noUpcoming": "Nema predstojeccih utakmica"
+    "noUpcoming": "Nema predstojeccih utakmica",
+    "gameDay": "Dan utakmice",
+    "heroTagline": "Domaći led. Brze smene. Jedan tim.",
+    "clubPulse": "Puls kluba"
   },
   "roster": {
     "title": "Sastav tima",
@@ -272,7 +275,8 @@
     "active": "Aktivan",
     "inactive": "Neaktivan",
     "approved": "Odobren",
-    "minPasswordChars": "Minimalno 6 karaktera"
+    "minPasswordChars": "Minimalno 6 karaktera",
+    "goToManagePlayers": "Idi na \"Upravljanje igračima\" za odobravanje"
   },
   "tournament": {
     "title": "Turniri",

@@ -29,6 +29,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   social: "bg-purple-500/20 text-purple-400",
 };
 
+import { PageHeader } from "@/components/ui/page-header";
+
 export default async function EventsPage({
   params,
 }: {
@@ -50,12 +52,7 @@ export default async function EventsPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="h-10 w-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-          <Megaphone className="h-5 w-5 text-purple-400" />
-        </div>
-        <h1 className="text-3xl font-bold">{t("title")}</h1>
-      </div>
+      <PageHeader title={t("title")} icon={Megaphone} iconClassName="bg-purple-500/10 border-purple-500/20 text-purple-400" />
 
       {allEvents.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
