@@ -20,7 +20,6 @@ import type {
     Season,
     GameResult,
     Tournament,
-    Opponent,
     Team,
     Profile,
     GameNotesPayload,
@@ -34,7 +33,6 @@ import {
     utcToBelgradeDateTimeLocalInput,
     formatInBelgrade,
 } from "@/lib/utils/datetime";
-import { buildOpponentVisualLookup } from "@/lib/utils/opponent-visual";
 import { updateGameStats } from "@/lib/utils/game-stats";
 
 
@@ -43,8 +41,7 @@ import { updateGameStats } from "@/lib/utils/game-stats";
 export type GameFormData = {
     season_id: string;
     tournament_id: string;
-    opponent_id: string;
-    opponent: string;
+    opponent_team_id: string;
     location: string;
     game_date: string;
     is_home: boolean;
@@ -59,7 +56,6 @@ interface GameFormProps {
     initialData?: Game;
     seasons: Season[];
     tournaments: Tournament[];
-    opponents: Opponent[];
     teams: Team[];
     players: Profile[];
     onSave: (data: any) => Promise<void>;
@@ -168,7 +164,7 @@ export function GameForm({
     initialData,
     seasons,
     tournaments,
-    opponents,
+
     teams,
     players,
     onSave,
@@ -201,8 +197,7 @@ export function GameForm({
     const [form, setForm] = useState<GameFormData>({
         season_id: initialData?.season_id ?? seasons[0]?.id ?? "",
         tournament_id: initialData?.tournament_id ?? "",
-        opponent_id: initialData?.opponent_id ?? "",
-        opponent: initialData?.opponent ?? "",
+        opponent_team_id: initialData?.opponent_team_id ?? "",
         location: initialData?.location ?? "",
         game_date: initialData
             ? utcToBelgradeDateTimeLocalInput(initialData.game_date)
@@ -213,7 +208,6 @@ export function GameForm({
         result: initialData?.result ?? "pending",
     });
 
-    const [newOpponentName, setNewOpponentName] = useState("");
     const [error, setError] = useState("");
     const [saving, setSaving] = useState(false);
     const [lineupPlayers, setLineupPlayers] = useState<Profile[]>([]);
@@ -252,14 +246,10 @@ export function GameForm({
     // -- Effects --
     useEffect(() => {
         if (initialData) {
-            // Find proper opponent name
-            const matchedOpponent = opponents.find(o => o.id === initialData.opponent_id);
-            const snapshotName = matchedOpponent ? matchedOpponent.name : initialData.opponent;
-
             setForm(prev => ({
                 ...prev,
-                opponent: snapshotName,
-                opponent_id: initialData.opponent_id ?? matchedOpponent?.id ?? ""
+                opponent_team_id: initialData.opponent_team_id ?? "",
+                location: initialData.location ?? "",
             }));
 
             // Parse notes
@@ -278,7 +268,7 @@ export function GameForm({
             // Load lineup
             loadLineupPlayers(initialData.id);
         }
-    }, [initialData, opponents]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [initialData]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // -- Callbacks --
 
@@ -332,90 +322,7 @@ export function GameForm({
         );
     }
 
-    // Opponent logic
-    const findOpponentById = useCallback(
-        (id: string) => opponents.find((opp) => opp.id === id) ?? null,
-        [opponents]
-    );
 
-    const findOpponentByName = useCallback(
-        (value: string) => {
-            const normalized = normalizeName(value);
-            return opponents.find((opp) => normalizeName(opp.name) === normalized) ?? null;
-        },
-        [opponents]
-    );
-
-    async function ensureOpponent(value: string): Promise<Opponent | null> {
-        const cleaned = value.trim();
-        if (!cleaned) return null;
-
-        const local = findOpponentByName(cleaned);
-        if (local) return local;
-
-        const normalized = normalizeName(cleaned);
-
-        const { data: existingRows } = await supabase
-            .from("opponents")
-            .select("*")
-            .eq("normalized_name", normalized)
-            .limit(1);
-
-        if (existingRows?.[0]) {
-            return existingRows[0] as Opponent;
-        }
-
-        const { data: inserted, error: insertError } = await supabase
-            .from("opponents")
-            .insert({ name: cleaned })
-            .select("*")
-            .single();
-
-        if (insertError) {
-            // Fallback read
-            const { data: fallbackRows } = await supabase
-                .from("opponents")
-                .select("*")
-                .eq("normalized_name", normalized)
-                .limit(1);
-
-            if (fallbackRows?.[0]) {
-                return fallbackRows[0] as Opponent;
-            }
-
-            setError(insertError.message);
-            return null;
-        }
-
-        return inserted as Opponent;
-    }
-
-    async function handleCreateOpponent() {
-        if (!newOpponentName.trim()) return;
-        // Note: In a real reusable component, updating the parent's opponent list might be needed.
-        // For now assuming the parent might not update immediately, but we can verify.
-        // However, ensureOpponent creates it in DB. 
-        // Ideally we should call a prop function to refresh opponents.
-        // Since we don't have that easily, we rely on the parent refreshing or just setting ID.
-        // But since we need to select it, we should probably just return the ID if possible or similar.
-        // Wait, the original code updated local state `setOpponents`.
-        // Here we can't easily update `opponents` prop. 
-        // We might need an `onOpponentCreated` prop or just refetch in parent.
-        // For MVP, let's just create it and set the form ID, hoping the UI updates if we re-render or if we assume the user just needs the ID.
-        // Actually, `ensureOpponent` returns the opponent. We can set it in form.
-
-        // BUT we need it in the dropdown. 
-        // Let's assume for now we just set it in form.
-        const created = await ensureOpponent(newOpponentName);
-        if (!created) return;
-
-        setForm((prev) => ({
-            ...prev,
-            opponent_id: created.id,
-            opponent: created.name,
-        }));
-        setNewOpponentName("");
-    }
 
     async function handleSubmit() {
         setSaving(true);
@@ -465,14 +372,12 @@ export function GameForm({
                     : null;
 
             // 2. Prepare Opponent
-            let opponentRecord = form.opponent_id ? findOpponentById(form.opponent_id) : null;
-            if (!opponentRecord && form.opponent) {
-                // Try to find it again or create
-                opponentRecord = await ensureOpponent(form.opponent);
-            }
-
-            if (!opponentRecord) {
+            if (!form.opponent_team_id) {
                 throw new Error("Opponent is required");
+            }
+            const opponentTeam = teams.find(t => t.id === form.opponent_team_id);
+            if (!opponentTeam) {
+                throw new Error("Selected opponent team not found");
             }
 
             // 3. Prepare Date
@@ -485,8 +390,7 @@ export function GameForm({
             const payload: any = {
                 season_id: form.season_id,
                 tournament_id: form.tournament_id || null,
-                opponent_id: opponentRecord.id,
-                opponent: opponentRecord.name,
+                opponent_team_id: opponentTeam.id,
                 location: form.location || null,
                 game_date: gameDateUtc,
                 is_home: form.is_home,
@@ -512,8 +416,7 @@ export function GameForm({
         }
     }
 
-    const selectedOpponentId =
-        form.opponent_id || (form.opponent ? findOpponentByName(form.opponent)?.id ?? "" : "");
+    const selectedOpponentId = form.opponent_team_id;
 
     // Historical games for context
     const [opponentHistory, setOpponentHistory] = useState<Game[]>([]);
@@ -529,7 +432,7 @@ export function GameForm({
             const { data } = await supabase
                 .from("games")
                 .select("*")
-                .eq("opponent_id", selectedOpponentId)
+                .eq("opponent_team_id", selectedOpponentId)
                 .neq("id", initialData?.id ?? "__new__")
                 .order("game_date", { ascending: false })
                 .limit(6);
@@ -594,19 +497,9 @@ export function GameForm({
             <div className="space-y-2">
                 <Label>{tt("opponent")}</Label>
                 <Select
-                    value={form.opponent_id || "__none__"}
+                    value={form.opponent_team_id || "__none__"}
                     onValueChange={(v) => {
-                        if (v === "__none__") {
-                            setForm({ ...form, opponent_id: "" });
-                            return;
-                        }
-
-                        const selected = findOpponentById(v);
-                        setForm({
-                            ...form,
-                            opponent_id: v,
-                            opponent: selected?.name ?? form.opponent,
-                        });
+                        setForm({ ...form, opponent_team_id: v === "__none__" ? "" : v });
                     }}
                     disabled={isManagedByTournament}
                 >
@@ -615,43 +508,18 @@ export function GameForm({
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="__none__">—</SelectItem>
-                        {opponents.map((opponent) => (
-                            <SelectItem key={opponent.id} value={opponent.id}>
-                                {opponent.name}
-                            </SelectItem>
-                        ))}
+                        {teams
+                            .filter(t => !t.is_propeleri)
+                            .map((team) => (
+                                <SelectItem key={team.id} value={team.id}>
+                                    {team.name}
+                                </SelectItem>
+                            ))}
                     </SelectContent>
                 </Select>
             </div>
 
-            {!isManagedByTournament && (
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <Input
-                        value={newOpponentName}
-                        onChange={(e) => setNewOpponentName(e.target.value)}
-                        placeholder={tt("newOpponent")}
-                        className="bg-background"
-                    />
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleCreateOpponent}
-                        disabled={!newOpponentName.trim()}
-                    >
-                        {tc("create")}
-                    </Button>
-                </div>
-            )}
 
-            <div className="space-y-2">
-                <Label>{tt("opponentName")}</Label>
-                <Input
-                    value={form.opponent}
-                    onChange={(e) => setForm({ ...form, opponent: e.target.value })}
-                    className="bg-background"
-                    disabled={isManagedByTournament}
-                />
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -975,7 +843,7 @@ export function GameForm({
                 <Button
                     onClick={handleSubmit}
                     disabled={
-                        saving || (!isManagedByTournament && (!form.game_date || !form.opponent.trim()))
+                        saving || (!isManagedByTournament && (!form.game_date || !form.opponent_team_id))
                     }
                     className="flex-1 bg-primary"
                 >

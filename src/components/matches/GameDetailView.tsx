@@ -25,13 +25,12 @@ import type {
   GameStats,
   SlotPosition,
   Team,
-  Opponent,
   Tournament,
   TournamentMatch,
 } from "@/types/database";
 import HockeyRink from "@/components/games/HockeyRink";
 import type { RinkPlayer } from "@/components/games/HockeyRink";
-import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
+
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { Button } from "@/components/ui/button";
 
@@ -72,7 +71,6 @@ interface GameDetailViewProps {
   lineup: GameLineupEntry[];
   stats: GameStatEntry[];
   teams: Team[];
-  opponents: Opponent[];
   tournaments: Tournament[];
   tournamentMatch?: TournamentMatch | null;
   locale: string;
@@ -145,8 +143,8 @@ export function GameDetailView({
   game,
   lineup,
   stats,
+
   teams,
-  opponents,
   tournaments,
   tournamentMatch,
   locale,
@@ -205,10 +203,10 @@ export function GameDetailView({
     return `${numberPrefix}${player.first_name} ${player.last_name}`;
   };
 
-  const opponentVisual = resolveOpponentVisual(
-    game,
-    buildOpponentVisualLookup(teams, opponents)
-  );
+  const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
+  const opponentName = opponentTeam?.name ?? game.opponent ?? "Unknown Opponent";
+  const opponentLogo = opponentTeam?.logo_url;
+  const opponentCountry = opponentTeam?.country;
 
   const dateLabel = formatInBelgrade(game.game_date, locale, {
     weekday: "long",
@@ -228,9 +226,9 @@ export function GameDetailView({
       <div className="flex items-center justify-between">
         <GameMatchCard
           teamName="Propeleri"
-          opponentName={game.opponent}
-          opponentLogoUrl={opponentVisual.logoUrl}
-          opponentCountry={opponentVisual.country}
+          opponentName={opponentName}
+          opponentLogoUrl={opponentLogo}
+          opponentCountry={opponentCountry}
           teamScore={game.result === "pending" ? undefined : teamScore}
           opponentScore={game.result === "pending" ? undefined : opponentScore}
           dateLabel={dateLabel}

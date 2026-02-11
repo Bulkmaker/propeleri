@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Swords, Award } from "lucide-react";
-import type { Game, GameResult, Opponent, Team, Tournament } from "@/types/database";
+import type { Game, GameResult, Team, Tournament } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
-import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
 import { PageHeader } from "@/components/ui/page-header";
@@ -26,37 +25,33 @@ export default async function GamesPage({
 
   let allGames: Game[] = [];
   let allTournaments: Tournament[] = [];
-  let opponents: Opponent[] = [];
   let teams: Team[] = [];
   let error: string | null = null;
 
   try {
     const supabase = await createClient();
-    const [gamesRes, tournamentsRes, opponentsRes, teamsRes] = await Promise.all([
+    const [gamesRes, tournamentsRes, teamsRes] = await Promise.all([
       supabase.from("games").select("*").order("game_date", { ascending: false }),
       supabase
         .from("tournaments")
         .select("*")
         .order("start_date", { ascending: false }),
-      supabase.from("opponents").select("*").eq("is_active", true),
       supabase.from("teams").select("*"),
     ]);
 
     if (gamesRes.error) throw gamesRes.error;
     if (tournamentsRes.error) throw tournamentsRes.error;
-    if (opponentsRes.error) throw opponentsRes.error;
     if (teamsRes.error) throw teamsRes.error;
 
     allGames = (gamesRes.data ?? []) as Game[];
     allTournaments = (tournamentsRes.data ?? []) as Tournament[];
-    opponents = (opponentsRes.data ?? []) as Opponent[];
     teams = (teamsRes.data ?? []) as Team[];
   } catch (err: any) {
     console.error("Error loading games page data:", err);
     error = err.message || "Failed to load games";
   }
 
-  const opponentVisuals = buildOpponentVisualLookup(teams, opponents);
+
 
   // Group games by tournament
   const tournamentMap = new Map<
@@ -129,7 +124,9 @@ export default async function GamesPage({
               </Link>
               <div className="mt-3 space-y-3">
                 {games.map((game) => {
-                  const visual = resolveOpponentVisual(game, opponentVisuals);
+                  const opponent = teams.find((t) => t.id === game.opponent_team_id);
+                  const opponentName = opponent?.name ?? game.opponent ?? "Unknown Opponent";
+
                   const dateLabel = formatInBelgrade(game.game_date, "sr-Latn", {
                     day: "numeric",
                     month: "long",
@@ -144,9 +141,9 @@ export default async function GamesPage({
                       key={game.id}
                       href={`/games/${game.id}`}
                       teamName="Propeleri"
-                      opponentName={game.opponent}
-                      opponentLogoUrl={visual.logoUrl}
-                      opponentCountry={visual.country}
+                      opponentName={opponentName}
+                      opponentLogoUrl={opponent?.logo_url || null}
+                      opponentCountry={opponent?.country || null}
                       teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
                       opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
                       dateLabel={dateLabel}
@@ -172,7 +169,9 @@ export default async function GamesPage({
                 </h2>
               )}
               {standaloneGames.map((game) => {
-                const visual = resolveOpponentVisual(game, opponentVisuals);
+                const opponent = teams.find((t) => t.id === game.opponent_team_id);
+                const opponentName = opponent?.name ?? game.opponent ?? "Unknown Opponent";
+
                 const dateLabel = formatInBelgrade(game.game_date, "sr-Latn", {
                   day: "numeric",
                   month: "long",
@@ -187,9 +186,9 @@ export default async function GamesPage({
                     key={game.id}
                     href={`/games/${game.id}`}
                     teamName="Propeleri"
-                    opponentName={game.opponent}
-                    opponentLogoUrl={visual.logoUrl}
-                    opponentCountry={visual.country}
+                    opponentName={opponentName}
+                    opponentLogoUrl={opponent?.logo_url || null}
+                    opponentCountry={opponent?.country || null}
                     teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
                     opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
                     dateLabel={dateLabel}

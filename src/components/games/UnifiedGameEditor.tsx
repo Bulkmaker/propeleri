@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/navigation";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { RESULT_COLORS } from "@/lib/utils/constants";
-import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
+
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import { GameLineupEditor } from "@/components/games/GameLineupEditor";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
@@ -36,7 +36,6 @@ import {
 import type {
   Game,
   LineupDesignation,
-  Opponent,
   Profile,
   SlotPosition,
   Team,
@@ -115,6 +114,7 @@ function sortPlayersByNumberAndName(list: Profile[]) {
 
 export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps) {
   const router = useRouter();
+  const locale = useLocale();
   const tt = useTranslations("tournament");
   const tc = useTranslations("common");
   const ts = useTranslations("stats");
@@ -131,7 +131,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   const [match, setMatch] = useState<TournamentMatch | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [groups, setGroups] = useState<TournamentGroup[]>([]);
   const [groupTeams, setGroupTeams] = useState<TournamentGroupTeam[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
@@ -200,7 +199,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
     // Если нет tournamentMatch, загружаем только базовые данные
     if (!matchData) {
-      const [playersRes, opponentsRes, teamsRes] = await Promise.all([
+      const [playersRes, teamsRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("*")
@@ -208,12 +207,10 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
           .eq("is_approved", true)
           .eq("is_guest", false)
           .order("jersey_number", { ascending: true }),
-        supabase.from("opponents").select("*").order("name"),
         supabase.from("teams").select("*").order("name"),
       ]);
 
       setPlayers((playersRes.data ?? []) as Profile[]);
-      setOpponents((opponentsRes.data ?? []) as Opponent[]);
       setTeams((teamsRes.data ?? []) as Team[]);
       setLoading(false);
       return;
@@ -228,7 +225,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       groupTeamsRes,
       playersRes,
       registrationsRes,
-      opponentsRes,
     ] = await Promise.all([
       supabase.from("tournaments").select("*").eq("id", matchData.tournament_id).maybeSingle(),
       supabase
@@ -254,7 +250,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         .from("tournament_player_registrations")
         .select("player_id")
         .eq("tournament_id", matchData.tournament_id),
-      supabase.from("opponents").select("*").order("name"),
     ]);
 
     const loadedTournament = (tournamentRes.data ?? null) as Tournament | null;
@@ -281,7 +276,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     setGroupTeams(loadedGroupTeams);
     setPlayers(loadedPlayers);
     setRegisteredPlayerIds(loadedRegistrations);
-    setOpponents((opponentsRes.data ?? []) as Opponent[]);
 
     setForm({
       team_a_id: matchData.team_a_id ?? "",
@@ -362,10 +356,10 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   const selectedGroupTeamIds =
     form.stage === "group" && form.group_id
       ? new Set(
-          groupTeams
-            .filter((entry) => entry.group_id === form.group_id)
-            .map((entry) => entry.team_id)
-        )
+        groupTeams
+          .filter((entry) => entry.group_id === form.group_id)
+          .map((entry) => entry.team_id)
+      )
       : null;
   const scopedTeams =
     selectedGroupTeamIds && selectedGroupTeamIds.size > 0
@@ -383,8 +377,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     const { error: updateError } = await supabase
       .from("games")
       .update({
-        opponent: game.opponent,
-        opponent_id: game.opponent_id,
+        opponent_team_id: game.opponent_team_id,
         location: game.location,
         game_date: game.game_date,
         home_score: game.home_score,
@@ -433,9 +426,9 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     const resolvedGroupId =
       form.stage === "group"
         ? form.group_id ||
-          (form.team_a_id && form.team_b_id
-            ? findGroupForMatch(form.team_a_id, form.team_b_id)
-            : null)
+        (form.team_a_id && form.team_b_id
+          ? findGroupForMatch(form.team_a_id, form.team_b_id)
+          : null)
         : null;
     const matchDateUtc = form.match_date
       ? belgradeDateTimeLocalInputToUtcIso(form.match_date)
@@ -484,13 +477,13 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
     const result = isRegistered
       ? await supabase
-          .from("tournament_player_registrations")
-          .delete()
-          .eq("tournament_id", tournament.id)
-          .eq("player_id", playerId)
+        .from("tournament_player_registrations")
+        .delete()
+        .eq("tournament_id", tournament.id)
+        .eq("player_id", playerId)
       : await supabase
-          .from("tournament_player_registrations")
-          .insert({ tournament_id: tournament.id, player_id: playerId });
+        .from("tournament_player_registrations")
+        .insert({ tournament_id: tournament.id, player_id: playerId });
 
     if (result.error) {
       setError(result.error.message);
@@ -510,9 +503,9 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       prev.map((row) =>
         row.player_id === playerId
           ? {
-              ...row,
-              [field]: field === "plus_minus" ? value : Math.max(0, value),
-            }
+            ...row,
+            [field]: field === "plus_minus" ? value : Math.max(0, value),
+          }
           : row
       )
     );
@@ -587,14 +580,16 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   const isTournamentMatch = Boolean(match);
 
   // Подготовка данных для GameMatchCard
-  const opponentVisualLookup = buildOpponentVisualLookup(opponents, teams);
-  const visual = resolveOpponentVisual(game.opponent, game.opponent_id, opponentVisualLookup);
+  const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
+  const opponentName = opponentTeam?.name ?? game.opponent ?? "Unknown Opponent";
+  const opponentLogo = opponentTeam?.logo_url;
+  const opponentCountry = opponentTeam?.country;
 
-  const dateLabel = formatInBelgrade(game.game_date, {
+  const dateLabel = formatInBelgrade(game.game_date, locale, {
     month: "short",
     day: "numeric",
   });
-  const timeLabel = formatInBelgrade(game.game_date, {
+  const timeLabel = formatInBelgrade(game.game_date, locale, {
     hour: "numeric",
     minute: "numeric",
     hour12: false,
@@ -616,16 +611,16 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
       <GameMatchCard
         teamName="Propeleri"
-        opponentName={game.opponent}
-        opponentLogoUrl={visual.logoUrl}
-        opponentCountry={visual.country}
+        opponentName={opponentName}
+        opponentLogoUrl={opponentLogo}
+        opponentCountry={opponentCountry}
         teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
         opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
         dateLabel={dateLabel}
         timeLabel={timeLabel}
         location={game.location}
         resultLabel={tg(`result.${game.result}`)}
-        resultClassName={RESULT_COLORS[game.result as any]}
+        resultClassName={RESULT_COLORS[game.result as keyof typeof RESULT_COLORS]}
         matchTimeLabel={tg("matchTime")}
         variant="compact"
       />
@@ -653,14 +648,14 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                     <div className="space-y-2">
                       <Label>Соперник</Label>
                       <Select
-                        value={game.opponent_id || "__none__"}
+                        value={game.opponent_team_id || "__none__"}
                         onValueChange={(value) => {
                           if (value === "__none__") {
-                            setGame({ ...game, opponent_id: null, opponent: "" });
+                            setGame({ ...game, opponent_team_id: null });
                           } else {
-                            const opponent = opponents.find(o => o.id === value);
-                            if (opponent) {
-                              setGame({ ...game, opponent_id: value, opponent: opponent.name });
+                            const team = teams.find(t => t.id === value);
+                            if (team) {
+                              setGame({ ...game, opponent_team_id: value });
                             }
                           }
                         }}
@@ -670,11 +665,13 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">—</SelectItem>
-                          {opponents.map((opp) => (
-                            <SelectItem key={opp.id} value={opp.id}>
-                              {opp.name}
-                            </SelectItem>
-                          ))}
+                          {teams
+                            .filter(t => !t.is_propeleri) // Assuming Propeleri is not an opponent to itself usually
+                            .map((team) => (
+                              <SelectItem key={team.id} value={team.id}>
+                                {team.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -790,171 +787,171 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                 // Турнирный матч - турнирные поля
                 <>
                   <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{tt("stage")}</Label>
-                  <Select
-                    value={form.stage}
-                    disabled={!isTournamentMatch}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        stage: value as TournamentMatchStage,
-                        group_id: value === "group" ? prev.group_id : "",
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="group">{tt("groupStage")}</SelectItem>
-                      <SelectItem value="playoff">{tt("playoffStage")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {form.stage === "group" ? (
-                  <div className="space-y-2">
-                    <Label>{tt("group")}</Label>
-                    <Select
-                      value={form.group_id || "__none__"}
-                      disabled={!isTournamentMatch}
-                      onValueChange={(value) =>
-                        setForm((prev) => {
-                          const nextGroupId = value === "__none__" ? "" : value;
-                          if (!nextGroupId) {
-                            return { ...prev, group_id: "" };
-                          }
-
-                          const allowedIds = new Set(
-                            groupTeams
-                              .filter((entry) => entry.group_id === nextGroupId)
-                              .map((entry) => entry.team_id)
-                          );
-
-                          let teamAId = prev.team_a_id;
-                          let teamBId = prev.team_b_id;
-
-                          if (allowedIds.size > 0) {
-                            if (teamAId && !allowedIds.has(teamAId)) teamAId = "";
-                            if (teamBId && !allowedIds.has(teamBId)) teamBId = "";
-                          }
-
-                          if (teamAId && teamBId && teamAId === teamBId) {
-                            teamBId = "";
-                          }
-
-                          return {
+                    <div className="space-y-2">
+                      <Label>{tt("stage")}</Label>
+                      <Select
+                        value={form.stage}
+                        disabled={!isTournamentMatch}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({
                             ...prev,
-                            group_id: nextGroupId,
-                            team_a_id: teamAId,
-                            team_b_id: teamBId,
-                          };
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">—</SelectItem>
-                        {groups.map((group) => (
-                          <SelectItem key={group.id} value={group.id}>
-                            {group.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                            stage: value as TournamentMatchStage,
+                            group_id: value === "group" ? prev.group_id : "",
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="group">{tt("groupStage")}</SelectItem>
+                          <SelectItem value="playoff">{tt("playoffStage")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {form.stage === "group" ? (
+                      <div className="space-y-2">
+                        <Label>{tt("group")}</Label>
+                        <Select
+                          value={form.group_id || "__none__"}
+                          disabled={!isTournamentMatch}
+                          onValueChange={(value) =>
+                            setForm((prev) => {
+                              const nextGroupId = value === "__none__" ? "" : value;
+                              if (!nextGroupId) {
+                                return { ...prev, group_id: "" };
+                              }
+
+                              const allowedIds = new Set(
+                                groupTeams
+                                  .filter((entry) => entry.group_id === nextGroupId)
+                                  .map((entry) => entry.team_id)
+                              );
+
+                              let teamAId = prev.team_a_id;
+                              let teamBId = prev.team_b_id;
+
+                              if (allowedIds.size > 0) {
+                                if (teamAId && !allowedIds.has(teamAId)) teamAId = "";
+                                if (teamBId && !allowedIds.has(teamBId)) teamBId = "";
+                              }
+
+                              if (teamAId && teamBId && teamAId === teamBId) {
+                                teamBId = "";
+                              }
+
+                              return {
+                                ...prev,
+                                group_id: nextGroupId,
+                                team_a_id: teamAId,
+                                team_b_id: teamBId,
+                              };
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">—</SelectItem>
+                            {groups.map((group) => (
+                              <SelectItem key={group.id} value={group.id}>
+                                {group.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>{tt("label")}</Label>
+                        <Input
+                          value={form.bracket_label}
+                          disabled={!isTournamentMatch}
+                          onChange={(event) =>
+                            setForm((prev) => ({ ...prev, bracket_label: event.target.value }))
+                          }
+                          placeholder={tt("labelPlaceholder")}
+                        />
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>{tt("label")}</Label>
-                    <Input
-                      value={form.bracket_label}
-                      disabled={!isTournamentMatch}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, bracket_label: event.target.value }))
-                      }
-                      placeholder={tt("labelPlaceholder")}
-                    />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>{tt("matchDate")}</Label>
+                      <Input
+                        type="datetime-local"
+                        value={form.match_date}
+                        disabled={!isTournamentMatch}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, match_date: event.target.value }))
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{tt("location")}</Label>
+                      <Input
+                        value={tournament?.location ?? ""}
+                        placeholder={tt("scorePlaceholder")}
+                        disabled
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {tt("locationFromTournament")}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{tt("matchDate")}</Label>
-                  <Input
-                    type="datetime-local"
-                    value={form.match_date}
-                    disabled={!isTournamentMatch}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, match_date: event.target.value }))
-                    }
-                  />
-                </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>{tt("score")} A</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.score_a}
+                        disabled={!isTournamentMatch}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            score_a: parseInt(event.target.value, 10) || 0,
+                          }))
+                        }
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>{tt("location")}</Label>
-                  <Input
-                    value={tournament?.location ?? ""}
-                    placeholder={tt("scorePlaceholder")}
-                    disabled
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {tt("locationFromTournament")}
-                  </p>
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label>{tt("score")} B</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.score_b}
+                        disabled={!isTournamentMatch}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            score_b: parseInt(event.target.value, 10) || 0,
+                          }))
+                        }
+                      />
+                    </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>{tt("score")} A</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.score_a}
-                    disabled={!isTournamentMatch}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        score_a: parseInt(event.target.value, 10) || 0,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{tt("score")} B</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.score_b}
-                    disabled={!isTournamentMatch}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        score_b: parseInt(event.target.value, 10) || 0,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{tt("completed")}</Label>
-                  <Button
-                    type="button"
-                    variant={form.is_completed ? "default" : "outline"}
-                    className="w-full"
-                    disabled={!isTournamentMatch}
-                    onClick={() =>
-                      setForm((prev) => ({ ...prev, is_completed: !prev.is_completed }))
-                    }
-                  >
-                    {form.is_completed ? tt("reopen") : tt("complete")}
-                  </Button>
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label>{tt("completed")}</Label>
+                      <Button
+                        type="button"
+                        variant={form.is_completed ? "default" : "outline"}
+                        className="w-full"
+                        disabled={!isTournamentMatch}
+                        onClick={() =>
+                          setForm((prev) => ({ ...prev, is_completed: !prev.is_completed }))
+                        }
+                      >
+                        {form.is_completed ? tt("reopen") : tt("complete")}
+                      </Button>
+                    </div>
+                  </div>
 
                   <Button
                     onClick={() => void saveMatch()}
@@ -1145,11 +1142,10 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                         type="button"
                         onClick={() => void toggleRegisteredPlayer(player.id)}
                         disabled={!isTournamentMatch || savingAction === "roster"}
-                        className={`rounded-md border px-3 py-2 text-left transition-colors ${
-                          isSelected
-                            ? "border-primary/50 bg-primary/10"
-                            : "border-border/40 hover:border-primary/30"
-                        } ${!isTournamentMatch ? "opacity-50 cursor-not-allowed" : ""}`}
+                        className={`rounded-md border px-3 py-2 text-left transition-colors ${isSelected
+                          ? "border-primary/50 bg-primary/10"
+                          : "border-border/40 hover:border-primary/30"
+                          } ${!isTournamentMatch ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-medium truncate">

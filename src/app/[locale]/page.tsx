@@ -18,11 +18,10 @@ import {
 import { Exo_2 } from "next/font/google";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import type { Game, Opponent, PlayerGameTotals, Team, TeamEvent } from "@/types/database";
+import type { Game, PlayerGameTotals, Team, TeamEvent } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import type { GameResult } from "@/types/database";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
-import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
 const headlineFont = Exo_2({
@@ -60,7 +59,6 @@ export default async function HomePage({
     { data: topScorersData },
     { data: upcomingEventsData },
     { data: teamsData },
-    { data: opponentsData },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -73,14 +71,14 @@ export default async function HomePage({
       .select("*", { count: "exact", head: true }),
     supabase
       .from("games")
-      .select("id, opponent, opponent_id, game_date, home_score, away_score, is_home, result, location")
+      .select("id, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
       .eq("result", "pending")
       .gte("game_date", new Date().toISOString())
       .order("game_date", { ascending: true })
       .limit(1),
     supabase
       .from("games")
-      .select("id, opponent, opponent_id, game_date, home_score, away_score, is_home, result, location")
+      .select("id, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
       .neq("result", "pending")
       .order("game_date", { ascending: false })
       .limit(5),
@@ -96,8 +94,7 @@ export default async function HomePage({
       .gte("event_date", new Date().toISOString())
       .order("event_date", { ascending: true })
       .limit(4),
-    supabase.from("teams").select("name, logo_url, country, is_propeleri, opponent_id"),
-    supabase.from("opponents").select("id, name, country").eq("is_active", true),
+    supabase.from("teams").select("id, name, logo_url, country, is_propeleri"),
   ]);
 
   const nextGame = (nextGameData?.[0] ?? null) as Game | null;
@@ -105,9 +102,8 @@ export default async function HomePage({
   const topScorers = (topScorersData ?? []) as PlayerGameTotals[];
   const upcomingEvents = (upcomingEventsData ?? []) as TeamEvent[];
   const teams = (teamsData ?? []) as Team[];
-  const opponents = (opponentsData ?? []) as Opponent[];
-  const opponentVisuals = buildOpponentVisualLookup(teams, opponents);
-  const nextGameVisual = nextGame ? resolveOpponentVisual(nextGame, opponentVisuals) : null;
+
+  const nextGameOpponent = nextGame ? teams.find((t) => t.id === nextGame.opponent_team_id) : null;
 
   const wins = recentGames.filter((g) => g.result === "win").length;
   const losses = recentGames.filter((g) => g.result === "loss").length;
@@ -193,8 +189,9 @@ export default async function HomePage({
                   localeTag={localeTag}
                   homeLabel={tg("home")}
                   awayLabel={tg("away")}
-                  opponentLogoUrl={nextGameVisual?.logoUrl ?? null}
-                  opponentCountry={nextGameVisual?.country ?? null}
+                  opponentName={nextGameOpponent?.name ?? nextGame.opponent ?? "Unknown"}
+                  opponentLogoUrl={nextGameOpponent?.logo_url ?? null}
+                  opponentCountry={nextGameOpponent?.country ?? null}
                 />
               ) : (
                 <div className="club-matchday__empty">{t("noUpcoming")}</div>
@@ -214,14 +211,15 @@ export default async function HomePage({
             <div className="club-pulse__items">
               {recentGames.length > 0 ? (
                 recentGames.map((game) => {
-                  const visual = resolveOpponentVisual(game, opponentVisuals);
+                  const opponent = teams.find((t) => t.id === game.opponent_team_id);
                   return (
                     <PulseResult
                       key={game.id}
                       game={game}
                       localeTag={localeTag}
-                      opponentLogoUrl={visual.logoUrl}
-                      opponentCountry={visual.country}
+                      opponentName={opponent?.name ?? game.opponent ?? "Unknown"}
+                      opponentLogoUrl={opponent?.logo_url ?? null}
+                      opponentCountry={opponent?.country ?? null}
                     />
                   );
                 })
@@ -281,15 +279,16 @@ export default async function HomePage({
             {recentGames.length > 0 ? (
               <div className="club-results-list">
                 {recentGames.map((game) => {
-                  const visual = resolveOpponentVisual(game, opponentVisuals);
+                  const opponent = teams.find((t) => t.id === game.opponent_team_id);
                   return (
                     <ResultLine
                       key={game.id}
                       game={game}
                       localeTag={localeTag}
                       resultLabel={tg(`result.${game.result}`)}
-                      opponentLogoUrl={visual.logoUrl}
-                      opponentCountry={visual.country}
+                      opponentName={opponent?.name ?? "Unknown"}
+                      opponentLogoUrl={opponent?.logo_url ?? null}
+                      opponentCountry={opponent?.country ?? null}
                     />
                   );
                 })}
@@ -369,6 +368,7 @@ function MatchdayPoster({
   localeTag,
   homeLabel,
   awayLabel,
+  opponentName,
   opponentLogoUrl,
   opponentCountry,
 }: {
@@ -376,6 +376,7 @@ function MatchdayPoster({
   localeTag: string;
   homeLabel: string;
   awayLabel: string;
+  opponentName: string;
   opponentLogoUrl: string | null;
   opponentCountry: string | null;
 }) {
@@ -399,13 +400,13 @@ function MatchdayPoster({
         <span>vs</span>
         <div className="club-team-mark">
           <TeamAvatar
-            name={game.opponent.trim() || "Opponent"}
+            name={opponentName}
             logoUrl={opponentLogoUrl}
             country={opponentCountry}
             size="md"
             className="h-12 w-12 text-xl mx-auto"
           />
-          <p>{game.opponent.trim() || "TBD"}</p>
+          <p>{opponentName}</p>
         </div>
       </div>
 
@@ -433,11 +434,13 @@ function MatchdayPoster({
 function PulseResult({
   game,
   localeTag,
+  opponentName,
   opponentLogoUrl,
   opponentCountry,
 }: {
   game: Game;
   localeTag: string;
+  opponentName: string;
   opponentLogoUrl: string | null;
   opponentCountry: string | null;
 }) {
@@ -456,12 +459,12 @@ function PulseResult({
       <span className="club-pulse-item__match flex items-center gap-2">
         <span>Propeleri vs</span>
         <TeamAvatar
-          name={game.opponent}
+          name={opponentName}
           logoUrl={opponentLogoUrl}
           country={opponentCountry}
           size="xs"
         />
-        <span>{game.opponent}</span>
+        <span>{opponentName}</span>
       </span>
       <span className="club-pulse-item__score">
         {teamScore}:{opponentScore}
@@ -517,12 +520,14 @@ function ResultLine({
   game,
   localeTag,
   resultLabel,
+  opponentName,
   opponentLogoUrl,
   opponentCountry,
 }: {
   game: Game;
   localeTag: string;
   resultLabel: string;
+  opponentName: string;
   opponentLogoUrl: string | null;
   opponentCountry: string | null;
 }) {
@@ -542,7 +547,7 @@ function ResultLine({
     <GameMatchCard
       href={`/games/${game.id}`}
       teamName="Propeleri"
-      opponentName={game.opponent}
+      opponentName={opponentName}
       opponentLogoUrl={opponentLogoUrl}
       opponentCountry={opponentCountry}
       teamScore={teamScore}

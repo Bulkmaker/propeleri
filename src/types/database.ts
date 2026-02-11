@@ -63,8 +63,8 @@ export interface Game {
   id: string;
   season_id: string;
   tournament_id: string | null;
-  opponent_id: string | null;
-  opponent: string;
+  opponent_team_id: string | null;
+  opponent: string | null;
   location: string | null;
   game_date: string;
   home_score: number;
@@ -75,6 +75,9 @@ export interface Game {
   notes: string | null;
   created_at: string;
   updated_at: string;
+
+  // Joins
+  opponent_team?: Team;
 }
 
 export interface GameLineup {
@@ -142,7 +145,6 @@ export interface Tournament {
 
 export interface Team {
   id: string;
-  opponent_id: string | null;
   name: string;
   city: string | null;
   country: string | null;
@@ -151,16 +153,7 @@ export interface Team {
   created_at: string;
 }
 
-export interface Opponent {
-  id: string;
-  name: string;
-  normalized_name: string;
-  city: string | null;
-  country: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Opponent interface removed (merged into Team)
 
 export interface TournamentTeam {
   id: string;

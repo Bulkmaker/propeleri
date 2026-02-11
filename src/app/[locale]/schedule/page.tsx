@@ -11,12 +11,11 @@ import { RESULT_COLORS } from "@/lib/utils/constants";
 import type {
   Game,
   GameResult,
-  Opponent,
+
   Team,
   TrainingSession,
   TrainingSessionStatus,
 } from "@/types/database";
-import { buildOpponentVisualLookup, resolveOpponentVisual } from "@/lib/utils/opponent-visual";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
@@ -76,7 +75,7 @@ export default async function SchedulePage({
   const supabase = await createClient();
 
   // Get upcoming games
-  const [gamesRes, trainingsRes, teamsRes, opponentsRes] = await Promise.all([
+  const [gamesRes, trainingsRes, teamsRes] = await Promise.all([
     supabase
       .from("games")
       .select("*")
@@ -86,26 +85,25 @@ export default async function SchedulePage({
       .select("*")
       .order("session_date", { ascending: true }),
     supabase.from("teams").select("*"),
-    supabase.from("opponents").select("*").eq("is_active", true),
   ]);
 
   const games = (gamesRes.data ?? []) as Game[];
   const trainings = (trainingsRes.data ?? []) as TrainingSession[];
   const teams = (teamsRes.data ?? []) as Team[];
-  const opponents = (opponentsRes.data ?? []) as Opponent[];
-  const opponentVisuals = buildOpponentVisualLookup(teams, opponents);
 
   const items: ScheduleItem[] = [
     ...games.map((game) => {
-      const visual = resolveOpponentVisual(game, opponentVisuals);
+      const opponent = teams.find((t) => t.id === game.opponent_team_id);
+      const opponentName = opponent?.name ?? game.opponent ?? "Unknown Opponent";
+
       return {
         id: game.id,
         type: "game" as const,
         date: game.game_date,
-        title: `Propeleri vs ${game.opponent}`,
-        opponentName: game.opponent,
-        opponentLogoUrl: visual.logoUrl,
-        opponentCountry: visual.country,
+        title: `Propeleri vs ${opponentName}`,
+        opponentName: opponentName,
+        opponentLogoUrl: opponent?.logo_url,
+        opponentCountry: opponent?.country,
         teamScore: game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score,
         opponentScore: game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score,
         subtitle: game.is_home ? tg("home") : tg("away"),

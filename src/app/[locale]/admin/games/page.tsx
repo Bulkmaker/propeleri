@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
 import { Plus, Trophy, Loader2 } from "lucide-react";
-import type { Game, Season, GameResult, Tournament, Opponent, Team, Profile, TournamentMatch } from "@/types/database";
+import type { Game, Season, GameResult, Tournament, Team, Profile, TournamentMatch } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
-import { resolveOpponentVisual, buildOpponentVisualLookup } from "@/lib/utils/opponent-visual";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,6 @@ export default function AdminGamesPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [tournamentMatches, setTournamentMatches] = useState<TournamentMatch[]>([]);
@@ -42,7 +40,6 @@ export default function AdminGamesPage() {
         gamesRes,
         seasonsRes,
         tournamentsRes,
-        opponentsRes,
         teamsRes,
         playersRes,
         tournamentMatchesRes
@@ -50,7 +47,6 @@ export default function AdminGamesPage() {
         supabase.from("games").select("*").order("game_date", { ascending: false }),
         supabase.from("seasons").select("*").order("start_date", { ascending: false }),
         supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
-        supabase.from("opponents").select("*").eq("is_active", true).order("name", { ascending: true }),
         supabase.from("teams").select("*"),
         supabase.from("profiles").select("*").eq("is_active", true).eq("is_approved", true).order("jersey_number", { ascending: true }),
         supabase.from("tournament_matches").select("*").not("game_id", "is", null)
@@ -59,7 +55,6 @@ export default function AdminGamesPage() {
       if (gamesRes.error) throw gamesRes.error;
       if (seasonsRes.error) throw seasonsRes.error;
       if (tournamentsRes.error) throw tournamentsRes.error;
-      if (opponentsRes.error) throw opponentsRes.error;
       if (teamsRes.error) throw teamsRes.error;
       if (playersRes.error) throw playersRes.error;
       if (tournamentMatchesRes.error) throw tournamentMatchesRes.error;
@@ -67,7 +62,6 @@ export default function AdminGamesPage() {
       setGames((gamesRes.data ?? []) as Game[]);
       setSeasons((seasonsRes.data ?? []) as Season[]);
       setTournaments((tournamentsRes.data ?? []) as Tournament[]);
-      setOpponents((opponentsRes.data ?? []) as Opponent[]);
       setTeams((teamsRes.data ?? []) as Team[]);
       setPlayers((playersRes.data ?? []) as Profile[]);
       setTournamentMatches((tournamentMatchesRes.data ?? []) as TournamentMatch[]);
@@ -83,10 +77,7 @@ export default function AdminGamesPage() {
     loadData();
   }, [loadData]);
 
-  const opponentVisuals = useMemo(
-    () => buildOpponentVisualLookup(teams, opponents),
-    [teams, opponents]
-  );
+
 
   async function handleCreateSave(payload: any) {
     const { error: insertError } = await supabase.from("games").insert(payload);
@@ -121,7 +112,6 @@ export default function AdminGamesPage() {
             <GameForm
               seasons={seasons}
               tournaments={tournaments}
-              opponents={opponents}
               teams={teams}
               players={players}
               onSave={handleCreateSave}
@@ -150,7 +140,8 @@ export default function AdminGamesPage() {
           </div>
         ) : (
           games.map((game) => {
-            const visual = resolveOpponentVisual(game, opponentVisuals);
+            const opponentTeam = teams.find((t) => t.id === game.opponent_team_id);
+            const opponentName = opponentTeam?.name ?? game.opponent ?? "Unknown Opponent";
             const teamScore = game.is_home ? game.home_score : game.away_score;
             const opponentScore = game.is_home ? game.away_score : game.home_score;
             const tournament = tournaments.find((t) => t.id === game.tournament_id);
@@ -162,9 +153,9 @@ export default function AdminGamesPage() {
               <Link key={game.id} href={href} className="block transition-transform hover:scale-[1.01]">
                 <GameMatchCard
                   teamName="Propeleri"
-                  opponentName={game.opponent}
-                  opponentLogoUrl={visual.logoUrl}
-                  opponentCountry={visual.country}
+                  opponentName={opponentName}
+                  opponentLogoUrl={opponentTeam?.logo_url || null}
+                  opponentCountry={opponentTeam?.country || null}
                   teamScore={game.result === "pending" ? undefined : teamScore}
                   opponentScore={game.result === "pending" ? undefined : opponentScore}
                   dateLabel={formatInBelgrade(game.game_date, "sr-Latn", {

@@ -14,7 +14,7 @@ export default async function middleware(request: NextRequest) {
   const supabaseCookies: { name: string; value: string; options: CookieOptions }[] = [];
 
   // 1. Refresh Supabase session (skip if not configured)
-  if (supabaseUrl && supabaseKey && !supabaseUrl.includes("your-project")) {
+  if (supabaseUrl && supabaseKey) {
     try {
       const supabase = createServerClient(supabaseUrl, supabaseKey, {
         cookies: {
