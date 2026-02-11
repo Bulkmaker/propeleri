@@ -6,8 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
-import { Plus, Users, Layers, Trophy, Loader2 } from "lucide-react";
-import { buildTournamentMatchUrlParam } from "@/lib/utils/match-slug";
+import { Plus, Trophy, Loader2 } from "lucide-react";
 import type { Game, Season, GameResult, Tournament, Opponent, Team, Profile, TournamentMatch } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { resolveOpponentVisual, buildOpponentVisualLookup } from "@/lib/utils/opponent-visual";
@@ -29,7 +28,6 @@ export default function AdminGamesPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [tournamentMatches, setTournamentMatches] = useState<TournamentMatch[]>([]);
-  const [lineupStats, setLineupStats] = useState<Map<string, { playerCount: number; lineCount: number }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -47,8 +45,7 @@ export default function AdminGamesPage() {
         opponentsRes,
         teamsRes,
         playersRes,
-        tournamentMatchesRes,
-        lineupsRes
+        tournamentMatchesRes
       ] = await Promise.all([
         supabase.from("games").select("*").order("game_date", { ascending: false }),
         supabase.from("seasons").select("*").order("start_date", { ascending: false }),
@@ -56,8 +53,7 @@ export default function AdminGamesPage() {
         supabase.from("opponents").select("*").eq("is_active", true).order("name", { ascending: true }),
         supabase.from("teams").select("*"),
         supabase.from("profiles").select("*").eq("is_active", true).eq("is_approved", true).order("jersey_number", { ascending: true }),
-        supabase.from("tournament_matches").select("*").not("game_id", "is", null),
-        supabase.from("game_lineups").select("game_id, line_number")
+        supabase.from("tournament_matches").select("*").not("game_id", "is", null)
       ]);
 
       if (gamesRes.error) throw gamesRes.error;
@@ -67,7 +63,6 @@ export default function AdminGamesPage() {
       if (teamsRes.error) throw teamsRes.error;
       if (playersRes.error) throw playersRes.error;
       if (tournamentMatchesRes.error) throw tournamentMatchesRes.error;
-      if (lineupsRes.error) throw lineupsRes.error;
 
       setGames((gamesRes.data ?? []) as Game[]);
       setSeasons((seasonsRes.data ?? []) as Season[]);
@@ -76,25 +71,6 @@ export default function AdminGamesPage() {
       setTeams((teamsRes.data ?? []) as Team[]);
       setPlayers((playersRes.data ?? []) as Profile[]);
       setTournamentMatches((tournamentMatchesRes.data ?? []) as TournamentMatch[]);
-
-      const stats = new Map<string, { playerCount: number; lineCount: number }>();
-      if (lineupsRes.data) {
-        const grouped = new Map<string, { count: number; lines: Set<number> }>();
-        for (const entry of lineupsRes.data) {
-          if (!grouped.has(entry.game_id)) {
-            grouped.set(entry.game_id, { count: 0, lines: new Set() });
-          }
-          const g = grouped.get(entry.game_id)!;
-          g.count++;
-          if (entry.line_number !== null) {
-            g.lines.add(entry.line_number);
-          }
-        }
-        for (const [gid, val] of grouped) {
-          stats.set(gid, { playerCount: val.count, lineCount: val.lines.size });
-        }
-      }
-      setLineupStats(stats);
     } catch (err: any) {
       console.error("Error loading admin data:", err);
       setError(err.message || "Failed to load admin data");
@@ -177,21 +153,10 @@ export default function AdminGamesPage() {
             const visual = resolveOpponentVisual(game, opponentVisuals);
             const teamScore = game.is_home ? game.home_score : game.away_score;
             const opponentScore = game.is_home ? game.away_score : game.home_score;
-            const stats = lineupStats.get(game.id) || { playerCount: 0, lineCount: 0 };
             const tournament = tournaments.find((t) => t.id === game.tournament_id);
 
-            let href = `/admin/games/${game.id}`;
-            const match = tournamentMatches.find((m) => m.game_id === game.id);
-            if (match && tournament) {
-              const slugParam = buildTournamentMatchUrlParam({
-                matchId: match.id,
-                matchDate: match.match_date,
-                opponentName: game.opponent,
-                tournamentName: tournament.name,
-                stage: match.stage
-              });
-              href = `/admin/tournaments/${tournament.id}/matches/${slugParam}`;
-            }
+            // Always navigate to unified game page
+            const href = `/admin/games/${game.id}`;
 
             return (
               <Link key={game.id} href={href} className="block transition-transform hover:scale-[1.01]">
@@ -226,18 +191,6 @@ export default function AdminGamesPage() {
                       {game.auto_generated_from_tournament && (
                         <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/20">
                           {tt("managedByTournament")}
-                        </Badge>
-                      )}
-                      {stats.playerCount > 0 && (
-                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {stats.playerCount}
-                        </Badge>
-                      )}
-                      {stats.lineCount > 0 && (
-                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                          <Layers className="h-3 w-3" />
-                          {stats.lineCount}
                         </Badge>
                       )}
                     </div>

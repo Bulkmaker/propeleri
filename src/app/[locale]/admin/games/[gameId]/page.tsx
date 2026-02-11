@@ -1,86 +1,53 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, Loader2, Trash2 } from "lucide-react";
+import { ChevronLeft, Loader2, Trash2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GameForm } from "@/components/admin/games/GameForm";
-import { GameLineupEditor } from "@/components/games/GameLineupEditor";
-import GameStatsEditor from "@/components/games/GameStatsEditor";
-import type { Game, Season, Tournament, Opponent, Team, Profile } from "@/types/database";
+import { Badge } from "@/components/ui/badge";
+import { UnifiedGameEditor } from "@/components/games/UnifiedGameEditor";
+import type {
+  Game,
+  Tournament,
+} from "@/types/database";
 
 export default function AdminGameEditPage() {
   const params = useParams();
   const gameId = params.gameId as string;
   const router = useRouter();
-  const t = useTranslations("common");
   const tg = useTranslations("game");
 
   const [game, setGame] = useState<Game | null>(null);
-  const [seasons, setSeasons] = useState<Season[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [opponents, setOpponents] = useState<Opponent[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [players, setPlayers] = useState<Profile[]>([]);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
 
   const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      const [
-        gameRes,
-        seasonsRes,
-        tournamentsRes,
-        opponentsRes,
-        teamsRes,
-        playersRes
-      ] = await Promise.all([
-        supabase.from("games").select("*").eq("id", gameId).single(),
-        supabase.from("seasons").select("*").order("start_date", { ascending: false }),
-        supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
-        supabase.from("opponents").select("*").order("name"),
-        supabase.from("teams").select("*").order("name"),
-        supabase.from("profiles").select("*").order("last_name"),
-      ]);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [gameRes, tournamentRes] = await Promise.all([
+      supabase.from("games").select("*").eq("id", gameId).single(),
+      supabase.from("games").select("tournament_id").eq("id", gameId).single()
+        .then(async (res) => {
+          if (res.data?.tournament_id) {
+            return supabase.from("tournaments").select("*").eq("id", res.data.tournament_id).single();
+          }
+          return { data: null, error: null };
+        })
+    ]);
 
-      if (gameRes.data) setGame(gameRes.data);
-      if (seasonsRes.data) setSeasons(seasonsRes.data);
-      if (tournamentsRes.data) setTournaments(tournamentsRes.data);
-      if (opponentsRes.data) setOpponents(opponentsRes.data);
-      if (teamsRes.data) setTeams(teamsRes.data);
-      if (playersRes.data) setPlayers(playersRes.data); // Fixed type mismatch by casting if needed, but Profile[] matches
-
-      setLoading(false);
-    }
-    loadData();
+    if (gameRes.data) setGame(gameRes.data);
+    if (tournamentRes.data) setTournament(tournamentRes.data);
+    setLoading(false);
   }, [gameId, supabase]);
 
-  const handleUpdate = async (updatedData: Partial<Game>) => {
-    if (!game) return;
-
-    // Optimistic update
-    setGame({ ...game, ...updatedData } as Game);
-
-    const { error } = await supabase
-      .from("games")
-      .update(updatedData)
-      .eq("id", gameId);
-
-    if (error) {
-      console.error("Error updating game:", error);
-      // Revert or show error could go here
-    } else {
-      // Ideally re-fetch or just rely on optimistic
-      router.refresh();
-    }
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleDelete = async () => {
     if (!window.confirm(tg("deleteGameConfirm"))) return;
@@ -117,9 +84,17 @@ export default function AdminGameEditPage() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">
-            {game.opponent} - {new Date(game.game_date).toLocaleDateString()}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">
+              {game.opponent} - {new Date(game.game_date).toLocaleDateString()}
+            </h1>
+            {tournament && (
+              <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
+                <Trophy className="h-3 w-3 mr-1" />
+                {tournament.name}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground text-sm">
             {game.is_home ? "Home" : "Away"} • {game.result}
           </p>
@@ -129,35 +104,7 @@ export default function AdminGameEditPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-[400px]">
-          <TabsTrigger value="details">{tg("details")}</TabsTrigger>
-          <TabsTrigger value="lineup">{tg("lineup")}</TabsTrigger>
-          <TabsTrigger value="stats">Stats</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="details" className="mt-6">
-          <div className="max-w-3xl">
-            <GameForm
-              initialData={game}
-              seasons={seasons}
-              tournaments={tournaments}
-              opponents={opponents}
-              teams={teams}
-              players={players}
-              onSave={handleUpdate}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="lineup" className="mt-6">
-          <GameLineupEditor gameId={gameId} />
-        </TabsContent>
-
-        <TabsContent value="stats" className="mt-6">
-          <GameStatsEditor gameId={gameId} />
-        </TabsContent>
-      </Tabs>
+      <UnifiedGameEditor gameId={gameId} onRefresh={loadData} />
     </div>
   );
 }
