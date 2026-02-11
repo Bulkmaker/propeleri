@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "@/i18n/navigation";
+import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import {
   ChevronLeft,
   Loader2,
@@ -732,6 +733,10 @@ export default function AdminTournamentDetailPage() {
     return teams.find((team) => team.id === id)?.name ?? "?";
   }
 
+  function teamById(id: string) {
+    return teams.find((team) => team.id === id);
+  }
+
   function isTeamPropeleri(id: string) {
     return teams.find((team) => team.id === id)?.is_propeleri ?? false;
   }
@@ -1331,6 +1336,7 @@ export default function AdminTournamentDetailPage() {
                           key={`${match.id}-${match.score_a}-${match.score_b}-${match.is_completed ? 1 : 0}`}
                           match={match}
                           teamName={teamName}
+                          teamById={teamById}
                           isTeamPropeleri={isTeamPropeleri}
                           groups={groups}
                           tt={tt}
@@ -1355,6 +1361,7 @@ export default function AdminTournamentDetailPage() {
                           key={`${match.id}-${match.score_a}-${match.score_b}-${match.is_completed ? 1 : 0}`}
                           match={match}
                           teamName={teamName}
+                          teamById={teamById}
                           isTeamPropeleri={isTeamPropeleri}
                           groups={groups}
                           tt={tt}
@@ -1585,6 +1592,7 @@ function MatchFormFields({
 function MatchCard({
   match,
   teamName,
+  teamById,
   isTeamPropeleri,
   groups,
   tt,
@@ -1595,6 +1603,7 @@ function MatchCard({
 }: {
   match: TournamentMatch;
   teamName: (id: string) => string;
+  teamById: (id: string) => Team | undefined;
   isTeamPropeleri: (id: string) => boolean;
   groups: TournamentGroup[];
   tt: ReturnType<typeof useTranslations>;
@@ -1608,9 +1617,12 @@ function MatchCard({
 
   const hasPropeleri =
     isTeamPropeleri(match.team_a_id) || isTeamPropeleri(match.team_b_id);
+  const hasLinkedGame = Boolean(match.game_id);
   const groupName = match.group_id
     ? groups.find((group) => group.id === match.group_id)?.name
     : null;
+  const teamA = teamById(match.team_a_id);
+  const teamB = teamById(match.team_b_id);
 
   return (
     <Card className="border-border/40">
@@ -1632,29 +1644,53 @@ function MatchCard({
                 {tt("propeleri")}
               </Badge>
             )}
-            <span className="text-sm font-medium truncate">{teamName(match.team_a_id)}</span>
-            <div className="flex items-center gap-1 shrink-0">
-              <Input
-                type="number"
-                min={0}
-                value={scoreA}
-                onChange={(e) => setScoreA(parseInt(e.target.value, 10) || 0)}
-                className="w-12 h-7 text-center text-sm bg-background px-1"
+            <div className="flex items-center gap-1.5 min-w-0">
+              <TeamAvatar
+                name={teamA?.name ?? teamName(match.team_a_id)}
+                logoUrl={teamA?.logo_url}
+                country={teamA?.country}
+                size="xs"
               />
-              <span className="text-muted-foreground">:</span>
-              <Input
-                type="number"
-                min={0}
-                value={scoreB}
-                onChange={(e) => setScoreB(parseInt(e.target.value, 10) || 0)}
-                className="w-12 h-7 text-center text-sm bg-background px-1"
-              />
+              <span className="text-sm font-medium truncate">{teamName(match.team_a_id)}</span>
             </div>
-            <span className="text-sm font-medium truncate">{teamName(match.team_b_id)}</span>
+            <div className="flex items-center gap-1 shrink-0">
+              {hasLinkedGame ? (
+                <span className="text-sm font-semibold tabular-nums">
+                  {match.score_a}:{match.score_b}
+                </span>
+              ) : (
+                <>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={scoreA}
+                    onChange={(e) => setScoreA(parseInt(e.target.value, 10) || 0)}
+                    className="w-12 h-7 text-center text-sm bg-background px-1"
+                  />
+                  <span className="text-muted-foreground">:</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={scoreB}
+                    onChange={(e) => setScoreB(parseInt(e.target.value, 10) || 0)}
+                    className="w-12 h-7 text-center text-sm bg-background px-1"
+                  />
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <TeamAvatar
+                name={teamB?.name ?? teamName(match.team_b_id)}
+                logoUrl={teamB?.logo_url}
+                country={teamB?.country}
+                size="xs"
+              />
+              <span className="text-sm font-medium truncate">{teamName(match.team_b_id)}</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {(scoreA !== match.score_a || scoreB !== match.score_b) && (
+            {!hasLinkedGame && (scoreA !== match.score_a || scoreB !== match.score_b) && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1665,27 +1701,37 @@ function MatchCard({
               </Button>
             )}
 
-            <Button
-              size="sm"
-              variant="outline"
-              className={`h-7 text-xs ${
-                match.is_completed
-                  ? "border-yellow-500/30 text-yellow-400"
-                  : "border-green-500/30 text-green-400"
-              }`}
-              onClick={() => onToggleCompleted(match.id, match.is_completed)}
-            >
-              {match.is_completed ? tt("reopen") : tt("complete")}
-            </Button>
+            {!hasLinkedGame && (
+              <Button
+                size="sm"
+                variant="outline"
+                className={`h-7 text-xs ${
+                  match.is_completed
+                    ? "border-yellow-500/30 text-yellow-400"
+                    : "border-green-500/30 text-green-400"
+                }`}
+                onClick={() => onToggleCompleted(match.id, match.is_completed)}
+              >
+                {match.is_completed ? tt("reopen") : tt("complete")}
+              </Button>
+            )}
 
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              onClick={() => onEdit(match)}
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
+            {hasLinkedGame ? (
+              <Link href={`/admin/games/${match.game_id}`}>
+                <Button size="sm" variant="outline" className="h-7 text-xs">
+                  {tt("details")}
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={() => onEdit(match)}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            )}
 
             <Button
               size="icon"
