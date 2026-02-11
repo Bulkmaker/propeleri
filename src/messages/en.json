@@ -330,7 +330,8 @@
     "inactive": "Inactive",
     "approved": "Approved",
     "minPasswordChars": "Minimum 6 characters",
-    "goToManagePlayers": "Go to \"Manage Players\" to approve"
+    "goToManagePlayers": "Go to \"Manage Players\" to approve",
+    "deletePlayerConfirm": "Are you sure you want to delete player"
   },
   "tournament": {
     "title": "Tournaments",

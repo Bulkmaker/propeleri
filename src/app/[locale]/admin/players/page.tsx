@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload } from "lucide-react";
+import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload, Trash2 } from "lucide-react";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
 import imageCompression from "browser-image-compression";
@@ -162,6 +162,24 @@ export default function AdminPlayersPage() {
   async function approvePlayer(id: string) {
     await supabase.from("profiles").update({ is_approved: true }).eq("id", id);
     loadPlayers();
+  }
+
+  async function deletePlayer(id: string, playerName: string) {
+    if (!window.confirm(`${t("deletePlayerConfirm")} ${playerName}?`)) {
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    await loadPlayers();
   }
 
   function openEdit(player: Profile) {
@@ -955,6 +973,13 @@ export default function AdminPlayersPage() {
                         <CheckCircle className="h-4 w-4 mr-1" />
                         {t("approve")}
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deletePlayer(player.id, formatPlayerName(player))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -1082,13 +1107,23 @@ export default function AdminPlayersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openEdit(player)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEdit(player)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deletePlayer(player.id, formatPlayerName(player))}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
