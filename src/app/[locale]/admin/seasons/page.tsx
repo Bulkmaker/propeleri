@@ -36,10 +36,6 @@ export default function AdminSeasonsPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   async function loadData() {
     const { data } = await supabase
       .from("seasons")
@@ -48,6 +44,19 @@ export default function AdminSeasonsPage() {
     setSeasons(data ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    async function loadInitialData() {
+      const { data } = await supabase
+        .from("seasons")
+        .select("*")
+        .order("start_date", { ascending: false });
+      setSeasons(data ?? []);
+      setLoading(false);
+    }
+
+    void loadInitialData();
+  }, []);
 
   async function handleSave() {
     setSaving(true);

@@ -14,9 +14,26 @@ import {
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, MapPin, CalendarDays, Swords } from "lucide-react";
 import { RESULT_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
-import type { Game, GameResult, PlayerPosition } from "@/types/database";
+import type {
+  GameResult,
+  PlayerPosition,
+  Profile,
+  GameLineup,
+  GameStats,
+  SlotPosition,
+} from "@/types/database";
 import HockeyRink from "@/components/games/HockeyRink";
 import type { RinkPlayer } from "@/components/games/HockeyRink";
+
+type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
+  line_number: number | null;
+  slot_position: SlotPosition | null;
+  player: Profile | null;
+};
+
+type GameStatEntry = Omit<GameStats, "player"> & {
+  player: Profile | null;
+};
 
 export default async function GameDetailPage({
   params,
@@ -41,16 +58,18 @@ export default async function GameDetailPage({
 
   if (!game) notFound();
 
-  const { data: lineup } = await supabase
+  const { data: lineupRaw } = await supabase
     .from("game_lineups")
     .select("*, player:profiles(*)")
     .eq("game_id", gameId);
+  const lineup = (lineupRaw ?? []) as GameLineupEntry[];
 
-  const { data: stats } = await supabase
+  const { data: statsRaw } = await supabase
     .from("game_stats")
     .select("*, player:profiles(*)")
     .eq("game_id", gameId)
     .order("goals", { ascending: false });
+  const stats = (statsRaw ?? []) as GameStatEntry[];
 
   const date = new Date(game.game_date);
 
@@ -115,7 +134,7 @@ export default async function GameDetailPage({
       </Card>
 
       {/* Hockey Rink Visualization */}
-      {lineup && lineup.length > 0 && (
+      {lineup.length > 0 && (
         <Card className="border-border/40 mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -125,7 +144,7 @@ export default async function GameDetailPage({
           </CardHeader>
           <CardContent>
             <HockeyRink
-              lineup={(lineup as any[]).map((entry: any) => ({
+              lineup={lineup.map((entry) => ({
                 player_id: entry.player_id,
                 designation: entry.designation,
                 position_played: entry.position_played,
@@ -146,8 +165,8 @@ export default async function GameDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {lineup && lineup.length > 0 ? (
-              <LineupByLines lineup={lineup as any[]} t={t} tp={tp} />
+            {lineup.length > 0 ? (
+              <LineupByLines lineup={lineup} t={t} tp={tp} />
             ) : (
               <p className="text-muted-foreground text-sm text-center py-6">
                 {t("noLineup")}
@@ -165,7 +184,7 @@ export default async function GameDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {stats && stats.length > 0 ? (
+            {stats.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -178,7 +197,7 @@ export default async function GameDetailPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stats.map((s: any) => (
+                  {stats.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell className="text-primary font-bold">
                         {s.player?.jersey_number ?? "-"}
@@ -213,17 +232,17 @@ function LineupByLines({
   t,
   tp,
 }: {
-  lineup: any[];
+  lineup: GameLineupEntry[];
   t: Awaited<ReturnType<typeof getTranslations>>;
   tp: Awaited<ReturnType<typeof getTranslations>>;
 }) {
   // Group by line_number
-  const hasLines = lineup.some((e) => e.line_number !== null && e.slot_position);
+  const hasLines = lineup.some((e) => e.line_number !== null && e.slot_position !== null);
   if (!hasLines) {
     // Legacy flat list
     return (
       <div className="space-y-2">
-        {lineup.map((entry: any) => (
+        {lineup.map((entry) => (
           <LineupPlayerRow key={entry.id} entry={entry} tp={tp} />
         ))}
       </div>
@@ -231,7 +250,7 @@ function LineupByLines({
   }
 
   const goalies = lineup.filter((e) => e.slot_position === "GK");
-  const lineGroups = new Map<number, any[]>();
+  const lineGroups = new Map<number, GameLineupEntry[]>();
   for (const entry of lineup) {
     if (entry.slot_position === "GK") continue;
     const lineNum = entry.line_number ?? 1;
@@ -248,7 +267,7 @@ function LineupByLines({
             {t("goalies")}
           </p>
           <div className="space-y-1">
-            {goalies.map((entry: any) => (
+            {goalies.map((entry) => (
               <LineupPlayerRow key={entry.id} entry={entry} tp={tp} />
             ))}
           </div>
@@ -260,7 +279,7 @@ function LineupByLines({
             {t("line")} {lineNum}
           </p>
           <div className="space-y-1">
-            {lineGroups.get(lineNum)!.map((entry: any) => (
+            {lineGroups.get(lineNum)!.map((entry) => (
               <LineupPlayerRow key={entry.id} entry={entry} tp={tp} />
             ))}
           </div>
@@ -274,7 +293,7 @@ function LineupPlayerRow({
   entry,
   tp,
 }: {
-  entry: any;
+  entry: GameLineupEntry;
   tp: Awaited<ReturnType<typeof getTranslations>>;
 }) {
   return (

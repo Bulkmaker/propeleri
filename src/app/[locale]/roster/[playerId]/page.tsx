@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { POSITION_COLORS } from "@/lib/utils/constants";
-import type { PlayerPosition } from "@/types/database";
+import type { PlayerPosition, PlayerSeasonStats } from "@/types/database";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Trophy, TrendingUp } from "lucide-react";
 
@@ -159,7 +159,7 @@ export default async function PlayerProfilePage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {seasonStats.map((s: any) => (
+                  {(seasonStats as PlayerSeasonStats[]).map((s) => (
                     <TableRow key={s.season_id}>
                       <TableCell className="font-medium">{s.season_name}</TableCell>
                       <TableCell className="text-center">{s.games_played}</TableCell>

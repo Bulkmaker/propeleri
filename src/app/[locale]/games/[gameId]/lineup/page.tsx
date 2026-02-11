@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Loader2, Save, Plus, Trash2, X, GripVertical } from "lucide-react";
-import type { Profile, PlayerPosition, LineupDesignation, SlotPosition } from "@/types/database";
+import type { Profile, PlayerPosition, LineupDesignation, SlotPosition, GameLineup } from "@/types/database";
 import { POSITION_COLORS, POSITION_COLORS_HEX, SLOT_TO_POSITION, LINE_SLOTS } from "@/lib/utils/constants";
 
 // A slot holds a player assignment
@@ -25,6 +25,18 @@ interface LineData {
 }
 
 const EMPTY_SLOT: SlotAssignment = { playerId: null, designation: "player" };
+const SLOT_LABEL_KEYS: Record<Exclude<SlotPosition, "GK">, "lw" | "c" | "rw" | "ld" | "rd"> = {
+  LW: "lw",
+  C: "c",
+  RW: "rw",
+  LD: "ld",
+  RD: "rd",
+};
+
+type SavedLineupEntry = Omit<GameLineup, "line_number"> & {
+  line_number: number | null;
+  slot_position: SlotPosition | null;
+};
 
 function createEmptyLine(): LineData {
   return {
@@ -85,38 +97,37 @@ export default function LineupPage() {
 
       setPlayers(playersRes.data ?? []);
 
-      const entries = lineupRes.data ?? [];
+      const entries = (lineupRes.data ?? []) as SavedLineupEntry[];
       if (entries.length > 0) {
         // Rebuild state from saved data
         const goalies: SlotAssignment[] = [];
         const lineMap = new Map<number, LineData>();
 
         for (const entry of entries) {
-          const e = entry as any;
-          if (e.slot_position === "GK") {
+          if (entry.slot_position === "GK") {
             goalies.push({
-              playerId: e.player_id,
-              designation: e.designation,
+              playerId: entry.player_id,
+              designation: entry.designation,
             });
-          } else if (e.slot_position && e.line_number !== null) {
-            const lineNum = e.line_number as number;
+          } else if (entry.slot_position && entry.line_number !== null) {
+            const lineNum = entry.line_number;
             if (!lineMap.has(lineNum)) {
               lineMap.set(lineNum, createEmptyLine());
             }
             const line = lineMap.get(lineNum)!;
-            const slot = e.slot_position as keyof LineData["slots"];
+            const slot = entry.slot_position as keyof LineData["slots"];
             if (slot in line.slots) {
               line.slots[slot] = {
-                playerId: e.player_id,
-                designation: e.designation,
+                playerId: entry.player_id,
+                designation: entry.designation,
               };
             }
           } else {
             // Legacy entry without slot_position — treat as unassigned goalie or guess
-            if (e.position_played === "goalie") {
+            if (entry.position_played === "goalie") {
               goalies.push({
-                playerId: e.player_id,
-                designation: e.designation,
+                playerId: entry.player_id,
+                designation: entry.designation,
               });
             }
           }
@@ -492,7 +503,7 @@ export default function LineupPage() {
                 <PositionSlot
                   key={`${lineIndex}-${slotKey}`}
                   slotPosition={slotKey}
-                  label={t(slotKey.toLowerCase() as any)}
+                  label={t(SLOT_LABEL_KEYS[slotKey])}
                   assignment={line.slots[slotKey]}
                   player={getPlayer(line.slots[slotKey].playerId)}
                   availablePlayers={sortedPlayersForSlot(slotKey)}
@@ -528,7 +539,7 @@ export default function LineupPage() {
                 <PositionSlot
                   key={`${lineIndex}-${slotKey}`}
                   slotPosition={slotKey}
-                  label={t(slotKey.toLowerCase() as any)}
+                  label={t(SLOT_LABEL_KEYS[slotKey])}
                   assignment={line.slots[slotKey]}
                   player={getPlayer(line.slots[slotKey].playerId)}
                   availablePlayers={sortedPlayersForSlot(slotKey)}

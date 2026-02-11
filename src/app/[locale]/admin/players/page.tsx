@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, XCircle, Users, Loader2, Pencil, UserPlus } from "lucide-react";
+import { CheckCircle, Users, Loader2, Pencil, UserPlus } from "lucide-react";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
 
@@ -50,7 +50,10 @@ interface PlayerForm {
   is_approved: boolean;
 }
 
+type ActivePlayersSort = "name" | "number" | "position" | "training_team";
+
 export default function AdminPlayersPage() {
+  const locale = useLocale();
   const t = useTranslations("admin");
   const tp = useTranslations("positions");
   const tr = useTranslations("roles");
@@ -66,6 +69,7 @@ export default function AdminPlayersPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editingPlayer, setEditingPlayer] = useState<Profile | null>(null);
+  const [activeSort, setActiveSort] = useState<ActivePlayersSort>("name");
   const [createForm, setCreateForm] = useState({
     email: "",
     password: "",
@@ -93,10 +97,6 @@ export default function AdminPlayersPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    loadPlayers();
-  }, []);
-
   async function loadPlayers() {
     const { data } = await supabase
       .from("profiles")
@@ -106,6 +106,28 @@ export default function AdminPlayersPage() {
     setPlayers(data ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadInitialPlayers() {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("is_approved", { ascending: true })
+        .order("last_name", { ascending: true });
+
+      if (!isMounted) return;
+      setPlayers(data ?? []);
+      setLoading(false);
+    }
+
+    void loadInitialPlayers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function approvePlayer(id: string) {
     await supabase.from("profiles").update({ is_approved: true }).eq("id", id);
@@ -207,8 +229,53 @@ export default function AdminPlayersPage() {
     loadPlayers();
   }
 
-  const pending = players.filter((p) => !p.is_approved);
-  const approved = players.filter((p) => p.is_approved);
+  const pending = useMemo(() => players.filter((p) => !p.is_approved), [players]);
+  const approved = useMemo(() => players.filter((p) => p.is_approved), [players]);
+  const sortedApproved = useMemo(() => {
+    const sorted = [...approved];
+    const byName = (a: Profile, b: Profile) =>
+      `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+
+    sorted.sort((a, b) => {
+      if (activeSort === "number") {
+        if (a.jersey_number === null && b.jersey_number === null) return byName(a, b);
+        if (a.jersey_number === null) return 1;
+        if (b.jersey_number === null) return -1;
+        return a.jersey_number - b.jersey_number || byName(a, b);
+      }
+
+      if (activeSort === "position") {
+        const posDiff = POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position);
+        return posDiff || byName(a, b);
+      }
+
+      if (activeSort === "training_team") {
+        const teamRank: Record<TrainingTeam | "none", number> = {
+          team_a: 0,
+          team_b: 1,
+          none: 2,
+        };
+        const aTeam = a.default_training_team ?? "none";
+        const bTeam = b.default_training_team ?? "none";
+        return teamRank[aTeam] - teamRank[bTeam] || byName(a, b);
+      }
+
+      return byName(a, b);
+    });
+
+    return sorted;
+  }, [approved, activeSort]);
+
+  function formatDateOfBirth(dateOfBirth: string | null) {
+    if (!dateOfBirth) return "-";
+    const parsed = new Date(`${dateOfBirth}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return dateOfBirth;
+    return new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(parsed);
+  }
 
   if (loading) {
     return (
@@ -568,11 +635,27 @@ export default function AdminPlayersPage() {
 
       {/* All Players */}
       <Card className="border-border/40">
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             {t("activePlayers")} ({approved.length})
           </CardTitle>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="active-players-sort" className="text-xs text-muted-foreground">
+              {t("sortBy")}
+            </Label>
+            <Select value={activeSort} onValueChange={(value) => setActiveSort(value as ActivePlayersSort)}>
+              <SelectTrigger id="active-players-sort" className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">{t("sortByName")}</SelectItem>
+                <SelectItem value="number">{t("sortByNumber")}</SelectItem>
+                <SelectItem value="position">{t("sortByPosition")}</SelectItem>
+                <SelectItem value="training_team">{t("sortByTrainingTeam")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -581,19 +664,34 @@ export default function AdminPlayersPage() {
                 <TableHead className="w-[50px]">#</TableHead>
                 <TableHead>{t("playerColumn")}</TableHead>
                 <TableHead>{t("positionColumn")}</TableHead>
-                <TableHead>{t("teamRoleColumn")}</TableHead>
-                <TableHead>{t("statusColumn")}</TableHead>
+                <TableHead>{t("trainingTeamColumn")}</TableHead>
+                <TableHead>{tpr("dateOfBirth")}</TableHead>
+                <TableHead className="text-center">{t("statusColumn")}</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {approved.map((player) => (
+              {sortedApproved.map((player) => (
                 <TableRow key={player.id}>
                   <TableCell className="text-primary font-bold">
                     {player.jersey_number ?? "-"}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {player.first_name} {player.last_name}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>
+                        {player.first_name} {player.last_name}
+                      </span>
+                      {player.team_role === "captain" && (
+                        <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                          {tr("captain")}
+                        </Badge>
+                      )}
+                      {player.team_role === "assistant_captain" && (
+                        <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40">
+                          {tr("assistantCaptain")}
+                        </Badge>
+                      )}
+                    </div>
                     <br />
                     <span className="text-xs text-muted-foreground">
                       {player.email}
@@ -605,20 +703,27 @@ export default function AdminPlayersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
+                    {player.default_training_team ? (
+                      <Badge variant="outline" className="text-xs">
+                        {player.default_training_team === "team_a" ? tt("teamA") : tt("teamB")}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">{tt("noTeam")}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <span className="text-sm text-muted-foreground">
-                      {player.team_role === "captain"
-                        ? tr("captain")
-                        : player.team_role === "assistant_captain"
-                          ? tr("assistantCaptain")
-                          : tr("player")}
+                      {formatDateOfBirth(player.date_of_birth)}
                     </span>
                   </TableCell>
                   <TableCell>
-                    {player.is_active ? (
-                      <Badge className="bg-green-600/20 text-green-400">{t("active")}</Badge>
-                    ) : (
-                      <Badge className="bg-red-600/20 text-red-400">{t("inactive")}</Badge>
-                    )}
+                    <div className="flex items-center justify-center">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${player.is_active ? "bg-green-500" : "bg-red-500"}`}
+                        aria-label={player.is_active ? t("active") : t("inactive")}
+                        title={player.is_active ? t("active") : t("inactive")}
+                      />
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Button

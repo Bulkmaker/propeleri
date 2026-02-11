@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { Trophy, Target, TrendingUp } from "lucide-react";
 import { POSITION_COLORS } from "@/lib/utils/constants";
-import type { PlayerPosition } from "@/types/database";
+import type { PlayerPosition, PlayerGameTotals } from "@/types/database";
 
 export default async function StatsPage({
   params,
@@ -34,16 +34,12 @@ export default async function StatsPage({
     .select("*")
     .order("total_points", { ascending: false });
 
-  const players = playerStats ?? [];
+  const players = (playerStats ?? []) as PlayerGameTotals[];
 
   // Top scorers (by goals)
-  const topGoals = [...players].sort(
-    (a: any, b: any) => b.total_goals - a.total_goals
-  );
+  const topGoals = [...players].sort((a, b) => b.total_goals - a.total_goals);
   // Top assists
-  const topAssists = [...players].sort(
-    (a: any, b: any) => b.total_assists - a.total_assists
-  );
+  const topAssists = [...players].sort((a, b) => b.total_assists - a.total_assists);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -117,7 +113,7 @@ export default async function StatsPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {players.map((p: any, idx: number) => (
+                  {players.map((p, idx: number) => (
                     <TableRow key={p.player_id}>
                       <TableCell className="font-medium text-muted-foreground">
                         {idx + 1}

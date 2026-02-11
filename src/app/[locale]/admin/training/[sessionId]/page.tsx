@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Loader2, Save, CheckCircle, XCircle, Wand2 } from "lucide-react";
-import type { Profile, TrainingTeam } from "@/types/database";
+import type { Profile, TrainingStats, TrainingTeam } from "@/types/database";
 
 interface TrainingRow {
   player_id: string;
@@ -51,9 +51,7 @@ export default function TrainingStatsEntryPage() {
         .select("*")
         .eq("session_id", sessionId);
 
-      const statsMap = new Map(
-        (existing ?? []).map((s: any) => [s.player_id, s])
-      );
+      const statsMap = new Map((existing ?? []).map((s: TrainingStats) => [s.player_id, s]));
 
       const playerRows: TrainingRow[] = (players ?? []).map((p: Profile) => {
         const e = statsMap.get(p.id);

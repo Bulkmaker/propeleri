@@ -6,13 +6,12 @@ import { Camera, ImageIcon } from "lucide-react";
 import type { GalleryAlbum } from "@/types/database";
 
 function getLocalizedField(
-  item: Record<string, any>,
-  locale: string,
-  field: string = "title"
+  item: Pick<GalleryAlbum, "title" | "title_ru" | "title_en">,
+  locale: string
 ): string {
-  if (locale === "ru" && item[`${field}_ru`]) return item[`${field}_ru`];
-  if (locale === "en" && item[`${field}_en`]) return item[`${field}_en`];
-  return item[field];
+  if (locale === "ru" && item.title_ru) return item.title_ru;
+  if (locale === "en" && item.title_en) return item.title_en;
+  return item.title;
 }
 
 export default async function GalleryPage({

@@ -39,10 +39,6 @@ export default function AdminGalleryPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   async function loadData() {
     const { data } = await supabase
       .from("gallery_albums")
@@ -51,6 +47,19 @@ export default function AdminGalleryPage() {
     setAlbums(data ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    async function loadInitialData() {
+      const { data } = await supabase
+        .from("gallery_albums")
+        .select("*, photos:gallery_photos(count)")
+        .order("created_at", { ascending: false });
+      setAlbums(data ?? []);
+      setLoading(false);
+    }
+
+    void loadInitialData();
+  }, []);
 
   async function handleCreateAlbum() {
     setSaving(true);
@@ -78,7 +87,7 @@ export default function AdminGalleryPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    for (const file of Array.from(files)) {
+    for (const [index, file] of Array.from(files).entries()) {
       const compressed = await imageCompression(file, {
         maxSizeMB: 0.3,
         maxWidthOrHeight: 1920,
@@ -86,7 +95,8 @@ export default function AdminGalleryPage() {
       });
 
       const ext = compressed.type === "image/png" ? "png" : "jpg";
-      const filePath = `${user?.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const safeName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]+/g, "-");
+      const filePath = `${user?.id}/${safeName}-${file.lastModified}-${index}.${ext}`;
 
       const { error } = await supabase.storage
         .from("gallery")

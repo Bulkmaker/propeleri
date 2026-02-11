@@ -125,8 +125,8 @@ export default function ProfilePage() {
         .eq("id", profile.id);
 
       setProfile({ ...profile, avatar_url: publicUrl });
-    } catch (err: any) {
-      setMessage(err.message);
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : "Upload failed");
     }
     setUploading(false);
   }

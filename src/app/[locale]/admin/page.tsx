@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Swords, CalendarDays, UserCheck } from "lucide-react";
+import type { Profile } from "@/types/database";
 
 export default async function AdminDashboardPage({
   params,
@@ -36,11 +37,12 @@ export default async function AdminDashboardPage({
     .select("*", { count: "exact", head: true });
 
   // Pending approvals
-  const { data: pendingUsers } = await supabase
+  const { data: pendingUsersRaw } = await supabase
     .from("profiles")
     .select("*")
     .eq("is_approved", false)
     .order("created_at", { ascending: false });
+  const pendingUsers = (pendingUsersRaw ?? []) as Profile[];
 
   return (
     <div>
@@ -114,7 +116,7 @@ export default async function AdminDashboardPage({
       </div>
 
       {/* Pending Approvals */}
-      {pendingUsers && pendingUsers.length > 0 && (
+      {pendingUsers.length > 0 && (
         <Card className="border-yellow-500/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -127,7 +129,7 @@ export default async function AdminDashboardPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {pendingUsers.map((user: any) => (
+              {pendingUsers.map((user) => (
                 <div
                   key={user.id}
                   className="flex items-center justify-between py-2 px-3 rounded-md bg-secondary/50"

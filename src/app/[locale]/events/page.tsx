@@ -7,13 +7,17 @@ import { CalendarDays, MapPin, Megaphone } from "lucide-react";
 import type { TeamEvent } from "@/types/database";
 
 function getLocalizedField(
-  item: Record<string, any>,
+  item: TeamEvent,
   locale: string,
-  field: string = "title"
+  field: "title" | "description" = "title"
 ): string {
-  if (locale === "ru" && item[`${field}_ru`]) return item[`${field}_ru`];
-  if (locale === "en" && item[`${field}_en`]) return item[`${field}_en`];
-  return item[field];
+  const ruField = field === "title" ? item.title_ru : item.description_ru;
+  const enField = field === "title" ? item.title_en : item.description_en;
+  const baseField = field === "title" ? item.title : item.description;
+
+  if (locale === "ru" && ruField) return ruField;
+  if (locale === "en" && enField) return enField;
+  return baseField ?? "";
 }
 
 const EVENT_TYPE_COLORS: Record<string, string> = {

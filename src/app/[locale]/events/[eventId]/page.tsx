@@ -4,15 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, CalendarDays, MapPin } from "lucide-react";
+import type { TeamEvent } from "@/types/database";
 
 function getLocalizedField(
-  item: Record<string, any>,
+  item: TeamEvent,
   locale: string,
-  field: string = "title"
+  field: "title" | "description" = "title"
 ): string {
-  if (locale === "ru" && item[`${field}_ru`]) return item[`${field}_ru`];
-  if (locale === "en" && item[`${field}_en`]) return item[`${field}_en`];
-  return item[field];
+  const ruField = field === "title" ? item.title_ru : item.description_ru;
+  const enField = field === "title" ? item.title_en : item.description_en;
+  const baseField = field === "title" ? item.title : item.description;
+
+  if (locale === "ru" && ruField) return ruField;
+  if (locale === "en" && enField) return enField;
+  return baseField ?? "";
 }
 
 export default async function EventDetailPage({
@@ -26,11 +31,12 @@ export default async function EventDetailPage({
   const tc = await getTranslations("common");
 
   const supabase = await createClient();
-  const { data: event } = await supabase
+  const { data: eventRaw } = await supabase
     .from("events")
     .select("*")
     .eq("id", eventId)
     .single();
+  const event = eventRaw as TeamEvent | null;
 
   if (!event) notFound();
 

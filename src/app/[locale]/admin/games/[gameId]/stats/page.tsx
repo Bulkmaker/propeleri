@@ -22,6 +22,11 @@ interface PlayerStatRow {
   plus_minus: number;
 }
 
+interface GameLineupEntry {
+  player_id: string;
+  player: Pick<Profile, "first_name" | "last_name" | "jersey_number"> | null;
+}
+
 export default function GameStatsEntryPage() {
   const params = useParams();
   const gameId = params.gameId as string;
@@ -53,7 +58,7 @@ export default function GameStatsEntryPage() {
         (existingStats ?? []).map((s: GameStats) => [s.player_id, s])
       );
 
-      const playerRows: PlayerStatRow[] = (lineup ?? []).map((entry: any) => {
+      const playerRows: PlayerStatRow[] = ((lineup ?? []) as GameLineupEntry[]).map((entry) => {
         const existing = statsMap.get(entry.player_id);
         return {
           player_id: entry.player_id,

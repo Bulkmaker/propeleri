@@ -15,7 +15,11 @@ import {
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle } from "lucide-react";
 import { POSITION_COLORS } from "@/lib/utils/constants";
-import type { PlayerPosition } from "@/types/database";
+import type { PlayerPosition, Profile, TrainingStats } from "@/types/database";
+
+type TrainingStatWithPlayer = TrainingStats & {
+  player: Profile | null;
+};
 
 export default async function TrainingDetailPage({
   params,
@@ -40,18 +44,19 @@ export default async function TrainingDetailPage({
 
   if (!session) notFound();
 
-  const { data: stats } = await supabase
+  const { data: statsRaw } = await supabase
     .from("training_stats")
     .select("*, player:profiles(*)")
     .eq("session_id", sessionId)
     .order("goals", { ascending: false });
+  const stats = (statsRaw ?? []) as TrainingStatWithPlayer[];
 
   const date = new Date(session.session_date);
 
-  const hasTeams = stats?.some((s: any) => s.training_team);
-  const teamA = stats?.filter((s: any) => s.training_team === "team_a") ?? [];
-  const teamB = stats?.filter((s: any) => s.training_team === "team_b") ?? [];
-  const noTeam = stats?.filter((s: any) => !s.training_team) ?? [];
+  const hasTeams = stats.some((s) => s.training_team);
+  const teamA = stats.filter((s) => s.training_team === "team_a");
+  const teamB = stats.filter((s) => s.training_team === "team_b");
+  const noTeam = stats.filter((s) => !s.training_team);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -102,7 +107,7 @@ export default async function TrainingDetailPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {teamA.map((s: any) => (
+                  {teamA.map((s) => (
                     <TeamPlayerCard key={s.id} stat={s} />
                   ))}
                 </div>
@@ -120,7 +125,7 @@ export default async function TrainingDetailPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {teamB.map((s: any) => (
+                  {teamB.map((s) => (
                     <TeamPlayerCard key={s.id} stat={s} />
                   ))}
                 </div>
@@ -136,7 +141,7 @@ export default async function TrainingDetailPage({
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-2">
-                  {noTeam.map((s: any) => (
+                  {noTeam.map((s) => (
                     <TeamPlayerCard key={s.id} stat={s} />
                   ))}
                 </div>
@@ -151,7 +156,7 @@ export default async function TrainingDetailPage({
             <CardTitle>{t("attendance")} & {ts("title")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {stats && stats.length > 0 ? (
+            {stats.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -163,7 +168,7 @@ export default async function TrainingDetailPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stats.map((s: any) => (
+                  {stats.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell className="text-primary font-bold">
                         {s.player?.jersey_number ?? "-"}
@@ -196,7 +201,7 @@ export default async function TrainingDetailPage({
   );
 }
 
-function TeamPlayerCard({ stat }: { stat: any }) {
+function TeamPlayerCard({ stat }: { stat: TrainingStatWithPlayer }) {
   const player = stat.player;
   if (!player) return null;
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;

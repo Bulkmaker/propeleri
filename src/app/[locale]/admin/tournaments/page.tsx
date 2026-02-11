@@ -57,10 +57,6 @@ export default function AdminTournamentsPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   async function loadData() {
     const [tournamentsRes, seasonsRes] = await Promise.all([
       supabase
@@ -80,6 +76,30 @@ export default function AdminTournamentsPage() {
     }
     setLoading(false);
   }
+
+  useEffect(() => {
+    async function loadInitialData() {
+      const [tournamentsRes, seasonsRes] = await Promise.all([
+        supabase
+          .from("tournaments")
+          .select("*")
+          .order("start_date", { ascending: false }),
+        supabase
+          .from("seasons")
+          .select("*")
+          .order("start_date", { ascending: false }),
+      ]);
+      setTournaments(tournamentsRes.data ?? []);
+      const allSeasons = seasonsRes.data ?? [];
+      setSeasons(allSeasons);
+      if (allSeasons[0] && !form.season_id) {
+        setForm((f) => ({ ...f, season_id: allSeasons[0].id }));
+      }
+      setLoading(false);
+    }
+
+    void loadInitialData();
+  }, []);
 
   function openCreateDialog() {
     setEditingId(null);

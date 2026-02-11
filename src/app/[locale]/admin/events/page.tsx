@@ -52,10 +52,6 @@ export default function AdminEventsPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   async function loadData() {
     const [eventsRes, tournamentsRes] = await Promise.all([
       supabase.from("events").select("*").order("created_at", { ascending: false }),
@@ -65,6 +61,20 @@ export default function AdminEventsPage() {
     setTournaments(tournamentsRes.data ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    async function loadInitialData() {
+      const [eventsRes, tournamentsRes] = await Promise.all([
+        supabase.from("events").select("*").order("created_at", { ascending: false }),
+        supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
+      ]);
+      setEvents(eventsRes.data ?? []);
+      setTournaments(tournamentsRes.data ?? []);
+      setLoading(false);
+    }
+
+    void loadInitialData();
+  }, []);
 
   async function handleSave() {
     setSaving(true);

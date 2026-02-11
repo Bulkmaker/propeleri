@@ -47,10 +47,6 @@ export default function AdminTrainingPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   async function loadData() {
     const [sessionsRes, seasonsRes] = await Promise.all([
       supabase
@@ -66,6 +62,26 @@ export default function AdminTrainingPage() {
     }
     setLoading(false);
   }
+
+  useEffect(() => {
+    async function loadInitialData() {
+      const [sessionsRes, seasonsRes] = await Promise.all([
+        supabase
+          .from("training_sessions")
+          .select("*")
+          .order("session_date", { ascending: false }),
+        supabase.from("seasons").select("*").order("start_date", { ascending: false }),
+      ]);
+      setSessions(sessionsRes.data ?? []);
+      setSeasons(seasonsRes.data ?? []);
+      if (seasonsRes.data?.[0]) {
+        setForm((f) => ({ ...f, season_id: seasonsRes.data![0].id }));
+      }
+      setLoading(false);
+    }
+
+    void loadInitialData();
+  }, []);
 
   function openCreate() {
     setEditingId(null);
