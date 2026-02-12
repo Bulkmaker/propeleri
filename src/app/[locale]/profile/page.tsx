@@ -20,6 +20,7 @@ import { Loader2, Save, Upload, User } from "lucide-react";
 import type { Profile, PlayerPosition } from "@/types/database";
 import { POSITIONS } from "@/lib/utils/constants";
 import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
+import { processImageFile } from "@/lib/utils/image-processing";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
@@ -96,13 +97,22 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setCropImageSrc(url);
-    setCropDialogOpen(true);
-    e.target.value = "";
+
+    try {
+      setUploading(true);
+      const processedFile = await processImageFile(file);
+      const url = URL.createObjectURL(processedFile);
+      setCropImageSrc(url);
+      setCropDialogOpen(true);
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : "Failed to process image");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   }
 
   async function handleCroppedUpload(blob: Blob) {
@@ -210,7 +220,7 @@ export default function ProfilePage() {
             <label className="cursor-pointer">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 className="hidden"
                 onChange={handleFileSelect}
                 disabled={uploading}

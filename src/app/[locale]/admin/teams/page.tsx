@@ -30,6 +30,7 @@ import type { Game, GameResult, Team } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { COUNTRY_OPTIONS, countryFlagEmoji, countryDisplayName } from "@/lib/utils/country";
+import { processImageFile } from "@/lib/utils/image-processing";
 
 function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -92,7 +93,8 @@ export default function AdminTeamsPage() {
     setError("");
 
     try {
-      const compressed = await imageCompression(file, {
+      const processedFile = await processImageFile(file);
+      const compressed = await imageCompression(processedFile, {
         maxSizeMB: 0.25,
         maxWidthOrHeight: 512,
         useWebWorker: true,
@@ -289,7 +291,7 @@ export default function AdminTeamsPage() {
                 <label className="cursor-pointer inline-block">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     className="hidden"
                     disabled={uploadingLogo || saving}
                     onChange={async (e) => {

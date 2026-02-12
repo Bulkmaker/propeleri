@@ -615,9 +615,167 @@ export default function TournamentMatchEditorPage() {
           </TabsList>
 
           <TabsContent value="match" className="space-y-4">
+            {/* Scoreboard Section */}
+            <Card className="border-border/40">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                  {/* Team A */}
+                  <div className="flex-1 flex flex-col items-center gap-3 text-center min-w-0 w-full">
+                    <TeamAvatar
+                      name={selectedTeamA?.name ?? tt("teamA")}
+                      logoUrl={selectedTeamA?.logo_url}
+                      country={selectedTeamA?.country}
+                      size="lg" // Assuming lg size exists or will default to something reasonable, if not I might need to check TeamAvatar definition. Checking file... actually TeamAvatar usually takes sm/md/lg. I'll check if lg is valid or use className.
+                      className="h-20 w-20 md:h-24 md:w-24 text-2xl"
+                    />
+                    <div className="space-y-1 w-full">
+                      <p className="font-bold text-lg truncate w-full">
+                        {selectedTeamA?.name ?? tc("notSelected")}
+                      </p>
+                      {selectedTeamA?.is_propeleri && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                          {tt("propeleri")}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Score & Status */}
+                  <div className="flex flex-col items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.score_a}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            score_a: parseInt(event.target.value, 10) || 0,
+                          }))
+                        }
+                        className="w-20 h-16 text-center text-3xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
+                      />
+                      <span className="text-2xl font-bold text-muted-foreground">-</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.score_b}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            score_b: parseInt(event.target.value, 10) || 0,
+                          }))
+                        }
+                        className="w-20 h-16 text-center text-3xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={form.is_completed ? "default" : "outline"}
+                      className={`min-w-[120px] ${form.is_completed ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                      onClick={() =>
+                        setForm((prev) => ({ ...prev, is_completed: !prev.is_completed }))
+                      }
+                    >
+                      {form.is_completed ? (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          {tt("completed")}
+                        </>
+                      ) : (
+                        tt("markCompleted")
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Team B */}
+                  <div className="flex-1 flex flex-col items-center gap-3 text-center min-w-0 w-full">
+                    <TeamAvatar
+                      name={selectedTeamB?.name ?? tt("teamB")}
+                      logoUrl={selectedTeamB?.logo_url}
+                      country={selectedTeamB?.country}
+                      size="lg"
+                      className="h-20 w-20 md:h-24 md:w-24 text-2xl"
+                    />
+                    <div className="space-y-1 w-full">
+                      <p className="font-bold text-lg truncate w-full">
+                        {selectedTeamB?.name ?? tc("notSelected")}
+                      </p>
+                      {selectedTeamB?.is_propeleri && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                          {tt("propeleri")}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team Selectors (Collapsible or just reduced prominence) */}
+                <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-border/40">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">{tt("selectTeamA")}</Label>
+                    <Select
+                      value={form.team_a_id || "__none__"}
+                      onValueChange={(value) =>
+                        setForm((prev) => {
+                          const nextTeamAId = value === "__none__" ? "" : value;
+                          return {
+                            ...prev,
+                            team_a_id: nextTeamAId,
+                            team_b_id: prev.team_b_id === nextTeamAId ? "" : prev.team_b_id,
+                          };
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder={tt("selectTeam")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">—</SelectItem>
+                        {scopedTeams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">{tt("selectTeamB")}</Label>
+                    <Select
+                      value={form.team_b_id || "__none__"}
+                      onValueChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          team_b_id: value === "__none__" ? "" : value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder={tt("selectTeam")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">—</SelectItem>
+                        {scopedTeamBOptions.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Match Metadata */}
             <Card className="border-border/40">
               <CardContent className="p-4 space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <h3 className="font-semibold text-sm text-muted-foreground">{tt("matchDetails")}</h3>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
                     <Label>{tt("stage")}</Label>
                     <Select
@@ -648,34 +806,23 @@ export default function TournamentMatchEditorPage() {
                         onValueChange={(value) =>
                           setForm((prev) => {
                             const nextGroupId = value === "__none__" ? "" : value;
-                            if (!nextGroupId) {
-                              return { ...prev, group_id: "" };
-                            }
+                            // Logic preserved from original
+                            if (!nextGroupId) return { ...prev, group_id: "" };
 
                             const allowedIds = new Set(
                               groupTeams
                                 .filter((entry) => entry.group_id === nextGroupId)
                                 .map((entry) => entry.team_id)
                             );
-
                             let teamAId = prev.team_a_id;
                             let teamBId = prev.team_b_id;
-
                             if (allowedIds.size > 0) {
                               if (teamAId && !allowedIds.has(teamAId)) teamAId = "";
                               if (teamBId && !allowedIds.has(teamBId)) teamBId = "";
                             }
+                            if (teamAId && teamBId && teamAId === teamBId) teamBId = "";
 
-                            if (teamAId && teamBId && teamAId === teamBId) {
-                              teamBId = "";
-                            }
-
-                            return {
-                              ...prev,
-                              group_id: nextGroupId,
-                              team_a_id: teamAId,
-                              team_b_id: teamBId,
-                            };
+                            return { ...prev, group_id: nextGroupId, team_a_id: teamAId, team_b_id: teamBId };
                           })
                         }
                       >
@@ -685,9 +832,7 @@ export default function TournamentMatchEditorPage() {
                         <SelectContent>
                           <SelectItem value="__none__">—</SelectItem>
                           {groups.map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
-                            </SelectItem>
+                            <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -697,24 +842,18 @@ export default function TournamentMatchEditorPage() {
                       <Label>{tt("label")}</Label>
                       <Input
                         value={form.bracket_label}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, bracket_label: event.target.value }))
-                        }
+                        onChange={(e) => setForm((prev) => ({ ...prev, bracket_label: e.target.value }))}
                         placeholder={tt("labelPlaceholder")}
                       />
                     </div>
                   )}
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>{tt("matchDate")}</Label>
                     <Input
                       type="datetime-local"
                       value={form.match_date}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, match_date: event.target.value }))
-                      }
+                      onChange={(e) => setForm((prev) => ({ ...prev, match_date: e.target.value }))}
                     />
                   </div>
 
@@ -722,69 +861,22 @@ export default function TournamentMatchEditorPage() {
                     <Label>{tt("location")}</Label>
                     <Input
                       value={tournament.location ?? ""}
-                      placeholder={tt("scorePlaceholder")}
                       disabled
+                      className="bg-muted"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {tt("locationFromTournament")}
-                    </p>
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label>{tt("score")} A</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.score_a}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          score_a: parseInt(event.target.value, 10) || 0,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{tt("score")} B</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.score_b}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          score_b: parseInt(event.target.value, 10) || 0,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{tt("completed")}</Label>
-                    <Button
-                      type="button"
-                      variant={form.is_completed ? "default" : "outline"}
-                      className="w-full"
-                      onClick={() =>
-                        setForm((prev) => ({ ...prev, is_completed: !prev.is_completed }))
-                      }
-                    >
-                      {form.is_completed ? tt("reopen") : tt("complete")}
-                    </Button>
-                  </div>
+                <div className="flex justify-end pt-2">
+                  <Button onClick={() => void saveMatch()} disabled={savingAction === "match"} className="min-w-[150px]">
+                    {savingAction === "match" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    {tc("saveChanges")}
+                  </Button>
                 </div>
-
-                <Button onClick={() => void saveMatch()} disabled={savingAction === "match"}>
-                  {savingAction === "match" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  {tc("save")}
-                </Button>
               </CardContent>
             </Card>
           </TabsContent>

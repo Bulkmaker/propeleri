@@ -42,6 +42,7 @@ import {
   normalizeLogin,
 } from "@/lib/auth/login";
 import { formatPlayerName } from "@/lib/utils/player-name";
+import { processImageFile } from "@/lib/utils/image-processing";
 
 interface PlayerForm {
   first_name: string;
@@ -279,13 +280,22 @@ export default function AdminPlayersPage() {
     loadPlayers();
   }
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setCropImageSrc(url);
-    setCropDialogOpen(true);
-    e.target.value = "";
+
+    try {
+      setUploadingAvatar(true);
+      const processedFile = await processImageFile(file);
+      const url = URL.createObjectURL(processedFile);
+      setCropImageSrc(url);
+      setCropDialogOpen(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to process image");
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
   }
 
   async function handleCroppedUpload(blob: Blob) {
@@ -563,7 +573,7 @@ export default function AdminPlayersPage() {
                   <label className="cursor-pointer">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif"
                       className="hidden"
                       onChange={handleFileSelect}
                       disabled={uploadingAvatar}
@@ -1053,6 +1063,7 @@ export default function AdminPlayersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead className="w-[50px]">#</TableHead>
                   <TableHead>{t("playerColumn")}</TableHead>
                   <TableHead>{t("positionColumn")}</TableHead>
@@ -1065,13 +1076,21 @@ export default function AdminPlayersPage() {
               <TableBody>
                 {filteredApproved.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
                       {tc("noData")}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredApproved.map((player) => (
                     <TableRow key={player.id}>
+                      <TableCell>
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={player.avatar_url ?? undefined} />
+                          <AvatarFallback>
+                            {(player.first_name?.[0] ?? "") + (player.last_name?.[0] ?? "")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TableCell>
                       <TableCell className="text-primary font-bold">
                         {player.jersey_number ?? "-"}
                       </TableCell>

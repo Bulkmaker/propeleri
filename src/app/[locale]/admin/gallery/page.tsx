@@ -17,6 +17,7 @@ import {
 import { Camera, Plus, Loader2, Upload } from "lucide-react";
 import type { GalleryAlbum } from "@/types/database";
 import imageCompression from "browser-image-compression";
+import { processImageFile } from "@/lib/utils/image-processing";
 
 export default function AdminGalleryPage() {
   const t = useTranslations("admin");
@@ -87,7 +88,8 @@ export default function AdminGalleryPage() {
     } = await supabase.auth.getUser();
 
     for (const [index, file] of Array.from(files).entries()) {
-      const compressed = await imageCompression(file, {
+      const processedFile = await processImageFile(file);
+      const compressed = await imageCompression(processedFile, {
         maxSizeMB: 0.3,
         maxWidthOrHeight: 1920,
         useWebWorker: true,
@@ -202,7 +204,7 @@ export default function AdminGalleryPage() {
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     multiple
                     className="hidden"
                     onChange={(e) => {

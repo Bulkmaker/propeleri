@@ -55,6 +55,7 @@ import {
   countryDisplayName,
   countryFlagEmoji,
 } from "@/lib/utils/country";
+import { processImageFile } from "@/lib/utils/image-processing";
 import type {
   Tournament,
   Team,
@@ -262,7 +263,8 @@ export default function AdminTournamentDetailPage() {
     setError("");
 
     try {
-      const compressed = await imageCompression(file, {
+      const processedFile = await processImageFile(file);
+      const compressed = await imageCompression(processedFile, {
         maxSizeMB: 0.25,
         maxWidthOrHeight: 512,
         useWebWorker: true,
@@ -1122,8 +1124,8 @@ export default function AdminTournamentDetailPage() {
                       onClick={() => void toggleRegisteredPlayer(player.id)}
                       disabled={saving}
                       className={`rounded-md border px-3 py-2 text-left transition-colors ${isSelected
-                          ? "border-primary/50 bg-primary/10"
-                          : "border-border/40 hover:border-primary/30"
+                        ? "border-primary/50 bg-primary/10"
+                        : "border-border/40 hover:border-primary/30"
                         }`}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -1215,8 +1217,8 @@ export default function AdminTournamentDetailPage() {
                                   key={team.id}
                                   onClick={() => toggleTeamInGroup(group.id, team.id)}
                                   className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${isMember
-                                      ? "bg-primary/20 text-primary border-primary/40"
-                                      : "bg-muted/30 text-muted-foreground border-border/40 hover:border-primary/40"
+                                    ? "bg-primary/20 text-primary border-primary/40"
+                                    : "bg-muted/30 text-muted-foreground border-border/40 hover:border-primary/40"
                                     }`}
                                 >
                                   {team.name}
@@ -1716,8 +1718,8 @@ function MatchCard({
                 size="sm"
                 variant="outline"
                 className={`h-7 text-xs ${match.is_completed
-                    ? "border-yellow-500/30 text-yellow-400"
-                    : "border-green-500/30 text-green-400"
+                  ? "border-yellow-500/30 text-yellow-400"
+                  : "border-green-500/30 text-green-400"
                   }`}
                 onClick={() => onToggleCompleted(match.id, match.is_completed)}
               >
