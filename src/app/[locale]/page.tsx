@@ -59,16 +59,17 @@ export default async function HomePage({
     { data: topScorersData },
     { data: upcomingEventsData },
     { data: teamsData },
+    { data: tournamentsData },
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("is_active", true)
       .eq("is_approved", true),
-    supabase.from("games").select("*", { count: "exact", head: true }),
+    supabase.from("games").select("id", { count: "exact", head: true }),
     supabase
       .from("training_sessions")
-      .select("*", { count: "exact", head: true }),
+      .select("id", { count: "exact", head: true }),
     supabase
       .from("games")
       .select("id, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
@@ -95,13 +96,45 @@ export default async function HomePage({
       .order("event_date", { ascending: true })
       .limit(4),
     supabase.from("teams").select("id, name, logo_url, country, is_propeleri"),
+    supabase
+      .from("tournaments")
+      .select("id, name, start_date, location")
+      .gte("end_date", new Date().toISOString())
+      .order("start_date", { ascending: true })
+      .limit(4),
   ]);
 
   const nextGame = (nextGameData?.[0] ?? null) as Game | null;
   const recentGames = (recentGamesData ?? []) as Game[];
   const topScorers = (topScorersData ?? []) as PlayerGameTotals[];
-  const upcomingEvents = (upcomingEventsData ?? []) as TeamEvent[];
   const teams = (teamsData ?? []) as Team[];
+
+  // Mix events and tournaments
+  const rawEvents = (upcomingEventsData ?? []) as TeamEvent[];
+  const rawTournaments = (tournamentsData ?? []) as any[]; // Type assertion needed or proper type
+
+  const mixedEvents = [
+    ...rawEvents.map(e => ({ type: 'event' as const, data: { ...e, href: `/events/${e.id}` }, date: e.event_date })),
+    ...rawTournaments.map(t => ({
+      type: 'tournament' as const,
+      data: {
+        id: t.id,
+        title: t.name,
+        title_ru: t.name,
+        title_en: t.name,
+        event_date: t.start_date,
+        location: t.location,
+        is_published: true,
+        href: `/tournaments/${t.id}`
+      } as unknown as TeamEvent,
+      date: t.start_date
+    }))
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 4)
+    .map(item => item.data);
+
+  const upcomingEvents = mixedEvents;
+
 
   const nextGameOpponent = nextGame ? teams.find((t) => t.id === nextGame.opponent_team_id) : null;
 
@@ -578,7 +611,7 @@ function EventPoster({
         : event.title;
 
   return (
-    <Link href={`/events/${event.id}`} className="club-event-poster">
+    <Link href={(event as any).href || `/events/${event.id}`} className="club-event-poster">
       {date && (
         <div className="club-event-poster__date">
           <span>{formatInBelgrade(date, localeTag, { month: "short" })}</span>

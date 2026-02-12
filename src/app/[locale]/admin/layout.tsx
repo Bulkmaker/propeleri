@@ -23,7 +23,7 @@ export default async function AdminLayout({
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("app_role, team_role")
+    .select("app_role, team_role, is_approved")
     .eq("id", user.id)
     .single();
 
@@ -32,8 +32,8 @@ export default async function AdminLayout({
     redirect("/");
   }
 
-  // Check admin role
-  if (!isAdminRole(profile)) {
+  // Check admin role and approval status
+  if (!isAdminRole(profile) || !profile.is_approved) {
     redirect("/");
   }
 

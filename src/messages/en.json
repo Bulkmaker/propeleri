@@ -291,7 +291,8 @@
     "game": "Game",
     "training": "Training",
     "tournament": "Tournament",
-    "social": "Social"
+    "social": "Social",
+    "viewTournament": "View Tournament"
   },
   "auth": {
     "loginTitle": "Sign In",

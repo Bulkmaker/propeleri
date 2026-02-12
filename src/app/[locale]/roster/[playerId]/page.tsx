@@ -34,33 +34,34 @@ export default async function PlayerProfilePage({
 
   const supabase = await createClient();
 
-  const { data: player } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", playerId)
-    .single();
+  const [
+    { data: player },
+    { data: seasonStats },
+    { data: gameTotals },
+    { data: trainingTotals },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", playerId)
+      .single(),
+    supabase
+      .from("player_season_stats")
+      .select("*")
+      .eq("player_id", playerId),
+    supabase
+      .from("player_game_totals")
+      .select("*")
+      .eq("player_id", playerId)
+      .single(),
+    supabase
+      .from("player_training_totals")
+      .select("*")
+      .eq("player_id", playerId)
+      .single(),
+  ]);
 
   if (!player) notFound();
-
-  // Get game stats
-  const { data: seasonStats } = await supabase
-    .from("player_season_stats")
-    .select("*")
-    .eq("player_id", playerId);
-
-  // Get game totals
-  const { data: gameTotals } = await supabase
-    .from("player_game_totals")
-    .select("*")
-    .eq("player_id", playerId)
-    .single();
-
-  // Get training totals
-  const { data: trainingTotals } = await supabase
-    .from("player_training_totals")
-    .select("*")
-    .eq("player_id", playerId)
-    .single();
 
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
 

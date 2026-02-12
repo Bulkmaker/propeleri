@@ -11,6 +11,8 @@ import { formatInBelgrade } from "@/lib/utils/datetime";
 
 import { PageHeader } from "@/components/ui/page-header";
 
+export const revalidate = 60;
+
 export default async function GamesPage({
   params,
 }: {

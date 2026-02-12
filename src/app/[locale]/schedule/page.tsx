@@ -19,6 +19,8 @@ import type {
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
+export const revalidate = 60;
+
 type ScheduleItem = {
   id: string;
   type: "game" | "training";

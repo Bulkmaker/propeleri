@@ -5,6 +5,8 @@ import type { Profile } from "@/types/database";
 import RosterClient from "@/components/roster/RosterClient";
 import { PageHeader } from "@/components/ui/page-header";
 
+export const revalidate = 600;
+
 export default async function RosterPage({
   params,
 }: {

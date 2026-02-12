@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   let next = searchParams.get("next") ?? "/";
 
   // Защита от open redirect: next должен быть относительным путём
-  if (!next.startsWith("/") || next.startsWith("//")) {
+  if (!next.startsWith("/") || next.startsWith("//") || next.includes("\\")) {
     next = "/";
   }
 

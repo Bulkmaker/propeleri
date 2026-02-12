@@ -9,6 +9,8 @@ import type { TrainingSession, TrainingSessionStatus } from "@/types/database";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
+export const revalidate = 60;
+
 function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
   if (status === "completed" || status === "canceled") return status;
   return "planned";

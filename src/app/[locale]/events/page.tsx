@@ -22,6 +22,8 @@ function getLocalizedField(
   return baseField ?? "";
 }
 
+export const revalidate = 300;
+
 const EVENT_TYPE_COLORS: Record<string, string> = {
   game: "bg-primary/20 text-primary",
   training: "bg-blue-500/20 text-blue-400",
@@ -194,7 +196,7 @@ export default async function EventsPage({
 
                         {isTournament && (
                           <div className="mt-4 flex items-center gap-2 text-xs font-medium text-yellow-500 opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">
-                            <span>{t("viewTournament" as any) || "View Tournament"}</span>
+                            <span>{t("viewTournament")}</span>
                             <span aria-hidden="true">→</span>
                           </div>
                         )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,16 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
-import { Award, Plus, Loader2, Pencil, Trash2, Settings } from "lucide-react";
+import { Award, Plus, Pencil, Trash2, Settings } from "lucide-react";
 import type { Tournament, Season, TournamentFormat } from "@/types/database";
+import { AdminDialog } from "@/components/admin/AdminDialog";
+import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { useAdminData } from "@/hooks/use-admin-data";
 
 const FORMAT_LABELS: Record<TournamentFormat, string> = {
   cup: "formatCup",
@@ -38,9 +34,7 @@ export default function AdminTournamentsPage() {
   const tt = useTranslations("tournament");
   const tc = useTranslations("common");
 
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -55,50 +49,29 @@ export default function AdminTournamentsPage() {
     description: "",
   });
 
-  const supabase = useMemo(() => createClient(), []);
+  const queryFn = useCallback(
+    (sb: Parameters<Parameters<typeof useAdminData>[0]>[0]) =>
+      sb.from("tournaments").select("*").order("start_date", { ascending: false }),
+    []
+  );
 
-  async function loadData() {
-    const [tournamentsRes, seasonsRes] = await Promise.all([
-      supabase
-        .from("tournaments")
-        .select("*")
-        .order("start_date", { ascending: false }),
-      supabase
+  const { data: tournaments, loading, error, reload, supabase } =
+    useAdminData<Tournament>(queryFn);
+
+  // Load seasons separately
+  useEffect(() => {
+    const timer = window.setTimeout(async () => {
+      const { data } = await supabase
         .from("seasons")
         .select("*")
-        .order("start_date", { ascending: false }),
-    ]);
-    setTournaments(tournamentsRes.data ?? []);
-    const allSeasons = seasonsRes.data ?? [];
-    setSeasons(allSeasons);
-    if (allSeasons[0] && !form.season_id) {
-      setForm((f) => ({ ...f, season_id: allSeasons[0].id }));
-    }
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    async function loadInitialData() {
-      const [tournamentsRes, seasonsRes] = await Promise.all([
-        supabase
-          .from("tournaments")
-          .select("*")
-          .order("start_date", { ascending: false }),
-        supabase
-          .from("seasons")
-          .select("*")
-          .order("start_date", { ascending: false }),
-      ]);
-      setTournaments(tournamentsRes.data ?? []);
-      const allSeasons = seasonsRes.data ?? [];
+        .order("start_date", { ascending: false });
+      const allSeasons = data ?? [];
       setSeasons(allSeasons);
       if (allSeasons[0]) {
         setForm((f) => (f.season_id ? f : { ...f, season_id: allSeasons[0].id }));
       }
-      setLoading(false);
-    }
-
-    void loadInitialData();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [supabase]);
 
   function openCreateDialog() {
@@ -191,161 +164,131 @@ export default function AdminTournamentsPage() {
     setDialogOpen(false);
     setSaving(false);
     setEditingId(null);
-    loadData();
+    await reload();
   }
 
   async function handleDelete(id: string) {
     await supabase.from("tournaments").delete().eq("id", id);
-    loadData();
+    await reload();
   }
 
   function getSeasonName(seasonId: string) {
     return seasons.find((s) => s.id === seasonId)?.name ?? "";
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("manageTournaments")}</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary" onClick={openCreateDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              {tc("create")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>
-                {editingId ? tc("edit") : tt("newTournament")}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{tt("season")}</Label>
-                  <Select
-                    value={form.season_id}
-                    onValueChange={(v) => setForm({ ...form, season_id: v })}
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {seasons.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{tt("format")}</Label>
-                  <Select
-                    value={form.format}
-                    onValueChange={(v) =>
-                      setForm({ ...form, format: v as TournamentFormat })
-                    }
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cup">{tt("formatCup")}</SelectItem>
-                      <SelectItem value="placement">{tt("formatPlacement")}</SelectItem>
-                      <SelectItem value="round_robin">{tt("formatRoundRobin")}</SelectItem>
-                      <SelectItem value="custom">{tt("formatCustom")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("name")}</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("location")}</Label>
-                <Input
-                  value={form.location}
-                  onChange={(e) =>
-                    setForm({ ...form, location: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{tt("startDate")}</Label>
-                  <Input
-                    type="date"
-                    value={form.start_date}
-                    onChange={(e) =>
-                      setForm({ ...form, start_date: e.target.value })
-                    }
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{tt("endDate")}</Label>
-                  <Input
-                    type="date"
-                    value={form.end_date}
-                    onChange={(e) =>
-                      setForm({ ...form, end_date: e.target.value })
-                    }
-                    className="bg-background"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("description")}</Label>
-                <Input
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <Button
-                onClick={handleSave}
-                disabled={
-                  saving ||
-                  !form.name ||
-                  !form.start_date ||
-                  !form.end_date ||
-                  !form.season_id
-                }
-                className="w-full bg-primary"
-              >
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {tc("save")}
+    <LoadingErrorEmpty
+      loading={loading}
+      error={error}
+      isEmpty={tournaments.length === 0}
+      emptyMessage={tt("noTournaments")}
+      onRetry={reload}
+    >
+      <div>
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">{t("manageTournaments")}</h1>
+          <AdminDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            title={editingId ? tc("edit") : tt("newTournament")}
+            saving={saving}
+            disabled={!form.name || !form.start_date || !form.end_date || !form.season_id}
+            onSave={handleSave}
+            trigger={
+              <Button className="bg-primary" onClick={openCreateDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                {tc("create")}
               </Button>
+            }
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{tt("season")}</Label>
+                <Select
+                  value={form.season_id}
+                  onValueChange={(v) => setForm({ ...form, season_id: v })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seasons.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("format")}</Label>
+                <Select
+                  value={form.format}
+                  onValueChange={(v) =>
+                    setForm({ ...form, format: v as TournamentFormat })
+                  }
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cup">{tt("formatCup")}</SelectItem>
+                    <SelectItem value="placement">{tt("formatPlacement")}</SelectItem>
+                    <SelectItem value="round_robin">{tt("formatRoundRobin")}</SelectItem>
+                    <SelectItem value="custom">{tt("formatCustom")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div className="space-y-2">
+              <Label>{tt("name")}</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{tt("location")}</Label>
+              <Input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                className="bg-background"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{tt("startDate")}</Label>
+                <Input
+                  type="date"
+                  value={form.start_date}
+                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("endDate")}</Label>
+                <Input
+                  type="date"
+                  value={form.end_date}
+                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{tt("description")}</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="bg-background"
+              />
+            </div>
+          </AdminDialog>
+        </div>
 
-      <div className="p-6 space-y-2">
-        {tournaments.length === 0 ? (
-          <p className="text-muted-foreground text-center py-10">
-            {tt("noTournaments")}
-          </p>
-        ) : (
-          tournaments.map((tournament) => (
+        <div className="p-6 space-y-2">
+          {tournaments.map((tournament) => (
             <Card key={tournament.id} className="border-border/40">
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -389,9 +332,9 @@ export default function AdminTournamentsPage() {
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
+          ))}
+        </div>
       </div>
-    </div>
+    </LoadingErrorEmpty>
   );
 }

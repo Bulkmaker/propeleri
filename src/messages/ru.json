@@ -291,7 +291,8 @@
     "game": "Матч",
     "training": "Тренировка",
     "tournament": "Турнир",
-    "social": "Мероприятие"
+    "social": "Мероприятие",
+    "viewTournament": "Смотреть турнир"
   },
   "auth": {
     "loginTitle": "Вход",

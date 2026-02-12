@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,28 +15,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Megaphone, Plus, Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Megaphone, Plus, Eye, EyeOff, Trash2 } from "lucide-react";
 import type { TeamEvent, EventType, Tournament } from "@/types/database";
 import {
   belgradeDateTimeLocalInputToUtcIso,
   formatInBelgrade,
 } from "@/lib/utils/datetime";
-
-function isAbortError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  if ("name" in error && error.name === "AbortError") return true;
-  if ("message" in error && typeof error.message === "string") {
-    return error.message.toLowerCase().includes("abort");
-  }
-  return false;
-}
+import { AdminDialog } from "@/components/admin/AdminDialog";
+import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { useAdminData } from "@/hooks/use-admin-data";
+import { SelectWithNone } from "@/components/ui/SelectWithNone";
 
 export default function AdminEventsPage() {
   const t = useTranslations("admin");
@@ -44,9 +32,7 @@ export default function AdminEventsPage() {
   const tc = useTranslations("common");
   const te = useTranslations("events");
 
-  const [events, setEvents] = useState<TeamEvent[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -64,52 +50,24 @@ export default function AdminEventsPage() {
     is_published: true,
   });
 
-  const supabase = useMemo(() => createClient(), []);
+  const queryFn = useCallback(
+    (sb: Parameters<Parameters<typeof useAdminData>[0]>[0]) =>
+      sb.from("events").select("*").order("created_at", { ascending: false }),
+    []
+  );
 
-  async function loadData() {
-    try {
-      const [eventsRes, tournamentsRes] = await Promise.all([
-        supabase.from("events").select("*").order("created_at", { ascending: false }),
-        supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
-      ]);
-      setEvents(eventsRes.data ?? []);
-      setTournaments(tournamentsRes.data ?? []);
-    } catch (error) {
-      if (!isAbortError(error)) {
-        console.error("Failed to load admin events data", error);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: events, loading, error, reload, supabase } = useAdminData<TeamEvent>(queryFn);
 
+  // Load tournaments separately (needed for form dropdown)
   useEffect(() => {
-    let active = true;
-
-    async function loadInitialData() {
-      try {
-        const [eventsRes, tournamentsRes] = await Promise.all([
-          supabase.from("events").select("*").order("created_at", { ascending: false }),
-          supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
-        ]);
-        if (!active) return;
-        setEvents(eventsRes.data ?? []);
-        setTournaments(tournamentsRes.data ?? []);
-      } catch (error) {
-        if (!isAbortError(error)) {
-          console.error("Failed to load initial admin events data", error);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadInitialData();
-    return () => {
-      active = false;
-    };
+    const timer = window.setTimeout(async () => {
+      const { data } = await supabase
+        .from("tournaments")
+        .select("*")
+        .order("start_date", { ascending: false });
+      setTournaments(data ?? []);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [supabase]);
 
   async function handleSave() {
@@ -145,7 +103,7 @@ export default function AdminEventsPage() {
       tournament_id: "",
       is_published: true,
     });
-    loadData();
+    await reload();
   }
 
   async function togglePublish(id: string, current: boolean) {
@@ -153,7 +111,7 @@ export default function AdminEventsPage() {
       .from("events")
       .update({ is_published: !current })
       .eq("id", id);
-    loadData();
+    await reload();
   }
 
   async function handleDeleteEvent(id: string) {
@@ -163,33 +121,30 @@ export default function AdminEventsPage() {
       window.alert(te("deleteError", { message: error.message }));
       return;
     }
-    loadData();
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+    await reload();
   }
 
   return (
-    <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("manageEvents")}</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              {tc("create")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{t("newEvent")}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+    <LoadingErrorEmpty loading={loading} error={error} isEmpty={events.length === 0} onRetry={reload}>
+      <div>
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">{t("manageEvents")}</h1>
+          <AdminDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            title={t("newEvent")}
+            saving={saving}
+            disabled={!form.title}
+            onSave={handleSave}
+            className="max-w-lg"
+            trigger={
+              <Button onClick={() => setDialogOpen(true)} className="bg-primary">
+                <Plus className="h-4 w-4 mr-2" />
+                {tc("create")}
+              </Button>
+            }
+          >
+            <div className="max-h-[70vh] overflow-y-auto space-y-4">
               <div className="space-y-2">
                 <Label>{t("titleSr")}</Label>
                 <Input
@@ -203,9 +158,7 @@ export default function AdminEventsPage() {
                   <Label>{t("titleRu")}</Label>
                   <Input
                     value={form.title_ru}
-                    onChange={(e) =>
-                      setForm({ ...form, title_ru: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, title_ru: e.target.value })}
                     className="bg-background"
                   />
                 </div>
@@ -213,9 +166,7 @@ export default function AdminEventsPage() {
                   <Label>{t("titleEn")}</Label>
                   <Input
                     value={form.title_en}
-                    onChange={(e) =>
-                      setForm({ ...form, title_en: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, title_en: e.target.value })}
                     className="bg-background"
                   />
                 </div>
@@ -224,9 +175,7 @@ export default function AdminEventsPage() {
                 <Label>{t("descriptionSr")}</Label>
                 <Input
                   value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="bg-background"
                 />
               </div>
@@ -259,9 +208,7 @@ export default function AdminEventsPage() {
                   <Input
                     type="datetime-local"
                     value={form.event_date}
-                    onChange={(e) =>
-                      setForm({ ...form, event_date: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, event_date: e.target.value })}
                     className="bg-background"
                   />
                 </div>
@@ -269,98 +216,81 @@ export default function AdminEventsPage() {
               {form.event_type === "tournament" && (
                 <div className="space-y-2">
                   <Label>{tt("linkTournament")}</Label>
-                  <Select
-                    value={form.tournament_id || "__none__"}
-                    onValueChange={(v) =>
-                      setForm({ ...form, tournament_id: v === "__none__" ? "" : v })
-                    }
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">{tt("none")}</SelectItem>
-                      {tournaments.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name} ({t.start_date} — {t.end_date})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectWithNone
+                    value={form.tournament_id}
+                    onValueChange={(v) => setForm({ ...form, tournament_id: v })}
+                    options={tournaments.map((t) => ({
+                      value: t.id,
+                      label: `${t.name} (${t.start_date} — ${t.end_date})`,
+                    }))}
+                    noneLabel={tt("none")}
+                  />
                 </div>
               )}
               <div className="space-y-2">
                 <Label>{t("location")}</Label>
                 <Input
                   value={form.location}
-                  onChange={(e) =>
-                    setForm({ ...form, location: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
                   className="bg-background"
                 />
               </div>
-              <Button
-                onClick={handleSave}
-                disabled={saving || !form.title}
-                className="w-full bg-primary"
-              >
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {tc("save")}
-              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </AdminDialog>
+        </div>
 
-      <div className="p-6 space-y-2">
-        {events.map((event) => (
-          <Card key={event.id} className="border-border/40">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Megaphone className="h-5 w-5 text-purple-400" />
-                <div>
-                  <p className="font-medium text-sm">{event.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {event.event_type} |{" "}
-                    {event.event_date
-                      ? formatInBelgrade(event.event_date, "sr-Latn", { dateStyle: "short" })
-                      : t("noDate")}
-                  </p>
+        <div className="p-6 space-y-2">
+          {events.map((event) => (
+            <Card key={event.id} className="border-border/40">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Megaphone className="h-5 w-5 text-purple-400" />
+                  <div>
+                    <p className="font-medium text-sm">{event.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {event.event_type} |{" "}
+                      {event.event_date
+                        ? formatInBelgrade(event.event_date, "sr-Latn", {
+                            dateStyle: "short",
+                          })
+                        : t("noDate")}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge
-                  className={
-                    event.is_published
-                      ? "bg-green-600/20 text-green-400"
-                      : "bg-red-600/20 text-red-400"
-                  }
-                >
-                  {event.is_published ? t("published") : t("draft")}
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => togglePublish(event.id, event.is_published)}
-                >
-                  {event.is_published ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDeleteEvent(event.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={
+                      event.is_published
+                        ? "bg-green-600/20 text-green-400"
+                        : "bg-red-600/20 text-red-400"
+                    }
+                  >
+                    {event.is_published ? t("published") : t("draft")}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => togglePublish(event.id, event.is_published)}
+                  >
+                    {event.is_published ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeleteEvent(event.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-    </div>
+    </LoadingErrorEmpty>
   );
 }

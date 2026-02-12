@@ -15,6 +15,8 @@ function getLocalizedField(
   return item.title;
 }
 
+export const revalidate = 600;
+
 export default async function GalleryPage({
   params,
 }: {

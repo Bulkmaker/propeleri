@@ -16,6 +16,8 @@ import { Trophy, Target, TrendingUp, Dumbbell } from "lucide-react";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import type { PlayerPosition, PlayerGameTotals, PlayerTrainingTotals } from "@/types/database";
 
+export const revalidate = 300;
+
 export default async function StatsPage({
   params,
 }: {

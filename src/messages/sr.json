@@ -291,7 +291,8 @@
     "game": "Utakmica",
     "training": "Trening",
     "tournament": "Turnir",
-    "social": "Druzenje"
+    "social": "Druzenje",
+    "viewTournament": "Pogledaj turnir"
   },
   "auth": {
     "loginTitle": "Prijavi se",
