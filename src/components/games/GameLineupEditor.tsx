@@ -910,9 +910,9 @@ function PositionSlot({
     : "";
 
   const nameLabel = (
-    <div className="text-center">
+    <div className="text-center z-10 -mt-3 sm:-mt-4">
       {!isEmpty && player ? (
-        <p className="inline-block px-3 py-1 rounded-full bg-team-navy/80 text-[11px] sm:text-xs font-semibold text-white whitespace-nowrap">
+        <p className="inline-block px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-team-navy/90 text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap shadow-md border border-white/10">
           #{player.jersey_number ?? ""} {displayName}
         </p>
       ) : (
@@ -924,7 +924,7 @@ function PositionSlot({
   // Player circle content (shared between readOnly and edit modes)
   const playerCircle = (
     <div
-      className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
+      className={`relative w-16 h-16 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
         ? readOnly
           ? "bg-white/40"
           : "bg-white/60 hover:bg-white/80 cursor-pointer"
@@ -964,7 +964,7 @@ function PositionSlot({
           )}
           {/* Player avatar or initials */}
           {player?.avatar_url ? (
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden">
+            <div className="w-12 h-12 sm:w-20 sm:h-20 rounded-full overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={player.avatar_url}
@@ -974,7 +974,7 @@ function PositionSlot({
             </div>
           ) : (
             <div
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-white text-base sm:text-lg font-bold"
+              className="w-12 h-12 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-white text-xs sm:text-lg font-bold"
               style={{ backgroundColor: color }}
             >
               {player
@@ -990,7 +990,7 @@ function PositionSlot({
   // Read-only mode: no Popover, no drag
   if (readOnly) {
     return (
-      <div className="flex flex-col items-center gap-0.5 w-32">
+      <div className="flex flex-col items-center w-32">
         {playerCircle}
         {nameLabel}
       </div>
@@ -999,7 +999,7 @@ function PositionSlot({
 
   // Edit mode: full Popover + drag & drop
   return (
-    <div className="flex flex-col items-center gap-0.5 w-32">
+    <div className="flex flex-col items-center w-32">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div
