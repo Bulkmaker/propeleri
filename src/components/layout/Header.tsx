@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,7 +113,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2 hover:bg-accent">
                     <Avatar className="h-7 w-7">
-                      <AvatarImage src={profile?.avatar_url ?? undefined} />
+                      <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile ? `${profile.first_name} ${profile.last_name}` : ""} />
                       <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                         {initials}
                       </AvatarFallback>
@@ -159,11 +159,12 @@ export function Header() {
           {/* Mobile menu */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="Open navigation menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-72 bg-background border-border">
+              <SheetTitle className="sr-only">{t("menu")}</SheetTitle>
               <nav className="flex flex-col gap-1 mt-8">
                 {navLinks.map((link) => {
                   const isActive = pathname === link.href;

@@ -34,7 +34,8 @@
     "notSelected": "Nije izabrano",
     "error": "Doslo je do greske",
     "retry": "Pokusaj ponovo",
-    "deleteConfirm": "Da li ste sigurni da želite da obrišete ovu stavku?"
+    "deleteConfirm": "Da li ste sigurni da želite da obrišete ovu stavku?",
+    "menu": "Meni"
   },
   "locale": {
     "sr": "Srpski",

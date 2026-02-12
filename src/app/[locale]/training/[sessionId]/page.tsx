@@ -335,7 +335,7 @@ function TeamPlayerCard({
   return (
     <div className="flex items-center gap-3 py-2 px-3 rounded-md bg-secondary/30">
       <Avatar className="h-8 w-8">
-        <AvatarImage src={player.avatar_url ?? undefined} />
+        <AvatarImage src={player.avatar_url ?? undefined} alt={`${player.first_name} ${player.last_name}`} />
         <AvatarFallback className="bg-secondary text-xs font-bold">
           {initials}
         </AvatarFallback>

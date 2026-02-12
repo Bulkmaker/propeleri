@@ -201,7 +201,7 @@ export default async function HomePage({
         </div>
       </section>
 
-      <section className="club-pulse">
+      <section className="club-pulse relative z-2">
         <div className="container mx-auto px-4">
           <div className="club-pulse__wrap">
             <p className="club-pulse__title">
@@ -231,7 +231,7 @@ export default async function HomePage({
         </div>
       </section>
 
-      <section className="container mx-auto px-4 pt-10 pb-14">
+      <section className="container mx-auto px-4 pt-10 pb-14 relative z-2">
         <div className="club-content-grid">
           <article className="club-section club-section--leaders">
             <header className="club-section__header">

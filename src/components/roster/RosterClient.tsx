@@ -117,9 +117,9 @@ export default function RosterClient({ players }: { players: Profile[] }) {
         <div className="flex flex-col sm:flex-row gap-4 sm:items-end justify-between">
           <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
             <div className="space-y-2">
-              <Label>{t("sortBy")}</Label>
+              <Label id="sort-by-label">{t("sortBy")}</Label>
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as RosterSort)}>
-                <SelectTrigger>
+                <SelectTrigger aria-labelledby="sort-by-label">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -129,12 +129,12 @@ export default function RosterClient({ players }: { players: Profile[] }) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t("sortDirection")}</Label>
+              <Label id="sort-direction-label">{t("sortDirection")}</Label>
               <Select
                 value={sortDirection}
                 onValueChange={(value) => setSortDirection(value as SortDirection)}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-labelledby="sort-direction-label">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -226,7 +226,7 @@ function PlayerCard({ player }: { player: Profile }) {
       <Card className="border-border/40 card-hover bg-card group cursor-pointer h-full">
         <CardContent className="p-4 text-center">
           <Avatar className="h-20 w-20 mx-auto mb-3 ring-2 ring-border group-hover:ring-primary/50 transition-all">
-            <AvatarImage src={player.avatar_url ?? undefined} />
+            <AvatarImage src={player.avatar_url ?? undefined} alt={`${player.first_name} ${player.last_name}`} />
             <AvatarFallback className="bg-secondary text-lg font-bold">
               {initials}
             </AvatarFallback>

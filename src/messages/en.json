@@ -34,7 +34,8 @@
     "notSelected": "Not selected",
     "error": "An error occurred",
     "retry": "Retry",
-    "deleteConfirm": "Are you sure you want to delete this item?"
+    "deleteConfirm": "Are you sure you want to delete this item?",
+    "menu": "Menu"
   },
   "locale": {
     "sr": "Serbian",

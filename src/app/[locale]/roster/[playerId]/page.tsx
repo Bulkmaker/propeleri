@@ -77,7 +77,7 @@ export default async function PlayerProfilePage({
       {/* Player Header */}
       <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
         <Avatar className="h-32 w-32 ring-4 ring-primary/20">
-          <AvatarImage src={player.avatar_url ?? undefined} />
+          <AvatarImage src={player.avatar_url ?? undefined} alt={`${player.first_name} ${player.last_name}`} />
           <AvatarFallback className="bg-secondary text-3xl font-bold">
             {initials}
           </AvatarFallback>

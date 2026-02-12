@@ -1164,7 +1164,7 @@ function PositionSlot({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={player.avatar_url}
-                alt=""
+                alt={`${player.first_name} ${player.last_name}`}
                 className="w-full h-full object-cover"
               />
             </div>

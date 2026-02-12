@@ -212,7 +212,7 @@ export default function ProfilePage() {
           {/* Avatar */}
           <div className="flex flex-col items-center mb-8">
             <Avatar className="h-24 w-24 ring-4 ring-primary/20 mb-4">
-              <AvatarImage src={profile.avatar_url ?? undefined} />
+              <AvatarImage src={profile.avatar_url ?? undefined} alt={`${profile.first_name} ${profile.last_name}`} />
               <AvatarFallback className="bg-secondary text-2xl font-bold">
                 {initials}
               </AvatarFallback>

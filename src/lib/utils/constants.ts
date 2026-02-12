@@ -37,8 +37,8 @@ export const LINE_SLOTS: SlotPosition[] = ["LW", "C", "RW", "LD", "RD"];
 export const GOALIE_SLOTS: SlotPosition[] = ["GK"];
 
 export const RESULT_COLORS: Record<GameResult, string> = {
-  win: "bg-green-600 text-white",
-  loss: "bg-red-600 text-white",
+  win: "bg-green-700 text-white",
+  loss: "bg-red-700 text-white",
   draw: "bg-yellow-600 text-black",
   pending: "bg-muted text-muted-foreground",
 };

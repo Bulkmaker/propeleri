@@ -210,19 +210,33 @@ export default async function TournamentDetailPage({
               return (
                 <Card key={match.id} className="border-border/40">
                   <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 flex-1">
+                    <div className="flex flex-col gap-2">
+                      {/* Badges row */}
+                      <div className="flex items-center gap-2 flex-wrap">
                         {groupName && (
-                          <Badge className="bg-blue-500/20 text-blue-400 text-xs shrink-0">
+                          <Badge className="bg-blue-500/20 text-blue-400 text-xs">
                             {groupName}
                           </Badge>
                         )}
                         {match.bracket_label && (
-                          <Badge className="bg-purple-500/20 text-purple-400 text-xs shrink-0">
+                          <Badge className="bg-purple-500/20 text-purple-400 text-xs">
                             {match.bracket_label}
                           </Badge>
                         )}
-                        <div className="flex items-center gap-1.5 min-w-0">
+                        {match.is_completed && (
+                          <Badge className="bg-green-600/20 text-green-400 text-xs">
+                            {tt("completed")}
+                          </Badge>
+                        )}
+                        {match.match_date && (
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {formatInBelgrade(match.match_date, "sr-Latn", { dateStyle: "short" })}
+                          </span>
+                        )}
+                      </div>
+                      {/* Teams + score row */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
                           <TeamAvatar
                             name={teamA?.name ?? "TBD"}
                             logoUrl={teamA?.logo_url}
@@ -239,16 +253,10 @@ export default async function TournamentDetailPage({
                             {teamA?.name ?? "TBD"}
                           </span>
                         </div>
-                        <span className="text-sm font-bold tabular-nums">
+                        <span className="text-sm font-bold tabular-nums shrink-0">
                           {match.score_a} : {match.score_b}
                         </span>
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <TeamAvatar
-                            name={teamB?.name ?? "TBD"}
-                            logoUrl={teamB?.logo_url}
-                            country={teamB?.country}
-                            size="xs"
-                          />
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
                           <span
                             className={`text-sm truncate ${
                               winner === match.team_b_id
@@ -258,19 +266,13 @@ export default async function TournamentDetailPage({
                           >
                             {teamB?.name ?? "TBD"}
                           </span>
+                          <TeamAvatar
+                            name={teamB?.name ?? "TBD"}
+                            logoUrl={teamB?.logo_url}
+                            country={teamB?.country}
+                            size="xs"
+                          />
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {match.is_completed && (
-                          <Badge className="bg-green-600/20 text-green-400 text-xs">
-                            {tt("completed")}
-                          </Badge>
-                        )}
-                        {match.match_date && (
-                          <span className="text-xs text-muted-foreground">
-                            {formatInBelgrade(match.match_date, "sr-Latn", { dateStyle: "short" })}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </CardContent>

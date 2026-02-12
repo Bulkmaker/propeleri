@@ -337,16 +337,7 @@ export default function AdminTeamsPage() {
                 </label>
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.is_propeleri}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, is_propeleri: e.target.checked }))
-                  }
-                />
-                {tt("propeleri")}
-              </label>
+
 
               {error && (
                 <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
@@ -386,7 +377,7 @@ export default function AdminTeamsPage() {
                   variant="ghost"
                   className="h-8 w-8 text-destructive hover:text-destructive bg-background/50 backdrop-blur-sm hover:bg-destructive/10"
                   onClick={() => void handleDelete(team.id)}
-                  disabled={saving}
+                  disabled={saving || team.is_propeleri}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
