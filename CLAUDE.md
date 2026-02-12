@@ -67,7 +67,7 @@ src/
 │   ├── shared/             # Shared/reusable components
 │   └── ui/                 # shadcn/ui primitives
 ├── lib/
-│   ├── supabase/           # server.ts, client.ts, middleware.ts
+│   ├── supabase/           # server.ts, client.ts, proxy.ts
 │   └── utils/
 │       ├── constants.ts    # Position colors, role mappings
 │       ├── country.ts      # Country flags (emoji from code)
@@ -84,7 +84,7 @@ src/
 ```
 
 ### Routing & i18n
-All pages live under `src/app/[locale]/`. The middleware (`src/middleware.ts`) handles both locale rewriting and Supabase session refresh. With `as-needed` prefix, Serbian URLs have no prefix (`/roster`), other locales are prefixed (`/ru/roster`, `/en/roster`).
+All pages live under `src/app/[locale]/`. The middleware (`src/proxy.ts`) handles both locale rewriting and Supabase session refresh. With `as-needed` prefix, Serbian URLs have no prefix (`/roster`), other locales are prefixed (`/ru/roster`, `/en/roster`).
 
 Translations are in `src/messages/{sr,ru,en}.json`, organized by namespace. Use `useTranslations("namespace")` in components. Database content with multilingual fields uses `title`, `title_ru`, `title_en` columns.
 
