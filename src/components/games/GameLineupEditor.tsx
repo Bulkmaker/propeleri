@@ -72,8 +72,8 @@ const SLOT_LOCATION_CLASSES: Record<string, string> = {
   LW: "left-[15%] sm:left-[20%] top-[15%]",
   C: "left-[50%] top-[33%]",
   RW: "left-[85%] sm:left-[80%] top-[15%]",
-  LD: "left-[12%] sm:left-[27%] top-[56%]",
-  RD: "left-[88%] sm:left-[73%] top-[56%]",
+  LD: "left-[18%] sm:left-[27%] top-[56%]",
+  RD: "left-[82%] sm:left-[73%] top-[56%]",
   GK: "left-[50%] top-[70%]",
 };
 
@@ -990,7 +990,7 @@ function PositionSlot({
   // Read-only mode: no Popover, no drag
   if (readOnly) {
     return (
-      <div className="flex flex-col-reverse sm:flex-col items-center gap-0.5 w-32">
+      <div className="flex flex-col items-center gap-0.5 w-32">
         {playerCircle}
         {nameLabel}
       </div>
@@ -999,7 +999,7 @@ function PositionSlot({
 
   // Edit mode: full Popover + drag & drop
   return (
-    <div className="flex flex-col-reverse sm:flex-col items-center gap-0.5 w-32">
+    <div className="flex flex-col items-center gap-0.5 w-32">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div
