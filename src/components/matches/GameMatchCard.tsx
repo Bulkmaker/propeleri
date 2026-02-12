@@ -52,21 +52,21 @@ export function GameMatchCard({
       <div className="block">
         <Card className="border-border/40 bg-card/95 card-hover cursor-pointer py-0">
           <CardContent className="px-2.5 py-2.5 md:px-3.5 md:py-3">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <Image
                     src="/logo.svg"
                     alt={teamName}
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 object-contain shrink-0"
+                    width={24}
+                    height={24}
+                    className="h-6 w-6 object-contain shrink-0"
                   />
-                  <span className="font-semibold text-sm md:text-base truncate">{teamName}</span>
+                  <span className="font-semibold text-sm truncate">{teamName}</span>
                   {isPending ? (
-                    <span className="text-muted-foreground text-sm">vs</span>
+                    <span className="text-muted-foreground text-xs mx-1">vs</span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded bg-secondary text-sm font-bold tabular-nums">
+                    <span className="px-1.5 py-0.5 rounded bg-secondary text-xs font-bold tabular-nums shrink-0">
                       {teamScore}:{opponentScore}
                     </span>
                   )}
@@ -74,16 +74,17 @@ export function GameMatchCard({
                     name={opponentName}
                     logoUrl={opponentLogoUrl}
                     country={opponentCountry}
-                    size="sm"
+                    size="xs"
+                    className="h-6 w-6"
                   />
-                  <span className="font-semibold text-sm md:text-base truncate">{opponentName}</span>
+                  <span className="font-semibold text-sm truncate">{opponentName}</span>
                 </div>
 
                 <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{dateLabel}</span>
-                  <span className="text-base font-semibold leading-none text-foreground">{timeLabel}</span>
+                  <span className="text-sm font-semibold leading-none text-foreground">{timeLabel}</span>
                   {location && (
-                    <span className="hidden md:inline-flex items-center gap-1">
+                    <span className="hidden sm:inline-flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
                       {location}
                     </span>
@@ -92,10 +93,10 @@ export function GameMatchCard({
               </div>
 
               {(badges || !isPending || actions) && (
-                <div className={cn("flex items-center gap-2 shrink-0", isPending && "hidden sm:flex")}>
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto mt-2 sm:mt-0">
                   {badges}
                   {!isPending && (
-                    <Badge className={cn("text-xs", resultClassName)}>
+                    <Badge className={cn("text-[10px] h-5 px-1.5", resultClassName)}>
                       {resultLabel}
                     </Badge>
                   )}

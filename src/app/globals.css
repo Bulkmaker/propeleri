@@ -622,28 +622,40 @@ html {
 .club-pulse-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+  gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 999px;
   background: rgba(2, 6, 23, 0.52);
-  padding: 7px 11px;
+  padding: 6px 10px;
 }
 
 .club-pulse-item__match {
   color: #e2e8f0;
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .club-pulse-item__score {
   color: #f8fafc;
   font-weight: 800;
   font-size: 13px;
+  flex-shrink: 0;
 }
 
 .club-pulse-item__date {
   color: #94a3b8;
   font-size: 12px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .club-pulse-item__date {
+    display: none;
+  }
 }
 
 .club-pulse__empty {
@@ -706,8 +718,14 @@ html {
 
 .club-leaders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .club-leaders-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
 }
 
 .club-scorer-card {
@@ -842,8 +860,14 @@ html {
 
 .club-events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .club-events-grid {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
 }
 
 .club-event-poster {

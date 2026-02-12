@@ -9,13 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -31,6 +24,8 @@ import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { COUNTRY_OPTIONS, countryFlagEmoji, countryDisplayName } from "@/lib/utils/country";
 import { processImageFile } from "@/lib/utils/image-processing";
+import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { SelectWithNone } from "@/components/ui/SelectWithNone";
 
 function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -228,15 +223,8 @@ export default function AdminTeamsPage() {
     return map;
   }, [games, teams]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
+    <LoadingErrorEmpty loading={loading} isEmpty={teams.length === 0} onRetry={loadData}>
     <div>
       <AdminPageHeader title={t("manageTeams")}>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -271,27 +259,17 @@ export default function AdminTeamsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>{tt("country")}</Label>
-                  <Select
-                    value={form.country || "__none__"}
+                  <SelectWithNone
+                    value={form.country}
                     onValueChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        country: value === "__none__" ? "" : value,
-                      }))
+                      setForm((prev) => ({ ...prev, country: value }))
                     }
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder={tt("country")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">—</SelectItem>
-                      {COUNTRY_OPTIONS.map((option) => (
-                        <SelectItem key={option.code} value={option.code}>
-                          {countryFlagEmoji(option.code)} {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={COUNTRY_OPTIONS.map((option) => ({
+                      value: option.code,
+                      label: `${countryFlagEmoji(option.code)} ${option.label}`,
+                    }))}
+                    placeholder={tt("country")}
+                  />
                 </div>
               </div>
 
@@ -449,5 +427,6 @@ export default function AdminTeamsPage() {
         })}
       </div>
     </div>
+    </LoadingErrorEmpty>
   );
 }

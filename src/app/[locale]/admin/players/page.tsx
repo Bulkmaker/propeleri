@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload, Trash2 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
 import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
@@ -522,15 +523,8 @@ export default function AdminPlayersPage() {
     return player.email;
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
+    <LoadingErrorEmpty loading={loading} isEmpty={players.length === 0} onRetry={loadPlayers}>
     <div>
       <AdminPageHeader title={t("managePlayers")}>
         <Button onClick={openCreate} className="bg-primary">
@@ -1176,5 +1170,6 @@ export default function AdminPlayersPage() {
         </Card>
       </div>
     </div>
+    </LoadingErrorEmpty>
   );
 }

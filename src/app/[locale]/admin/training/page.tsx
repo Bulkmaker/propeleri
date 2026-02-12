@@ -31,6 +31,7 @@ import {
   formatInBelgrade,
   utcToBelgradeDateTimeLocalInput,
 } from "@/lib/utils/datetime";
+import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 
 const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
 const WEEKDAY_OPTIONS = [
@@ -368,15 +369,8 @@ export default function AdminTrainingPage() {
     setDeletingId(null);
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
+    <LoadingErrorEmpty loading={loading} isEmpty={sessions.length === 0} onRetry={loadData}>
     <div>
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("manageTraining")}</h1>
@@ -691,5 +685,6 @@ export default function AdminTrainingPage() {
         ))}
       </div>
     </div>
+    </LoadingErrorEmpty>
   );
 }

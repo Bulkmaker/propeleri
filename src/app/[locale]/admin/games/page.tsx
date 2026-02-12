@@ -14,6 +14,7 @@ import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Badge } from "@/components/ui/badge";
 import { GameForm } from "@/components/admin/games/GameForm";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 
 export default function AdminGamesPage() {
   const t = useTranslations("admin");
@@ -117,24 +118,8 @@ export default function AdminGamesPage() {
       </AdminPageHeader>
 
       <div className="p-6 space-y-3">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin mb-4 opacity-50" />
-            <p>{tc("loading")}</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 text-destructive text-center">
-            <p className="mb-4">{error}</p>
-            <Button onClick={() => loadData()} variant="outline" className="border-destructive/30 hover:bg-destructive/10">
-              {tc("retry")}
-            </Button>
-          </div>
-        ) : games.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
-            <p>{tc("noData")}</p>
-          </div>
-        ) : (
-          games.map((game) => {
+        <LoadingErrorEmpty loading={loading} error={error} isEmpty={games.length === 0} onRetry={loadData}>
+          {games.map((game) => {
             const opponentTeam = teams.find((t) => t.id === game.opponent_team_id);
             const opponentName = opponentTeam?.name ?? game.opponent ?? tg("unknownOpponent");
             const teamScore = game.is_home ? game.home_score : game.away_score;
@@ -185,8 +170,8 @@ export default function AdminGamesPage() {
                 />
               </Link>
             );
-          })
-        )}
+          })}
+        </LoadingErrorEmpty>
       </div>
     </div>
   );
