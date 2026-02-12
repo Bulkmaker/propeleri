@@ -924,7 +924,7 @@ function PositionSlot({
   // Player circle content (shared between readOnly and edit modes)
   const playerCircle = (
     <div
-      className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
+      className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
         ? readOnly
           ? "bg-white/40"
           : "bg-white/60 hover:bg-white/80 cursor-pointer"
