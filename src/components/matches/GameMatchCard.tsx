@@ -115,7 +115,7 @@ export function GameMatchCard({
   const posterContent = (
     <div className="block max-w-4xl mx-auto px-1 md:px-2   my-8">
       <Card className="border-primary/20 card-hover bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.08),transparent_52%),linear-gradient(135deg,rgba(12,28,59,0.95),rgba(14,26,53,0.96))] cursor-pointer overflow-hidden py-0">
-        <CardContent className="px-4 py-4 md:px-6 md:py-4.5 relative">
+        <CardContent className="px-4 py-4 md:px-12 md:py-9 relative">
           <div className="pointer-events-none absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-red-500/20 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-blue-500/25 blur-2xl" />
 
@@ -138,7 +138,7 @@ export function GameMatchCard({
 
             <div className="grid grid-cols-2 md:grid-cols-[1fr_auto_1fr] items-center gap-y-6 gap-x-3 md:gap-6">
               {/* Home Team */}
-              <div className="flex flex-col items-center md:items-start text-center md:text-left gap-2 order-1 md:order-none">
+              <div className="flex flex-col items-center text-center gap-2 order-1 md:order-none">
                 <Image
                   src="/logo.svg"
                   alt={teamName}
@@ -152,7 +152,7 @@ export function GameMatchCard({
               </div>
 
               {/* Away Team (Mobile: Right Column) */}
-              <div className="flex flex-col items-center md:items-end text-center md:text-right gap-2 order-2 md:order-last">
+              <div className="flex flex-col items-center text-center gap-2 order-2 md:order-last">
                 <TeamAvatar
                   name={opponentName}
                   logoUrl={opponentLogoUrl}
@@ -160,7 +160,7 @@ export function GameMatchCard({
                   size="lg"
                   className="h-24 w-24 sm:h-28 sm:w-28 md:h-36 md:w-36 text-3xl sm:text-4xl md:text-5xl"
                 />
-                <div className={cn("font-bold text-sm sm:text-base md:text-2xl tracking-wide max-w-[220px] line-clamp-2 md:truncate")}>
+                <div className={cn("font-bold text-sm sm:text-base md:text-2xl tracking-wide line-clamp-2 md:line-clamp-none")}>
                   {opponentName.toUpperCase()}
                 </div>
               </div>
