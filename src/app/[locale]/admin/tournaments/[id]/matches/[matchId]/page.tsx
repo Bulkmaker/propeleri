@@ -608,7 +608,7 @@ export default function TournamentMatchEditorPage() {
         <Tabs defaultValue="match" className="w-full">
           <TabsList className="mb-4 flex h-auto flex-wrap gap-1">
             <TabsTrigger value="match">{tt("matchAndTime")}</TabsTrigger>
-            <TabsTrigger value="opponent">{tt("opponent")}</TabsTrigger>
+
             <TabsTrigger value="roster">{tt("roster")}</TabsTrigger>
             <TabsTrigger value="lineup">{tt("lineup")}</TabsTrigger>
             <TabsTrigger value="stats">{tt("statistics")}</TabsTrigger>
@@ -881,139 +881,7 @@ export default function TournamentMatchEditorPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="opponent" className="space-y-4">
-            <Card className="border-border/40">
-              <CardContent className="p-4 space-y-4">
-                <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] items-end">
-                  <div className="space-y-2">
-                    <Label>{tt("selectTeamA")}</Label>
-                    <Select
-                      value={form.team_a_id || "__none__"}
-                      onValueChange={(value) =>
-                        setForm((prev) => {
-                          const nextTeamAId = value === "__none__" ? "" : value;
-                          return {
-                            ...prev,
-                            team_a_id: nextTeamAId,
-                            team_b_id: prev.team_b_id === nextTeamAId ? "" : prev.team_b_id,
-                          };
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">—</SelectItem>
-                        {scopedTeams.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        team_a_id: prev.team_b_id,
-                        team_b_id: prev.team_a_id,
-                      }))
-                    }
-                  >
-                    <ArrowLeftRight className="h-4 w-4" />
-                  </Button>
-
-                  <div className="space-y-2">
-                    <Label>{tt("selectTeamB")}</Label>
-                    <Select
-                      value={form.team_b_id || "__none__"}
-                      onValueChange={(value) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          team_b_id: value === "__none__" ? "" : value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">—</SelectItem>
-                        {scopedTeamBOptions.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {form.stage === "group" && form.group_id && scopedTeams.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {tt("noTeamsInGroup")}
-                  </p>
-                )}
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-md border border-border/40 p-3">
-                    <div className="flex items-center gap-2">
-                      <TeamAvatar
-                        name={selectedTeamA?.name ?? tt("teamA")}
-                        logoUrl={selectedTeamA?.logo_url}
-                        country={selectedTeamA?.country}
-                        size="sm"
-                      />
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{selectedTeamA?.name ?? tc("notSelected")}</p>
-                        {selectedTeamA?.is_propeleri && (
-                          <Badge className="bg-primary/20 text-primary text-xs mt-1">{tt("propeleri")}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-md border border-border/40 p-3">
-                    <div className="flex items-center gap-2">
-                      <TeamAvatar
-                        name={selectedTeamB?.name ?? tt("teamB")}
-                        logoUrl={selectedTeamB?.logo_url}
-                        country={selectedTeamB?.country}
-                        size="sm"
-                      />
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{selectedTeamB?.name ?? tc("notSelected")}</p>
-                        {selectedTeamB?.is_propeleri && (
-                          <Badge className="bg-primary/20 text-primary text-xs mt-1">{tt("propeleri")}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  {hasPropeleriTeam
-                    ? tt("lineupAvailable")
-                    : tt("lineupNotAvailable")}
-                </p>
-
-                <Button onClick={() => void saveMatch()} disabled={savingAction === "match"}>
-                  {savingAction === "match" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  {tc("save")}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="roster" className="space-y-4">
             <Card className="border-border/40">
