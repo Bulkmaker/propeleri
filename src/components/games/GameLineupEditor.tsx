@@ -929,9 +929,17 @@ function PositionSlot({
           ? "bg-white/40"
           : "bg-white/60 hover:bg-white/80 cursor-pointer"
         : readOnly
-          ? ""
-          : "hover:scale-105 active:cursor-grabbing cursor-pointer"
+          ? "border-2 border-solid"
+          : "border-2 border-solid hover:scale-105 active:cursor-grabbing cursor-pointer"
         }`}
+      style={
+        isEmpty
+          ? undefined
+          : {
+            borderColor: `${color}cc`,
+            backgroundColor: `${color}10`,
+          }
+      }
     >
       {isEmpty ? (
         <>
