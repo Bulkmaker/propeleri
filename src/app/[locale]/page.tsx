@@ -108,6 +108,7 @@ export default async function HomePage({
   const recentGames = (recentGamesData ?? []) as Game[];
   const topScorers = (topScorersData ?? []) as PlayerGameTotals[];
   const teams = (teamsData ?? []) as Team[];
+  const teamMap = new Map(teams.map((t) => [t.id, t]));
 
   // Mix events and tournaments
   const rawEvents = (upcomingEventsData ?? []) as TeamEvent[];
@@ -136,7 +137,7 @@ export default async function HomePage({
   const upcomingEvents = mixedEvents;
 
 
-  const nextGameOpponent = nextGame ? teams.find((t) => t.id === nextGame.opponent_team_id) : null;
+  const nextGameOpponent = nextGame?.opponent_team_id ? teamMap.get(nextGame.opponent_team_id) ?? null : null;
 
   const wins = recentGames.filter((g) => g.result === "win").length;
   const losses = recentGames.filter((g) => g.result === "loss").length;
@@ -244,7 +245,7 @@ export default async function HomePage({
             <div className="club-pulse__items">
               {recentGames.length > 0 ? (
                 recentGames.map((game) => {
-                  const opponent = teams.find((t) => t.id === game.opponent_team_id);
+                  const opponent = game.opponent_team_id ? teamMap.get(game.opponent_team_id) : undefined;
                   return (
                     <PulseResult
                       key={game.id}
@@ -312,7 +313,7 @@ export default async function HomePage({
             {recentGames.length > 0 ? (
               <div className="club-results-list">
                 {recentGames.map((game) => {
-                  const opponent = teams.find((t) => t.id === game.opponent_team_id);
+                  const opponent = game.opponent_team_id ? teamMap.get(game.opponent_team_id) : undefined;
                   return (
                     <ResultLine
                       key={game.id}

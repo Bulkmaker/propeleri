@@ -12,9 +12,14 @@ import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Badge } from "@/components/ui/badge";
-import { GameForm } from "@/components/admin/games/GameForm";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import dynamic from "next/dynamic";
+
+const GameForm = dynamic(
+  () => import("@/components/admin/games/GameForm").then((m) => m.GameForm),
+  { loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div> }
+);
 
 export default function AdminGamesPage() {
   const t = useTranslations("admin");

@@ -9,7 +9,12 @@ import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Loader2, Trash2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { UnifiedGameEditor } from "@/components/games/UnifiedGameEditor";
+import dynamic from "next/dynamic";
+
+const UnifiedGameEditor = dynamic(
+  () => import("@/components/games/UnifiedGameEditor").then((m) => m.UnifiedGameEditor),
+  { loading: () => <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> }
+);
 import type {
   Game,
   Tournament,

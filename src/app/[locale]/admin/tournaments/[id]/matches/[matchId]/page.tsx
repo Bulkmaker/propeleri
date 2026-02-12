@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Link, useRouter } from "@/i18n/navigation";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
-import { GameLineupEditor } from "@/components/games/GameLineupEditor";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,11 @@ import type {
   TournamentMatchStage,
   TournamentTeam,
 } from "@/types/database";
+
+const GameLineupEditor = dynamic(
+  () => import("@/components/games/GameLineupEditor").then((m) => m.GameLineupEditor),
+  { loading: () => <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> }
+);
 
 type MatchFormState = {
   team_a_id: string;

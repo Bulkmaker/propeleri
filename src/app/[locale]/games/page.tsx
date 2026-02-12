@@ -53,10 +53,11 @@ export default async function GamesPage({
     error = err instanceof Error ? err.message : "Failed to load games";
   }
 
-
+  const teamMap = new Map(teams.map((t) => [t.id, t]));
 
   // Group games by tournament
-  const tournamentMap = new Map<
+  const tournamentLookup = new Map(allTournaments.map((t) => [t.id, t]));
+  const tournamentGroupMap = new Map<
     string,
     { tournament: Tournament; games: Game[] }
   >();
@@ -64,21 +65,19 @@ export default async function GamesPage({
 
   for (const game of allGames) {
     if (game.tournament_id) {
-      if (!tournamentMap.has(game.tournament_id)) {
-        const tournament = allTournaments.find(
-          (t) => t.id === game.tournament_id
-        );
+      if (!tournamentGroupMap.has(game.tournament_id)) {
+        const tournament = tournamentLookup.get(game.tournament_id);
         if (tournament) {
-          tournamentMap.set(game.tournament_id, { tournament, games: [] });
+          tournamentGroupMap.set(game.tournament_id, { tournament, games: [] });
         }
       }
-      tournamentMap.get(game.tournament_id)?.games.push(game);
+      tournamentGroupMap.get(game.tournament_id)?.games.push(game);
     } else {
       standaloneGames.push(game);
     }
   }
 
-  const tournamentGroups = Array.from(tournamentMap.values()).sort(
+  const tournamentGroups = Array.from(tournamentGroupMap.values()).sort(
     (a, b) =>
       new Date(b.games[0].game_date).getTime() -
       new Date(a.games[0].game_date).getTime()
@@ -126,7 +125,7 @@ export default async function GamesPage({
               </Link>
               <div className="mt-3 space-y-3">
                 {games.map((game) => {
-                  const opponent = teams.find((t) => t.id === game.opponent_team_id);
+                  const opponent = game.opponent_team_id ? teamMap.get(game.opponent_team_id) : undefined;
                   const opponentName = opponent?.name ?? game.opponent ?? tg("unknownOpponent");
 
                   const dateLabel = formatInBelgrade(game.game_date, locale, {
@@ -171,7 +170,7 @@ export default async function GamesPage({
                 </h2>
               )}
               {standaloneGames.map((game) => {
-                const opponent = teams.find((t) => t.id === game.opponent_team_id);
+                const opponent = game.opponent_team_id ? teamMap.get(game.opponent_team_id) : undefined;
                 const opponentName = opponent?.name ?? game.opponent ?? tg("unknownOpponent");
 
                 const dateLabel = formatInBelgrade(game.game_date, locale, {

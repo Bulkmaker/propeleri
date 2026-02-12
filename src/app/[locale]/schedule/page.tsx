@@ -93,9 +93,11 @@ export default async function SchedulePage({
   const trainings = (trainingsRes.data ?? []) as TrainingSession[];
   const teams = (teamsRes.data ?? []) as Team[];
 
+  const teamMap = new Map(teams.map((t) => [t.id, t]));
+
   const items: ScheduleItem[] = [
     ...games.map((game) => {
-      const opponent = teams.find((t) => t.id === game.opponent_team_id);
+      const opponent = game.opponent_team_id ? teamMap.get(game.opponent_team_id) : undefined;
       const opponentName = opponent?.name ?? game.opponent ?? "Unknown Opponent";
 
       return {

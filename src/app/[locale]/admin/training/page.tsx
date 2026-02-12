@@ -77,7 +77,9 @@ export default function AdminTrainingPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const [error, setError] = useState("");
+  const [showGenerator, setShowGenerator] = useState(false);
 
   const [form, setForm] = useState({
     season_id: "",
@@ -371,320 +373,336 @@ export default function AdminTrainingPage() {
 
   return (
     <LoadingErrorEmpty loading={loading} isEmpty={sessions.length === 0} onRetry={loadData}>
-    <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("manageTraining")}</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate} className="bg-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              {tc("create")}
+      <div>
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 md:px-6 py-4 flex items-center justify-between gap-4">
+          <h1 className="text-xl md:text-2xl font-bold truncate">{t("manageTraining")}</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowGenerator(!showGenerator)}
+              className={showGenerator ? "bg-accent" : ""}
+              size="sm"
+            >
+              <Sparkles className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">{tt("scheduleGenerator")}</span>
             </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>
-                {editingId ? tc("edit") : tc("create")} - {tt("session")}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t("season")}</Label>
-                <Select
-                  value={form.season_id}
-                  onValueChange={(v) => setForm({ ...form, season_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {seasons.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("titleOptional")}</Label>
-                <Input
-                  value={form.title}
-                  onChange={(e) =>
-                    setForm({ ...form, title: e.target.value })
-                  }
-                  placeholder={tt("titlePlaceholder")}
-                  className="bg-background"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t("dateAndTime")}</Label>
-                  <Input
-                    type="datetime-local"
-                    value={form.session_date}
-                    onChange={(e) =>
-                      setForm({ ...form, session_date: e.target.value })
-                    }
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("location")}</Label>
-                  <Input
-                    value={form.location}
-                    onChange={(e) =>
-                      setForm({ ...form, location: e.target.value })
-                    }
-                    className="bg-background"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("sessionStatus")}</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) =>
-                    setForm({ ...form, status: normalizeStatus(v) })
-                  }
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SESSION_STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {tt(`status.${status}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("report")}</Label>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  placeholder={tt("reportPlaceholder")}
-                  className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-              </div>
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                  {error}
-                </p>
-              )}
-              <Button
-                onClick={handleSave}
-                disabled={saving || !form.session_date}
-                className="w-full bg-primary"
-              >
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {tc("save")}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="p-6 space-y-6">
-        <Card className="border-border/40">
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <p className="font-medium">{tt("scheduleGenerator")}</p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t("season")}</Label>
-                <Select
-                  value={scheduleForm.season_id}
-                  onValueChange={(v) => setScheduleForm({ ...scheduleForm, season_id: v })}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {seasons.map((season) => (
-                      <SelectItem key={season.id} value={season.id}>
-                        {season.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("sessionStatus")}</Label>
-                <Select
-                  value={scheduleForm.status}
-                  onValueChange={(v) =>
-                    setScheduleForm({ ...scheduleForm, status: normalizeStatus(v) })
-                  }
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SESSION_STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {tt(`status.${status}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label>{tt("startDate")}</Label>
-                <Input
-                  type="date"
-                  value={scheduleForm.start_date}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, start_date: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("endDate")}</Label>
-                <Input
-                  type="date"
-                  value={scheduleForm.end_date}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, end_date: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("time")}</Label>
-                <Input
-                  type="time"
-                  value={scheduleForm.time}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t("titleOptional")}</Label>
-                <Input
-                  value={scheduleForm.title}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("locationOptional")}</Label>
-                <Input
-                  value={scheduleForm.location}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{tt("weekdays")}</Label>
-              <div className="flex flex-wrap gap-2">
-                {WEEKDAY_OPTIONS.map((day) => {
-                  const active = scheduleForm.weekdays.includes(day.value);
-                  return (
-                    <Button
-                      key={day.value}
-                      type="button"
-                      size="sm"
-                      variant={active ? "default" : "outline"}
-                      onClick={() => toggleWeekday(day.value)}
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openCreate} className="bg-primary" size="sm">
+                  <Plus className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">{tc("create")}</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-border">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingId ? tc("edit") : tc("create")} - {tt("session")}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>{t("season")}</Label>
+                    <Select
+                      value={form.season_id}
+                      onValueChange={(v) => setForm({ ...form, season_id: v })}
                     >
-                      {tt(day.key)}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-            {scheduleError && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                {scheduleError}
-              </p>
-            )}
-            {scheduleResult && (
-              <div className="rounded-md border border-border/50 px-3 py-2 text-sm space-y-1">
-                {scheduleResult.created > 0 ? (
-                  <p>{tt("createdCount", { count: scheduleResult.created })}</p>
-                ) : (
-                  <p>{tt("noGeneratedSessions")}</p>
-                )}
-                {scheduleResult.skipped > 0 && (
-                  <p className="text-muted-foreground">
-                    {tt("skippedDuplicates", { count: scheduleResult.skipped })}
-                  </p>
-                )}
-              </div>
-            )}
-            <Button onClick={generateSchedule} disabled={scheduleSaving} className="w-full md:w-auto">
-              {scheduleSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {tt("generateSchedule")}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {sessions.map((session) => (
-          <Card key={session.id} className="border-border/40">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CalendarDays className="h-5 w-5 text-blue-400" />
-                <div>
-                  <p className="font-medium text-sm flex items-center gap-2">
-                    {session.title || tt("session")}
-                    <Badge
-                      variant="outline"
-                      className={statusBadgeClass(normalizeStatus(session.status))}
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {seasons.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("titleOptional")}</Label>
+                    <Input
+                      value={form.title}
+                      onChange={(e) =>
+                        setForm({ ...form, title: e.target.value })
+                      }
+                      placeholder={tt("titlePlaceholder")}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t("dateAndTime")}</Label>
+                      <Input
+                        type="datetime-local"
+                        value={form.session_date}
+                        onChange={(e) =>
+                          setForm({ ...form, session_date: e.target.value })
+                        }
+                        className="bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("location")}</Label>
+                      <Input
+                        value={form.location}
+                        onChange={(e) =>
+                          setForm({ ...form, location: e.target.value })
+                        }
+                        className="bg-background"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{tt("sessionStatus")}</Label>
+                    <Select
+                      value={form.status}
+                      onValueChange={(v) =>
+                        setForm({ ...form, status: normalizeStatus(v) })
+                      }
                     >
-                      {tt(`status.${normalizeStatus(session.status)}`)}
-                    </Badge>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatInBelgrade(session.session_date, "sr-Latn", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                    {session.location && ` — ${session.location}`}
-                  </p>
-                  {session.notes && (
-                    <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
-                      {session.notes}
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SESSION_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {tt(`status.${status}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{tt("report")}</Label>
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                      placeholder={tt("reportPlaceholder")}
+                      className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  </div>
+                  {error && (
+                    <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                      {error}
                     </p>
                   )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => openEdit(session)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Link href={`/admin/training/${session.id}`}>
-                  <Button size="sm" variant="outline" className="text-xs">
-                    {t("stats")}
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving || !form.session_date}
+                    className="w-full bg-primary"
+                  >
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {tc("save")}
                   </Button>
-                </Link>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDeleteSession(session.id)}
-                  disabled={deletingId === session.id}
-                  className="text-destructive hover:text-destructive"
-                >
-                  {deletingId === session.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+
+          {showGenerator && (
+            <Card className="border-border/40">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <p className="font-medium">{tt("scheduleGenerator")}</p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{t("season")}</Label>
+                    <Select
+                      value={scheduleForm.season_id}
+                      onValueChange={(v) => setScheduleForm({ ...scheduleForm, season_id: v })}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {seasons.map((season) => (
+                          <SelectItem key={season.id} value={season.id}>
+                            {season.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{tt("sessionStatus")}</Label>
+                    <Select
+                      value={scheduleForm.status}
+                      onValueChange={(v) =>
+                        setScheduleForm({ ...scheduleForm, status: normalizeStatus(v) })
+                      }
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SESSION_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {tt(`status.${status}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>{tt("startDate")}</Label>
+                    <Input
+                      type="date"
+                      value={scheduleForm.start_date}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, start_date: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{tt("endDate")}</Label>
+                    <Input
+                      type="date"
+                      value={scheduleForm.end_date}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, end_date: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{tt("time")}</Label>
+                    <Input
+                      type="time"
+                      value={scheduleForm.time}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{t("titleOptional")}</Label>
+                    <Input
+                      value={scheduleForm.title}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("locationOptional")}</Label>
+                    <Input
+                      value={scheduleForm.location}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>{tt("weekdays")}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {WEEKDAY_OPTIONS.map((day) => {
+                      const active = scheduleForm.weekdays.includes(day.value);
+                      return (
+                        <Button
+                          key={day.value}
+                          type="button"
+                          size="sm"
+                          variant={active ? "default" : "outline"}
+                          onClick={() => toggleWeekday(day.value)}
+                        >
+                          {tt(day.key)}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {scheduleError && (
+                  <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                    {scheduleError}
+                  </p>
+                )}
+                {scheduleResult && (
+                  <div className="rounded-md border border-border/50 px-3 py-2 text-sm space-y-1">
+                    {scheduleResult.created > 0 ? (
+                      <p>{tt("createdCount", { count: scheduleResult.created })}</p>
+                    ) : (
+                      <p>{tt("noGeneratedSessions")}</p>
+                    )}
+                    {scheduleResult.skipped > 0 && (
+                      <p className="text-muted-foreground">
+                        {tt("skippedDuplicates", { count: scheduleResult.skipped })}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <Button onClick={generateSchedule} disabled={scheduleSaving} className="w-full md:w-auto">
+                  {scheduleSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {tt("generateSchedule")}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {sessions.map((session) => (
+            <Card key={session.id} className="border-border/40">
+              <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <CalendarDays className="h-5 w-5 text-blue-400 mt-0.5 md:mt-0" />
+                  <div>
+                    <div className="font-medium text-sm flex flex-wrap items-center gap-2">
+                      <span>{session.title || tt("session")}</span>
+                      <Badge
+                        variant="outline"
+                        className={statusBadgeClass(normalizeStatus(session.status))}
+                      >
+                        {tt(`status.${normalizeStatus(session.status)}`)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatInBelgrade(session.session_date, "sr-Latn", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {session.location && ` — ${session.location}`}
+                    </p>
+                    {session.notes && (
+                      <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
+                        {session.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end md:self-auto">
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(session)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Link href={`/admin/training/${session.id}`}>
+                    <Button size="sm" variant="outline" className="text-xs">
+                      {t("stats")}
+                    </Button>
+                  </Link>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeleteSession(session.id)}
+                    disabled={deletingId === session.id}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    {deletingId === session.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-    </div>
     </LoadingErrorEmpty>
   );
 }
