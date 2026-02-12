@@ -630,8 +630,8 @@ export function GameLineupEditor({
             key={i}
             onClick={() => setActiveLineIndex(i)}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${activeLineIndex === i
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
+              ? "bg-primary text-primary-foreground shadow-md"
+              : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
               }`}
           >
             {readOnly ? `${i + 1} ${t("line").toLowerCase()}` : i + 1}
@@ -925,12 +925,12 @@ function PositionSlot({
   const playerCircle = (
     <div
       className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
-          ? readOnly
-            ? "bg-white/40"
-            : "bg-white/60 hover:bg-white/80 cursor-pointer"
-          : readOnly
-            ? ""
-            : "hover:scale-105 active:cursor-grabbing cursor-pointer"
+        ? readOnly
+          ? "bg-white/40"
+          : "bg-white/60 hover:bg-white/80 cursor-pointer"
+        : readOnly
+          ? ""
+          : "hover:scale-105 active:cursor-grabbing cursor-pointer"
         }`}
     >
       {isEmpty ? (
@@ -964,7 +964,7 @@ function PositionSlot({
           )}
           {/* Player avatar or initials */}
           {player?.avatar_url ? (
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={player.avatar_url}
@@ -974,7 +974,7 @@ function PositionSlot({
             </div>
           ) : (
             <div
-              className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-white text-base sm:text-lg font-bold"
               style={{ backgroundColor: color }}
             >
               {player
@@ -990,7 +990,7 @@ function PositionSlot({
   // Read-only mode: no Popover, no drag
   if (readOnly) {
     return (
-      <div className="flex flex-col-reverse sm:flex-col items-center gap-1 w-32">
+      <div className="flex flex-col-reverse sm:flex-col items-center gap-0.5 w-32">
         {playerCircle}
         {nameLabel}
       </div>
@@ -999,7 +999,7 @@ function PositionSlot({
 
   // Edit mode: full Popover + drag & drop
   return (
-    <div className="flex flex-col-reverse sm:flex-col items-center gap-1 w-32">
+    <div className="flex flex-col-reverse sm:flex-col items-center gap-0.5 w-32">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div
