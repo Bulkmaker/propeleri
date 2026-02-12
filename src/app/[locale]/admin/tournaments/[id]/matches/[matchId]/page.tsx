@@ -173,7 +173,8 @@ export default function TournamentMatchEditorPage() {
   );
 
   const loadAll = useCallback(async () => {
-    setLoading(true);
+    // Do not set loading(true) here to avoid unmounting Tabs and resetting state
+    // setLoading(true);
 
     const [
       tournamentRes,

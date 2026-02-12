@@ -50,7 +50,7 @@ src/
 │   └── profile/            # User profile (protected)
 ├── components/
 │   ├── admin/              # Admin-specific components (GameForm, etc.)
-│   ├── games/              # HockeyRink, GameLineupEditor, UnifiedGameEditor
+│   ├── games/              # HockeyRink, GameLineupEditor (Rink/List views), UnifiedGameEditor
 │   ├── matches/            # GameMatchCard, GameDetailView, TeamAvatar
 │   ├── tournament/         # Tournament brackets, groups, standings
 │   ├── training/           # Training session components

@@ -5,7 +5,7 @@ Hockey team website for HC Propeleri Novi Sad — a full-featured team managemen
 ## Features
 
 - **Roster** — player profiles with positions, stats, avatars
-- **Games** — game management with lineups, ice rink visualization, and detailed game notes (goals, assists, goalie reports)
+- **Games** — game management with lineups (Rink & All Lines views), mobile-friendly editor, and detailed game notes (goals, assists, goalie reports)
 - **Tournaments** — cup/placement/round-robin formats with group stages, playoff brackets, and standings
 - **Training** — training session tracking with attendance, intra-squad match scoring
 - **Statistics** — per-season player stats aggregated from games and training

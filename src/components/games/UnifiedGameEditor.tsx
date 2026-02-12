@@ -169,8 +169,8 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     [groups, groupTeams]
   );
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  const loadAll = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
 
     // Загружаем game
     const { data: gameData, error: gameError } = await supabase
@@ -347,7 +347,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void loadAll();
+      void loadAll(true);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [loadAll]);
@@ -1172,6 +1172,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
             gameId={gameId}
             embedded
             backHref={null}
+            onSaved={() => void loadAll()}
           />
         </TabsContent>
 
