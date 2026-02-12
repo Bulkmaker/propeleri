@@ -313,6 +313,8 @@
     "title": "Мой профиль",
     "editProfile": "Редактировать профиль",
     "changeAvatar": "Изменить фото",
+    "cropAvatar": "Обрезать фото",
+    "cropSave": "Сохранить",
     "nickname": "Прозвище",
     "jerseyNumber": "Номер",
     "position": "Позиция",

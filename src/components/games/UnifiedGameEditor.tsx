@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { RESULT_COLORS } from "@/lib/utils/constants";
+import { formatPlayerName } from "@/lib/utils/player-name";
 
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import { GameLineupEditor } from "@/components/games/GameLineupEditor";
@@ -1150,7 +1151,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-medium truncate">
-                            {player.nickname || player.last_name || player.first_name}
+                            {formatPlayerName(player)}
                           </span>
                           {isSelected && <Check className="h-4 w-4 text-primary" />}
                         </div>

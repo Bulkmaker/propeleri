@@ -6,9 +6,16 @@ type PlayerNameShape = {
 };
 
 export function formatPlayerName(player: PlayerNameShape) {
-  const base = `${player.first_name} ${player.last_name}`.trim();
+  const first = player.first_name?.trim() ?? "";
+  const last = player.last_name?.trim() ?? "";
   const nickname = player.nickname?.trim();
-  return nickname ? `${base} (${nickname})` : base;
+
+  if (nickname) {
+    const parts = [first, `"${nickname}"`, last].filter(Boolean);
+    return parts.join(" ");
+  }
+
+  return `${first} ${last}`.trim();
 }
 
 export function formatPlayerNameWithNumber(player: PlayerNameShape) {

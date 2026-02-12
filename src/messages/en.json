@@ -313,6 +313,8 @@
     "title": "My Profile",
     "editProfile": "Edit Profile",
     "changeAvatar": "Change Photo",
+    "cropAvatar": "Crop Photo",
+    "cropSave": "Save",
     "nickname": "Nickname",
     "jerseyNumber": "Jersey Number",
     "position": "Position",

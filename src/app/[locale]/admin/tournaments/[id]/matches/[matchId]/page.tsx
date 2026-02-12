@@ -28,6 +28,7 @@ import {
   belgradeDateTimeLocalInputToUtcIso,
   utcToBelgradeDateTimeLocalInput,
 } from "@/lib/utils/datetime";
+import { formatPlayerName } from "@/lib/utils/player-name";
 import {
   ArrowLeftRight,
   Check,
@@ -346,10 +347,10 @@ export default function TournamentMatchEditorPage() {
   const selectedGroupTeamIds =
     form.stage === "group" && form.group_id
       ? new Set(
-          groupTeams
-            .filter((entry) => entry.group_id === form.group_id)
-            .map((entry) => entry.team_id)
-        )
+        groupTeams
+          .filter((entry) => entry.group_id === form.group_id)
+          .map((entry) => entry.team_id)
+      )
       : null;
   const scopedTeams =
     selectedGroupTeamIds && selectedGroupTeamIds.size > 0
@@ -412,9 +413,9 @@ export default function TournamentMatchEditorPage() {
     const resolvedGroupId =
       form.stage === "group"
         ? form.group_id ||
-          (form.team_a_id && form.team_b_id
-            ? findGroupForMatch(form.team_a_id, form.team_b_id)
-            : null)
+        (form.team_a_id && form.team_b_id
+          ? findGroupForMatch(form.team_a_id, form.team_b_id)
+          : null)
         : null;
     const matchDateUtc = form.match_date
       ? belgradeDateTimeLocalInputToUtcIso(form.match_date)
@@ -462,13 +463,13 @@ export default function TournamentMatchEditorPage() {
 
     const result = isRegistered
       ? await supabase
-          .from("tournament_player_registrations")
-          .delete()
-          .eq("tournament_id", tournament.id)
-          .eq("player_id", playerId)
+        .from("tournament_player_registrations")
+        .delete()
+        .eq("tournament_id", tournament.id)
+        .eq("player_id", playerId)
       : await supabase
-          .from("tournament_player_registrations")
-          .insert({ tournament_id: tournament.id, player_id: playerId });
+        .from("tournament_player_registrations")
+        .insert({ tournament_id: tournament.id, player_id: playerId });
 
     if (result.error) {
       setError(result.error.message);
@@ -488,9 +489,9 @@ export default function TournamentMatchEditorPage() {
       prev.map((row) =>
         row.player_id === playerId
           ? {
-              ...row,
-              [field]: field === "plus_minus" ? value : Math.max(0, value),
-            }
+            ...row,
+            [field]: field === "plus_minus" ? value : Math.max(0, value),
+          }
           : row
       )
     );
@@ -941,15 +942,14 @@ export default function TournamentMatchEditorPage() {
                           type="button"
                           onClick={() => void toggleRegisteredPlayer(player.id)}
                           disabled={savingAction === "roster"}
-                          className={`rounded-md border px-3 py-2 text-left transition-colors ${
-                            isSelected
-                              ? "border-primary/50 bg-primary/10"
-                              : "border-border/40 hover:border-primary/30"
-                          }`}
+                          className={`rounded-md border px-3 py-2 text-left transition-colors ${isSelected
+                            ? "border-primary/50 bg-primary/10"
+                            : "border-border/40 hover:border-primary/30"
+                            }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-sm font-medium truncate">
-                              {player.first_name} {player.last_name}
+                              {formatPlayerName(player)}
                             </span>
                             {isSelected && <Check className="h-4 w-4 text-primary" />}
                           </div>
