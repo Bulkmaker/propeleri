@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Trophy, Plus, Loader2 } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { Season } from "@/types/database";
 
 export default function AdminSeasonsPage() {
@@ -96,8 +97,7 @@ export default function AdminSeasonsPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("manageSeasons")}</h1>
+      <AdminPageHeader title={t("manageSeasons")}>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary">
@@ -164,7 +164,7 @@ export default function AdminSeasonsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </AdminPageHeader>
 
       <div className="p-6 space-y-2">
         {seasons.map((season) => (

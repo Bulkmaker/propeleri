@@ -48,6 +48,13 @@ import {
   belgradeDateTimeLocalInputToUtcIso,
   formatInBelgrade,
 } from "@/lib/utils/datetime";
+import {
+  COUNTRY_OPTIONS,
+  DEFAULT_COUNTRY_CODE,
+  resolveCountryCode,
+  countryDisplayName,
+  countryFlagEmoji,
+} from "@/lib/utils/country";
 import type {
   Tournament,
   Team,
@@ -61,78 +68,6 @@ import type {
 
 function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-type CountryOption = {
-  code: string;
-  label: string;
-  aliases?: string[];
-};
-
-const DEFAULT_COUNTRY_CODE = "RS";
-
-const COUNTRY_OPTIONS: CountryOption[] = [
-  { code: "RS", label: "Serbia", aliases: ["Srbija", "Сербия"] },
-  { code: "RU", label: "Russia", aliases: ["Россия"] },
-  { code: "US", label: "United States", aliases: ["USA", "США"] },
-  { code: "CA", label: "Canada" },
-  { code: "CZ", label: "Czechia", aliases: ["Czech Republic", "Чехия"] },
-  { code: "SK", label: "Slovakia", aliases: ["Словакия"] },
-  { code: "SE", label: "Sweden", aliases: ["Швеция"] },
-  { code: "FI", label: "Finland", aliases: ["Финляндия"] },
-  { code: "NO", label: "Norway", aliases: ["Норвегия"] },
-  { code: "DK", label: "Denmark", aliases: ["Дания"] },
-  { code: "DE", label: "Germany", aliases: ["Deutschland", "Германия"] },
-  { code: "AT", label: "Austria", aliases: ["Австрия"] },
-  { code: "CH", label: "Switzerland", aliases: ["Швейцария"] },
-  { code: "SI", label: "Slovenia", aliases: ["Словения"] },
-  { code: "HR", label: "Croatia", aliases: ["Хорватия"] },
-  { code: "BA", label: "Bosnia and Herzegovina", aliases: ["Bosna i Hercegovina", "Босния"] },
-  { code: "ME", label: "Montenegro", aliases: ["Црна Гора", "Черногория"] },
-  { code: "MK", label: "North Macedonia", aliases: ["Macedonia", "Македония"] },
-  { code: "RO", label: "Romania", aliases: ["Румыния"] },
-  { code: "HU", label: "Hungary", aliases: ["Венгрия"] },
-  { code: "PL", label: "Poland", aliases: ["Польша"] },
-  { code: "IT", label: "Italy", aliases: ["Италия"] },
-  { code: "FR", label: "France", aliases: ["Франция"] },
-  { code: "GB", label: "United Kingdom", aliases: ["UK", "Великобритания"] },
-  { code: "UA", label: "Ukraine", aliases: ["Украина"] },
-  { code: "LV", label: "Latvia", aliases: ["Латвия"] },
-  { code: "LT", label: "Lithuania", aliases: ["Литва"] },
-  { code: "EE", label: "Estonia", aliases: ["Эстония"] },
-];
-
-function resolveCountryCode(value: string | null | undefined): string {
-  const cleaned = value?.trim();
-  if (!cleaned) return "";
-
-  const byCode = COUNTRY_OPTIONS.find((option) => option.code === cleaned.toUpperCase());
-  if (byCode) return byCode.code;
-
-  const normalized = normalizeName(cleaned);
-  const byName = COUNTRY_OPTIONS.find((option) => {
-    if (normalizeName(option.label) === normalized) return true;
-    return option.aliases?.some((alias) => normalizeName(alias) === normalized) ?? false;
-  });
-
-  return byName?.code ?? "";
-}
-
-function countryDisplayName(value: string | null | undefined): string {
-  const cleaned = value?.trim();
-  if (!cleaned) return "";
-
-  const code = resolveCountryCode(cleaned);
-  if (!code) return cleaned;
-
-  return COUNTRY_OPTIONS.find((option) => option.code === code)?.label ?? cleaned;
-}
-
-function countryFlagEmoji(value: string | null | undefined): string {
-  const code = resolveCountryCode(value);
-  if (code.length !== 2) return "🏳️";
-
-  return String.fromCodePoint(...code.split("").map((char) => 127397 + char.charCodeAt(0)));
 }
 
 type TeamForm = {
@@ -476,13 +411,13 @@ export default function AdminTournamentDetailPage() {
 
     const result = isRegistered
       ? await supabase
-          .from("tournament_player_registrations")
-          .delete()
-          .eq("tournament_id", tournamentId)
-          .eq("player_id", playerId)
+        .from("tournament_player_registrations")
+        .delete()
+        .eq("tournament_id", tournamentId)
+        .eq("player_id", playerId)
       : await supabase
-          .from("tournament_player_registrations")
-          .insert({ tournament_id: tournamentId, player_id: playerId });
+        .from("tournament_player_registrations")
+        .insert({ tournament_id: tournamentId, player_id: playerId });
 
     if (result.error) {
       setError(result.error.message);
@@ -631,9 +566,9 @@ export default function AdminTournamentDetailPage() {
     const resolvedGroupId =
       matchForm.stage === "group"
         ? matchForm.group_id ||
-          (matchForm.team_a_id && matchForm.team_b_id
-            ? findGroupForMatch(matchForm.team_a_id, matchForm.team_b_id)
-            : null)
+        (matchForm.team_a_id && matchForm.team_b_id
+          ? findGroupForMatch(matchForm.team_a_id, matchForm.team_b_id)
+          : null)
         : null;
     const matchDateUtc = matchForm.match_date
       ? belgradeDateTimeLocalInputToUtcIso(matchForm.match_date)
@@ -1186,11 +1121,10 @@ export default function AdminTournamentDetailPage() {
                       type="button"
                       onClick={() => void toggleRegisteredPlayer(player.id)}
                       disabled={saving}
-                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
-                        isSelected
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${isSelected
                           ? "border-primary/50 bg-primary/10"
                           : "border-border/40 hover:border-primary/30"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium truncate">{playerLabel}</span>
@@ -1280,11 +1214,10 @@ export default function AdminTournamentDetailPage() {
                                 <button
                                   key={team.id}
                                   onClick={() => toggleTeamInGroup(group.id, team.id)}
-                                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                                    isMember
+                                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${isMember
                                       ? "bg-primary/20 text-primary border-primary/40"
                                       : "bg-muted/30 text-muted-foreground border-border/40 hover:border-primary/40"
-                                  }`}
+                                    }`}
                                 >
                                   {team.name}
                                   {isMember && <Check className="inline h-3 w-3 ml-1" />}
@@ -1479,10 +1412,10 @@ function MatchFormFields({
   const selectedGroupTeamIds =
     form.stage === "group" && form.group_id
       ? new Set(
-          groupTeams
-            .filter((entry) => entry.group_id === form.group_id)
-            .map((entry) => entry.team_id)
-        )
+        groupTeams
+          .filter((entry) => entry.group_id === form.group_id)
+          .map((entry) => entry.team_id)
+      )
       : null;
 
   const scopedTeams =
@@ -1768,25 +1701,24 @@ function MatchCard({
             {!hasLinkedGame &&
               isPlayableMatch &&
               (scoreA !== match.score_a || scoreB !== match.score_b) && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => onUpdateScore(match.id, scoreA, scoreB)}
-              >
-                {tt("score")}
-              </Button>
-            )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => onUpdateScore(match.id, scoreA, scoreB)}
+                >
+                  {tt("score")}
+                </Button>
+              )}
 
             {!hasLinkedGame && isPlayableMatch && (
               <Button
                 size="sm"
                 variant="outline"
-                className={`h-7 text-xs ${
-                  match.is_completed
+                className={`h-7 text-xs ${match.is_completed
                     ? "border-yellow-500/30 text-yellow-400"
                     : "border-green-500/30 text-green-400"
-                }`}
+                  }`}
                 onClick={() => onToggleCompleted(match.id, match.is_completed)}
               >
                 {match.is_completed ? tt("reopen") : tt("complete")}

@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload, Trash2 } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
 import imageCompression from "browser-image-compression";
@@ -513,409 +514,495 @@ export default function AdminPlayersPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("managePlayers")}</h1>
+      <AdminPageHeader title={t("managePlayers")}>
         <Button onClick={openCreate} className="bg-primary">
           <UserPlus className="h-4 w-4 mr-2" />
           {t("addPlayer")}
         </Button>
-      </div>
+      </AdminPageHeader>
 
       <div className="p-6">
-      <div className="mb-6">
-        <div className="max-w-md space-y-2">
-          <Label htmlFor="players-search">{tc("search")}</Label>
-          <Input
-            id="players-search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-background"
-            placeholder={t("searchPlayersPlaceholder")}
-          />
+        <div className="mb-6">
+          <div className="max-w-md space-y-2">
+            <Label htmlFor="players-search">{tc("search")}</Label>
+            <Input
+              id="players-search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-background"
+              placeholder={t("searchPlayersPlaceholder")}
+            />
+          </div>
         </div>
-      </div>
-      {/* Edit Player Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {t("editPlayer")}
-              {editingPlayer ? ` — ${formatPlayerName(editingPlayer)}` : ""}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {editingPlayer && (
-              <div className="flex flex-col items-center gap-3 border border-border/60 rounded-lg p-4">
-                <Avatar className="h-20 w-20 ring-2 ring-primary/20">
-                  <AvatarImage src={editingPlayer.avatar_url ?? undefined} />
-                  <AvatarFallback className="text-lg font-semibold">
-                    {(editingPlayer.first_name?.[0] ?? "") + (editingPlayer.last_name?.[0] ?? "")}
-                  </AvatarFallback>
-                </Avatar>
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                    disabled={uploadingAvatar}
+        {/* Edit Player Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {t("editPlayer")}
+                {editingPlayer ? ` — ${formatPlayerName(editingPlayer)}` : ""}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {editingPlayer && (
+                <div className="flex flex-col items-center gap-3 border border-border/60 rounded-lg p-4">
+                  <Avatar className="h-20 w-20 ring-2 ring-primary/20">
+                    <AvatarImage src={editingPlayer.avatar_url ?? undefined} />
+                    <AvatarFallback className="text-lg font-semibold">
+                      {(editingPlayer.first_name?.[0] ?? "") + (editingPlayer.last_name?.[0] ?? "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
+                    />
+                    <Button variant="outline" size="sm" asChild disabled={uploadingAvatar}>
+                      <span>
+                        {uploadingAvatar ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="mr-2 h-4 w-4" />
+                        )}
+                        {tpr("changeAvatar")}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>{ta("firstName")}</Label>
+                  <Input
+                    value={form.first_name}
+                    onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                    className="bg-background"
                   />
-                  <Button variant="outline" size="sm" asChild disabled={uploadingAvatar}>
-                    <span>
-                      {uploadingAvatar ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Upload className="mr-2 h-4 w-4" />
-                      )}
-                      {tpr("changeAvatar")}
-                    </span>
-                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>{ta("lastName")}</Label>
+                  <Input
+                    value={form.last_name}
+                    onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{tpr("nickname")}</Label>
+                  <Input
+                    value={form.nickname}
+                    onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>{tpr("jerseyNumber")}</Label>
+                  <Input
+                    type="number"
+                    value={form.jersey_number}
+                    onChange={(e) => setForm({ ...form, jersey_number: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{tpr("position")}</Label>
+                  <Select
+                    value={form.position}
+                    onValueChange={(v) => setForm({ ...form, position: v as PlayerPosition })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POSITIONS.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {tp(pos)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{tpr("dateOfBirth")}</Label>
+                  <Input
+                    type="date"
+                    value={form.date_of_birth}
+                    onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>{tpr("height")}</Label>
+                  <Input
+                    type="number"
+                    value={form.height}
+                    onChange={(e) => setForm({ ...form, height: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{tpr("weight")}</Label>
+                  <Input
+                    type="number"
+                    value={form.weight}
+                    onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{tpr("phone")}</Label>
+                  <Input
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{tpr("bio")}</Label>
+                <Input
+                  value={form.bio}
+                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t("loginField")}</Label>
+                  <Input
+                    value={credentialsForm.login}
+                    onChange={(e) =>
+                      setCredentialsForm({ ...credentialsForm, login: e.target.value })
+                    }
+                    placeholder={t("credentialsOptional")}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("loginPassword")}</Label>
+                  <Input
+                    type="text"
+                    value={credentialsForm.password}
+                    onChange={(e) =>
+                      setCredentialsForm({ ...credentialsForm, password: e.target.value })
+                    }
+                    placeholder={t("credentialsOptional")}
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("credentialsHint")}</p>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>{t("teamRoleColumn")}</Label>
+                  <Select
+                    value={form.team_role}
+                    onValueChange={(v) => setForm({ ...form, team_role: v as PlayerRole })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="player">{tr("player")}</SelectItem>
+                      <SelectItem value="captain">{tr("captain")}</SelectItem>
+                      <SelectItem value="assistant_captain">{tr("assistantCaptain")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("appRole")}</Label>
+                  <Select
+                    value={form.app_role}
+                    onValueChange={(v) => setForm({ ...form, app_role: v as AppRole })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="player">{tr("player")}</SelectItem>
+                      <SelectItem value="admin">{tc("admin")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("defaultTeam")}</Label>
+                  <Select
+                    value={form.default_training_team}
+                    onValueChange={(v) => setForm({ ...form, default_training_team: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{tt("noTeam")}</SelectItem>
+                      <SelectItem value="team_a">{tt("teamA")}</SelectItem>
+                      <SelectItem value="team_b">{tt("teamB")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.is_guest}
+                    onChange={(e) => setForm({ ...form, is_guest: e.target.checked })}
+                    className="rounded border-border"
+                  />
+                  <span className="text-sm">{tt("guest")}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.is_active}
+                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                    className="rounded border-border"
+                  />
+                  <span className="text-sm">{t("active")}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.is_approved}
+                    onChange={(e) => setForm({ ...form, is_approved: e.target.checked })}
+                    className="rounded border-border"
+                  />
+                  <span className="text-sm">{t("approved")}</span>
                 </label>
               </div>
-            )}
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{ta("firstName")}</Label>
-                <Input
-                  value={form.first_name}
-                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{ta("lastName")}</Label>
-                <Input
-                  value={form.last_name}
-                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("nickname")}</Label>
-                <Input
-                  value={form.nickname}
-                  onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
+              {error && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                  {error}
+                </p>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={saving || !form.first_name.trim()}
+                className="w-full bg-primary"
+              >
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {tc("save")}
+              </Button>
             </div>
+          </DialogContent>
+        </Dialog>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{tpr("jerseyNumber")}</Label>
-                <Input
-                  type="number"
-                  value={form.jersey_number}
-                  onChange={(e) => setForm({ ...form, jersey_number: e.target.value })}
-                  className="bg-background"
-                />
+        {/* Create Player Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>{t("addPlayerTitle")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label>{ta("firstName")}</Label>
+                  <Input
+                    value={createForm.first_name}
+                    onChange={(e) => setCreateForm({ ...createForm, first_name: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>{tpr("position")}</Label>
-                <Select
-                  value={form.position}
-                  onValueChange={(v) => setForm({ ...form, position: v as PlayerPosition })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {POSITIONS.map((pos) => (
-                      <SelectItem key={pos} value={pos}>
-                        {tp(pos)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("dateOfBirth")}</Label>
-                <Input
-                  type="date"
-                  value={form.date_of_birth}
-                  onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{tpr("height")}</Label>
-                <Input
-                  type="number"
-                  value={form.height}
-                  onChange={(e) => setForm({ ...form, height: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("weight")}</Label>
-                <Input
-                  type="number"
-                  value={form.weight}
-                  onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("phone")}</Label>
-                <Input
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{tpr("bio")}</Label>
-              <Input
-                value={form.bio}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                className="bg-background"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("loginField")}</Label>
                 <Input
-                  value={credentialsForm.login}
-                  onChange={(e) =>
-                    setCredentialsForm({ ...credentialsForm, login: e.target.value })
-                  }
-                  placeholder={t("credentialsOptional")}
+                  value={createForm.login}
+                  onChange={(e) => setCreateForm({ ...createForm, login: e.target.value })}
                   className="bg-background"
+                  placeholder={t("credentialsOptional")}
                 />
               </div>
+
               <div className="space-y-2">
                 <Label>{t("loginPassword")}</Label>
                 <Input
                   type="text"
-                  value={credentialsForm.password}
-                  onChange={(e) =>
-                    setCredentialsForm({ ...credentialsForm, password: e.target.value })
-                  }
-                  placeholder={t("credentialsOptional")}
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                   className="bg-background"
+                  placeholder={t("credentialsOptional")}
                 />
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("credentialsHint")}</p>
+              <p className="text-xs text-muted-foreground">{t("credentialsHint")}</p>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{t("teamRoleColumn")}</Label>
-                <Select
-                  value={form.team_role}
-                  onValueChange={(v) => setForm({ ...form, team_role: v as PlayerRole })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="player">{tr("player")}</SelectItem>
-                    <SelectItem value="captain">{tr("captain")}</SelectItem>
-                    <SelectItem value="assistant_captain">{tr("assistantCaptain")}</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{tpr("jerseyNumber")}</Label>
+                  <Input
+                    type="number"
+                    value={createForm.jersey_number}
+                    onChange={(e) => setCreateForm({ ...createForm, jersey_number: e.target.value })}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{tpr("position")}</Label>
+                  <Select
+                    value={createForm.position}
+                    onValueChange={(v) => setCreateForm({ ...createForm, position: v as PlayerPosition })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POSITIONS.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {tp(pos)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>{t("appRole")}</Label>
-                <Select
-                  value={form.app_role}
-                  onValueChange={(v) => setForm({ ...form, app_role: v as AppRole })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="player">{tr("player")}</SelectItem>
-                    <SelectItem value="admin">{tc("admin")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("defaultTeam")}</Label>
-                <Select
-                  value={form.default_training_team}
-                  onValueChange={(v) => setForm({ ...form, default_training_team: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{tt("noTeam")}</SelectItem>
-                    <SelectItem value="team_a">{tt("teamA")}</SelectItem>
-                    <SelectItem value="team_b">{tt("teamB")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={form.is_guest}
-                  onChange={(e) => setForm({ ...form, is_guest: e.target.checked })}
+                  checked={createForm.is_guest}
+                  onChange={(e) => setCreateForm({ ...createForm, is_guest: e.target.checked })}
                   className="rounded border-border"
                 />
                 <span className="text-sm">{tt("guest")}</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                  className="rounded border-border"
-                />
-                <span className="text-sm">{t("active")}</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_approved}
-                  onChange={(e) => setForm({ ...form, is_approved: e.target.checked })}
-                  className="rounded border-border"
-                />
-                <span className="text-sm">{t("approved")}</span>
-              </label>
+
+              {error && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                  {error}
+                </p>
+              )}
+              <Button
+                onClick={handleCreate}
+                disabled={saving || !createForm.first_name.trim()}
+                className="w-full bg-primary"
+              >
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {tc("create")}
+              </Button>
             </div>
+          </DialogContent>
+        </Dialog>
 
-            {error && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
-            <Button
-              onClick={handleSave}
-              disabled={saving || !form.first_name.trim()}
-              className="w-full bg-primary"
-            >
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tc("save")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Player Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle>{t("addPlayerTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label>{ta("firstName")}</Label>
-                <Input
-                  value={createForm.first_name}
-                  onChange={(e) => setCreateForm({ ...createForm, first_name: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t("loginField")}</Label>
-              <Input
-                value={createForm.login}
-                onChange={(e) => setCreateForm({ ...createForm, login: e.target.value })}
-                className="bg-background"
-                placeholder={t("credentialsOptional")}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t("loginPassword")}</Label>
-              <Input
-                type="text"
-                value={createForm.password}
-                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                className="bg-background"
-                placeholder={t("credentialsOptional")}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">{t("credentialsHint")}</p>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{tpr("jerseyNumber")}</Label>
-                <Input
-                  type="number"
-                  value={createForm.jersey_number}
-                  onChange={(e) => setCreateForm({ ...createForm, jersey_number: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("position")}</Label>
-                <Select
-                  value={createForm.position}
-                  onValueChange={(v) => setCreateForm({ ...createForm, position: v as PlayerPosition })}
-                >
-                  <SelectTrigger>
+        {/* Pending Approvals */}
+        {pending.length > 0 && (
+          <Card className="border-yellow-500/20 mb-6">
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                {t("pendingApprovals")}
+                <Badge className="bg-yellow-500/20 text-yellow-500">
+                  {filteredPending.length}
+                  {normalizedSearchQuery ? `/${pending.length}` : ""}
+                </Badge>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="pending-players-sort" className="text-xs text-muted-foreground">
+                  {t("sortBy")}
+                </Label>
+                <Select value={pendingSort} onValueChange={(value) => setPendingSort(value as ActivePlayersSort)}>
+                  <SelectTrigger id="pending-players-sort" className="w-[220px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {POSITIONS.map((pos) => (
-                      <SelectItem key={pos} value={pos}>
-                        {tp(pos)}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="name">{t("sortByName")}</SelectItem>
+                    <SelectItem value="number">{t("sortByNumber")}</SelectItem>
+                    <SelectItem value="position">{t("sortByPosition")}</SelectItem>
+                    <SelectItem value="training_team">{t("sortByTrainingTeam")}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={pendingSortDirection}
+                  onValueChange={(value) => setPendingSortDirection(value as SortDirection)}
+                >
+                  <SelectTrigger id="pending-players-sort-direction" className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">{t("sortAsc")}</SelectItem>
+                    <SelectItem value="desc">{t("sortDesc")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {filteredPending.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">{tc("noData")}</p>
+                ) : (
+                  filteredPending.map((player) => (
+                    <div
+                      key={player.id}
+                      className="flex items-center justify-between py-3 px-4 rounded-md bg-secondary/50"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {formatPlayerName(player)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {renderPlayerLogin(player)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEdit(player)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => approvePlayer(player.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          {t("approve")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deletePlayer(player.id, formatPlayerName(player))}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={createForm.is_guest}
-                onChange={(e) => setCreateForm({ ...createForm, is_guest: e.target.checked })}
-                className="rounded border-border"
-              />
-              <span className="text-sm">{tt("guest")}</span>
-            </label>
-
-            {error && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
-            <Button
-              onClick={handleCreate}
-              disabled={saving || !createForm.first_name.trim()}
-              className="w-full bg-primary"
-            >
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tc("create")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Pending Approvals */}
-      {pending.length > 0 && (
-        <Card className="border-yellow-500/20 mb-6">
+        {/* All Players */}
+        <Card className="border-border/40">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
-              {t("pendingApprovals")}
-              <Badge className="bg-yellow-500/20 text-yellow-500">
-                {filteredPending.length}
-                {normalizedSearchQuery ? `/${pending.length}` : ""}
-              </Badge>
+              <Users className="h-5 w-5 text-primary" />
+              {t("activePlayers")} ({filteredApproved.length}
+              {normalizedSearchQuery ? `/${approved.length}` : ""})
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Label htmlFor="pending-players-sort" className="text-xs text-muted-foreground">
+              <Label htmlFor="active-players-sort" className="text-xs text-muted-foreground">
                 {t("sortBy")}
               </Label>
-              <Select value={pendingSort} onValueChange={(value) => setPendingSort(value as ActivePlayersSort)}>
-                <SelectTrigger id="pending-players-sort" className="w-[220px]">
+              <Select value={activeSort} onValueChange={(value) => setActiveSort(value as ActivePlayersSort)}>
+                <SelectTrigger id="active-players-sort" className="w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -926,10 +1013,10 @@ export default function AdminPlayersPage() {
                 </SelectContent>
               </Select>
               <Select
-                value={pendingSortDirection}
-                onValueChange={(value) => setPendingSortDirection(value as SortDirection)}
+                value={activeSortDirection}
+                onValueChange={(value) => setActiveSortDirection(value as SortDirection)}
               >
-                <SelectTrigger id="pending-players-sort-direction" className="w-[180px]">
+                <SelectTrigger id="active-players-sort-direction" className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -940,198 +1027,111 @@ export default function AdminPlayersPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {filteredPending.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-2">{tc("noData")}</p>
-              ) : (
-                filteredPending.map((player) => (
-                  <div
-                    key={player.id}
-                    className="flex items-center justify-between py-3 px-4 rounded-md bg-secondary/50"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {formatPlayerName(player)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {renderPlayerLogin(player)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openEdit(player)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => approvePlayer(player.id)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        {t("approve")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deletePlayer(player.id, formatPlayerName(player))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All Players */}
-      <Card className="border-border/40">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            {t("activePlayers")} ({filteredApproved.length}
-            {normalizedSearchQuery ? `/${approved.length}` : ""})
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="active-players-sort" className="text-xs text-muted-foreground">
-              {t("sortBy")}
-            </Label>
-            <Select value={activeSort} onValueChange={(value) => setActiveSort(value as ActivePlayersSort)}>
-              <SelectTrigger id="active-players-sort" className="w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">{t("sortByName")}</SelectItem>
-                <SelectItem value="number">{t("sortByNumber")}</SelectItem>
-                <SelectItem value="position">{t("sortByPosition")}</SelectItem>
-                <SelectItem value="training_team">{t("sortByTrainingTeam")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={activeSortDirection}
-              onValueChange={(value) => setActiveSortDirection(value as SortDirection)}
-            >
-              <SelectTrigger id="active-players-sort-direction" className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="asc">{t("sortAsc")}</SelectItem>
-                <SelectItem value="desc">{t("sortDesc")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">#</TableHead>
-                <TableHead>{t("playerColumn")}</TableHead>
-                <TableHead>{t("positionColumn")}</TableHead>
-                <TableHead>{t("trainingTeamColumn")}</TableHead>
-                <TableHead>{tpr("dateOfBirth")}</TableHead>
-                <TableHead className="text-center">{t("statusColumn")}</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredApproved.length === 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
-                    {tc("noData")}
-                  </TableCell>
+                  <TableHead className="w-[50px]">#</TableHead>
+                  <TableHead>{t("playerColumn")}</TableHead>
+                  <TableHead>{t("positionColumn")}</TableHead>
+                  <TableHead>{t("trainingTeamColumn")}</TableHead>
+                  <TableHead>{tpr("dateOfBirth")}</TableHead>
+                  <TableHead className="text-center">{t("statusColumn")}</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ) : (
-                filteredApproved.map((player) => (
-                  <TableRow key={player.id}>
-                    <TableCell className="text-primary font-bold">
-                      {player.jersey_number ?? "-"}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span>
-                          {formatPlayerName(player)}
-                        </span>
-                        {player.team_role === "captain" && (
-                          <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                            {tr("captain")}
-                          </Badge>
-                        )}
-                        {player.team_role === "assistant_captain" && (
-                          <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40">
-                            {tr("assistantCaptain")}
-                          </Badge>
-                        )}
-                        {player.is_guest && (
-                          <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                            {tt("guest")}
-                          </Badge>
-                        )}
-                      </div>
-                      <br />
-                      <span className="text-xs text-muted-foreground">
-                        {renderPlayerLogin(player)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
-                        {tp(player.position)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {player.default_training_team ? (
-                        <Badge variant="outline" className="text-xs">
-                          {player.default_training_team === "team_a" ? tt("teamA") : tt("teamB")}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">{tt("noTeam")}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {formatDateOfBirth(player.date_of_birth)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-center">
-                        <span
-                          className={`h-2.5 w-2.5 rounded-full ${player.is_active ? "bg-green-500" : "bg-red-500"}`}
-                          aria-label={player.is_active ? t("active") : t("inactive")}
-                          title={player.is_active ? t("active") : t("inactive")}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEdit(player)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => deletePlayer(player.id, formatPlayerName(player))}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {filteredApproved.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                      {tc("noData")}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : (
+                  filteredApproved.map((player) => (
+                    <TableRow key={player.id}>
+                      <TableCell className="text-primary font-bold">
+                        {player.jersey_number ?? "-"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>
+                            {formatPlayerName(player)}
+                          </span>
+                          {player.team_role === "captain" && (
+                            <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                              {tr("captain")}
+                            </Badge>
+                          )}
+                          {player.team_role === "assistant_captain" && (
+                            <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40">
+                              {tr("assistantCaptain")}
+                            </Badge>
+                          )}
+                          {player.is_guest && (
+                            <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                              {tt("guest")}
+                            </Badge>
+                          )}
+                        </div>
+                        <br />
+                        <span className="text-xs text-muted-foreground">
+                          {renderPlayerLogin(player)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
+                          {tp(player.position)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {player.default_training_team ? (
+                          <Badge variant="outline" className="text-xs">
+                            {player.default_training_team === "team_a" ? tt("teamA") : tt("teamB")}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">{tt("noTeam")}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDateOfBirth(player.date_of_birth)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          <span
+                            className={`h-2.5 w-2.5 rounded-full ${player.is_active ? "bg-green-500" : "bg-red-500"}`}
+                            aria-label={player.is_active ? t("active") : t("inactive")}
+                            title={player.is_active ? t("active") : t("inactive")}
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEdit(player)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deletePlayer(player.id, formatPlayerName(player))}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

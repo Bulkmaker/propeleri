@@ -125,14 +125,14 @@ export default async function GamesPage({
               <div className="mt-3 space-y-3">
                 {games.map((game) => {
                   const opponent = teams.find((t) => t.id === game.opponent_team_id);
-                  const opponentName = opponent?.name ?? game.opponent ?? "Unknown Opponent";
+                  const opponentName = opponent?.name ?? game.opponent ?? tg("unknownOpponent");
 
-                  const dateLabel = formatInBelgrade(game.game_date, "sr-Latn", {
+                  const dateLabel = formatInBelgrade(game.game_date, locale, {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
                   });
-                  const timeLabel = formatInBelgrade(game.game_date, "sr-Latn", {
+                  const timeLabel = formatInBelgrade(game.game_date, locale, {
                     hour: "2-digit",
                     minute: "2-digit",
                   });
@@ -140,7 +140,7 @@ export default async function GamesPage({
                     <GameMatchCard
                       key={game.id}
                       href={`/games/${game.id}`}
-                      teamName="Propeleri"
+                      teamName={tt("propeleri")}
                       opponentName={opponentName}
                       opponentLogoUrl={opponent?.logo_url || null}
                       opponentCountry={opponent?.country || null}
@@ -170,14 +170,14 @@ export default async function GamesPage({
               )}
               {standaloneGames.map((game) => {
                 const opponent = teams.find((t) => t.id === game.opponent_team_id);
-                const opponentName = opponent?.name ?? game.opponent ?? "Unknown Opponent";
+                const opponentName = opponent?.name ?? game.opponent ?? tg("unknownOpponent");
 
-                const dateLabel = formatInBelgrade(game.game_date, "sr-Latn", {
+                const dateLabel = formatInBelgrade(game.game_date, locale, {
                   day: "numeric",
                   month: "long",
                   year: "numeric",
                 });
-                const timeLabel = formatInBelgrade(game.game_date, "sr-Latn", {
+                const timeLabel = formatInBelgrade(game.game_date, locale, {
                   hour: "2-digit",
                   minute: "2-digit",
                 });
@@ -185,7 +185,7 @@ export default async function GamesPage({
                   <GameMatchCard
                     key={game.id}
                     href={`/games/${game.id}`}
-                    teamName="Propeleri"
+                    teamName={tt("propeleri")}
                     opponentName={opponentName}
                     opponentLogoUrl={opponent?.logo_url || null}
                     opponentCountry={opponent?.country || null}

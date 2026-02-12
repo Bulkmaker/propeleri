@@ -13,6 +13,7 @@ import { formatInBelgrade } from "@/lib/utils/datetime";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Badge } from "@/components/ui/badge";
 import { GameForm } from "@/components/admin/games/GameForm";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export default function AdminGamesPage() {
   const t = useTranslations("admin");
@@ -89,8 +90,7 @@ export default function AdminGamesPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("manageGames")}</h1>
+      <AdminPageHeader title={t("manageGames")}>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary">
@@ -114,7 +114,7 @@ export default function AdminGamesPage() {
             />
           </DialogContent>
         </Dialog>
-      </div>
+      </AdminPageHeader>
 
       <div className="p-6 space-y-3">
         {loading ? (

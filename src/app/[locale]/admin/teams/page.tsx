@@ -2,13 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +23,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader2, Pencil, Plus, Upload } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import imageCompression from "browser-image-compression";
 import type { Game, GameResult, Team } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
+import { COUNTRY_OPTIONS, countryFlagEmoji, countryDisplayName } from "@/lib/utils/country";
 
 function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -212,8 +221,7 @@ export default function AdminTeamsPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("manageTeams")}</h1>
+      <AdminPageHeader title={t("manageTeams")}>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={openCreateDialog} className="bg-primary">
@@ -246,11 +254,27 @@ export default function AdminTeamsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>{tt("country")}</Label>
-                  <Input
-                    value={form.country}
-                    onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))}
-                    className="bg-background"
-                  />
+                  <Select
+                    value={form.country || "__none__"}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        country: value === "__none__" ? "" : value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder={tt("country")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">—</SelectItem>
+                      {COUNTRY_OPTIONS.map((option) => (
+                        <SelectItem key={option.code} value={option.code}>
+                          {countryFlagEmoji(option.code)} {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -324,7 +348,7 @@ export default function AdminTeamsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </AdminPageHeader>
 
       <div className="p-6 space-y-2">
         {teams.map((team) => {
@@ -339,19 +363,12 @@ export default function AdminTeamsPage() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    {team.logo_url ? (
-                      <Image
-                        src={team.logo_url}
-                        alt={team.name}
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 rounded-full object-cover border border-border/40"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full border border-border/40 flex items-center justify-center bg-muted text-sm font-medium">
-                        {team.name.slice(0, 1).toUpperCase()}
-                      </div>
-                    )}
+                    <TeamAvatar
+                      name={team.name}
+                      logoUrl={team.logo_url}
+                      country={team.country}
+                      size="md"
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-semibold">{team.name}</p>
@@ -361,7 +378,7 @@ export default function AdminTeamsPage() {
                       </div>
                       {(team.city || team.country) && (
                         <p className="text-xs text-muted-foreground">
-                          {[team.city, team.country].filter(Boolean).join(", ")}
+                          {[team.city, team.country ? countryDisplayName(team.country) : null].filter(Boolean).join(", ")}
                         </p>
                       )}
                     </div>
