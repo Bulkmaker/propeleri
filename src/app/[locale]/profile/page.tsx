@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Save, Upload, User } from "lucide-react";
 import type { Profile, PlayerPosition } from "@/types/database";
 import { POSITIONS } from "@/lib/utils/constants";
-import imageCompression from "browser-image-compression";
+import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
@@ -32,6 +32,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isApproved, setIsApproved] = useState(true);
 
@@ -94,25 +96,25 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
-  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !profile) return;
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setCropDialogOpen(true);
+    e.target.value = "";
+  }
+
+  async function handleCroppedUpload(blob: Blob) {
+    if (!profile) return;
 
     setUploading(true);
     try {
-      // Compress image
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 0.2,
-        maxWidthOrHeight: 400,
-        useWebWorker: true,
-      });
-
-      const ext = compressed.type === "image/png" ? "png" : "jpg";
-      const filePath = `${profile.id}/${Date.now()}.${ext}`;
+      const filePath = `${profile.id}/${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, compressed, { upsert: true });
+        .upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
 
       if (uploadError) throw uploadError;
 
@@ -130,6 +132,11 @@ export default function ProfilePage() {
       setMessage(err instanceof Error ? err.message : "Upload failed");
     }
     setUploading(false);
+    setCropDialogOpen(false);
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
   }
 
   if (loading) {
@@ -205,7 +212,7 @@ export default function ProfilePage() {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={handleAvatarUpload}
+                onChange={handleFileSelect}
                 disabled={uploading}
               />
               <Button variant="outline" size="sm" asChild disabled={uploading}>
@@ -219,6 +226,21 @@ export default function ProfilePage() {
                 </span>
               </Button>
             </label>
+            <AvatarCropDialog
+              open={cropDialogOpen}
+              imageSrc={cropImageSrc}
+              onClose={() => {
+                setCropDialogOpen(false);
+                if (cropImageSrc) {
+                  URL.revokeObjectURL(cropImageSrc);
+                  setCropImageSrc(null);
+                }
+              }}
+              onConfirm={handleCroppedUpload}
+              title={t("cropAvatar")}
+              saveLabel={t("cropSave")}
+              cancelLabel={tc("cancel")}
+            />
           </div>
 
           {/* Form */}
@@ -370,8 +392,8 @@ export default function ProfilePage() {
             {message && (
               <p
                 className={`text-sm px-3 py-2 rounded-md ${message === t("saved")
-                    ? "text-green-400 bg-green-400/10 border border-green-400/20"
-                    : "text-destructive bg-destructive/10 border border-destructive/20"
+                  ? "text-green-400 bg-green-400/10 border border-green-400/20"
+                  : "text-destructive bg-destructive/10 border border-destructive/20"
                   }`}
               >
                 {message}

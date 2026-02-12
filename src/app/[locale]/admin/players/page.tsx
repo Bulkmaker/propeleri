@@ -34,7 +34,7 @@ import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload, Trash2 } from "l
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
-import imageCompression from "browser-image-compression";
+import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
 import {
   extractLoginFromEmail,
   isSyntheticLoginEmail,
@@ -88,6 +88,8 @@ export default function AdminPlayersPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [editingPlayer, setEditingPlayer] = useState<Profile | null>(null);
   const [activeSort, setActiveSort] = useState<ActivePlayersSort>("name");
@@ -277,26 +279,28 @@ export default function AdminPlayersPage() {
     loadPlayers();
   }
 
-  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !editingPlayer) return;
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setCropDialogOpen(true);
+    e.target.value = "";
+  }
+
+  async function handleCroppedUpload(blob: Blob) {
+    if (!editingPlayer) return;
 
     setUploadingAvatar(true);
     setError("");
 
     try {
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 0.2,
-        maxWidthOrHeight: 400,
-        useWebWorker: true,
-      });
-
-      const ext = compressed.type === "image/png" ? "png" : "jpg";
+      const ext = "jpg";
       const filePath = `${editingPlayer.id}/${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, compressed, { upsert: true });
+        .upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
 
       if (uploadError) throw uploadError;
 
@@ -319,7 +323,11 @@ export default function AdminPlayersPage() {
       setError(uploadError instanceof Error ? uploadError.message : "Failed to upload avatar");
     } finally {
       setUploadingAvatar(false);
-      e.target.value = "";
+      setCropDialogOpen(false);
+      if (cropImageSrc) {
+        URL.revokeObjectURL(cropImageSrc);
+        setCropImageSrc(null);
+      }
     }
   }
 
@@ -557,7 +565,7 @@ export default function AdminPlayersPage() {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleAvatarUpload}
+                      onChange={handleFileSelect}
                       disabled={uploadingAvatar}
                     />
                     <Button variant="outline" size="sm" asChild disabled={uploadingAvatar}>
@@ -571,6 +579,21 @@ export default function AdminPlayersPage() {
                       </span>
                     </Button>
                   </label>
+                  <AvatarCropDialog
+                    open={cropDialogOpen}
+                    imageSrc={cropImageSrc}
+                    onClose={() => {
+                      setCropDialogOpen(false);
+                      if (cropImageSrc) {
+                        URL.revokeObjectURL(cropImageSrc);
+                        setCropImageSrc(null);
+                      }
+                    }}
+                    onConfirm={handleCroppedUpload}
+                    title={tpr("cropAvatar")}
+                    saveLabel={tpr("cropSave")}
+                    cancelLabel={tc("cancel")}
+                  />
                 </div>
               )}
 
