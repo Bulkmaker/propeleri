@@ -53,7 +53,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container relative mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <Image
@@ -69,7 +69,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-1">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
@@ -85,6 +85,17 @@ export function Header() {
               </Link>
             );
           })}
+          {(isAdmin || isTeamLeader) && (
+            <Link
+              href="/admin"
+              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin")
+                ? "text-primary bg-primary/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+            >
+              {t("admin")}
+            </Link>
+          )}
         </nav>
 
         {/* Right side: locale switcher + auth + mobile menu */}
@@ -92,7 +103,7 @@ export function Header() {
           <LocaleSwitcher />
 
           {/* Desktop auth */}
-          <div className="hidden md:block">
+          <div className="flex">
             {loading ? (
               <Button variant="outline" size="sm" disabled className="border-primary/30">
                 {t("login")}
