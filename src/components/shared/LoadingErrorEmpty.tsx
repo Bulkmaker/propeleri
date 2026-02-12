@@ -10,6 +10,7 @@ interface LoadingErrorEmptyProps {
   isEmpty?: boolean;
   emptyMessage?: string;
   onRetry?: () => void;
+  skeleton?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -19,11 +20,15 @@ export function LoadingErrorEmpty({
   isEmpty,
   emptyMessage,
   onRetry,
+  skeleton,
   children,
 }: LoadingErrorEmptyProps) {
   const tc = useTranslations("common");
 
   if (loading) {
+    if (skeleton) {
+      return <>{skeleton}</>;
+    }
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />

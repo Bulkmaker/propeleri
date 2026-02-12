@@ -16,7 +16,7 @@ import {
     Menu,
 } from "lucide-react";
 import Image from "next/image";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -103,6 +103,7 @@ export default function AdminShell({
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
+                            <SheetTitle className="sr-only">{t("dashboard")}</SheetTitle>
                             <SidebarContent />
                         </SheetContent>
                     </Sheet>

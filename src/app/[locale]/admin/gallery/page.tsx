@@ -13,6 +13,7 @@ import imageCompression from "browser-image-compression";
 import { processImageFile } from "@/lib/utils/image-processing";
 import { AdminDialog } from "@/components/admin/AdminDialog";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { SkeletonCardList } from "@/components/shared/skeletons";
 import { useAdminData } from "@/hooks/use-admin-data";
 
 export default function AdminGalleryPage() {
@@ -102,7 +103,7 @@ export default function AdminGalleryPage() {
   }
 
   return (
-    <LoadingErrorEmpty loading={loading} error={error} isEmpty={albums.length === 0} onRetry={reload}>
+    <LoadingErrorEmpty loading={loading} error={error} isEmpty={albums.length === 0} onRetry={reload} skeleton={<SkeletonCardList count={4} />}>
       <div>
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{t("manageGallery")}</h1>

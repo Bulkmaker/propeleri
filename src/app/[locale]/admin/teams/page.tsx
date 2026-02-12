@@ -25,6 +25,7 @@ import { formatInBelgrade } from "@/lib/utils/datetime";
 import { COUNTRY_OPTIONS, countryFlagEmoji, countryDisplayName } from "@/lib/utils/country";
 import { processImageFile } from "@/lib/utils/image-processing";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { SkeletonTeamGrid } from "@/components/shared/skeletons";
 import { SelectWithNone } from "@/components/ui/SelectWithNone";
 
 function normalizeName(value: string) {
@@ -224,7 +225,7 @@ export default function AdminTeamsPage() {
   }, [games, teams]);
 
   return (
-    <LoadingErrorEmpty loading={loading} isEmpty={teams.length === 0} onRetry={loadData}>
+    <LoadingErrorEmpty loading={loading} isEmpty={teams.length === 0} onRetry={loadData} skeleton={<SkeletonTeamGrid count={6} />}>
     <div>
       <AdminPageHeader title={t("manageTeams")}>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

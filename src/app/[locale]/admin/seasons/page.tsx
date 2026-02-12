@@ -11,6 +11,7 @@ import { Trophy, Plus } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminDialog } from "@/components/admin/AdminDialog";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { SkeletonCardList } from "@/components/shared/skeletons";
 import { useAdminData } from "@/hooks/use-admin-data";
 import type { Season } from "@/types/database";
 
@@ -63,7 +64,7 @@ export default function AdminSeasonsPage() {
   }
 
   return (
-    <LoadingErrorEmpty loading={loading} error={error} isEmpty={seasons.length === 0} onRetry={reload}>
+    <LoadingErrorEmpty loading={loading} error={error} isEmpty={seasons.length === 0} onRetry={reload} skeleton={<SkeletonCardList count={4} />}>
       <div>
         <AdminPageHeader title={t("manageSeasons")}>
           <AdminDialog

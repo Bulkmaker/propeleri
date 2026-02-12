@@ -33,6 +33,7 @@ import {
 import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload, Trash2 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { SkeletonTable } from "@/components/shared/skeletons";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
 import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
@@ -524,7 +525,7 @@ export default function AdminPlayersPage() {
   }
 
   return (
-    <LoadingErrorEmpty loading={loading} isEmpty={players.length === 0} onRetry={loadPlayers}>
+    <LoadingErrorEmpty loading={loading} isEmpty={players.length === 0} onRetry={loadPlayers} skeleton={<SkeletonTable rows={10} />}>
     <div>
       <AdminPageHeader title={t("managePlayers")}>
         <Button onClick={openCreate} className="bg-primary">

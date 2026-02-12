@@ -20,6 +20,7 @@ import { Award, Plus, Pencil, Trash2, Settings } from "lucide-react";
 import type { Tournament, Season, TournamentFormat } from "@/types/database";
 import { AdminDialog } from "@/components/admin/AdminDialog";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { SkeletonCardList } from "@/components/shared/skeletons";
 import { useAdminData } from "@/hooks/use-admin-data";
 
 const FORMAT_LABELS: Record<TournamentFormat, string> = {
@@ -183,6 +184,7 @@ export default function AdminTournamentsPage() {
       isEmpty={tournaments.length === 0}
       emptyMessage={tt("noTournaments")}
       onRetry={reload}
+      skeleton={<SkeletonCardList count={4} />}
     >
       <div>
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4 flex items-center justify-between">

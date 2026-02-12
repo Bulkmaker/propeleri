@@ -14,6 +14,7 @@ import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Badge } from "@/components/ui/badge";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
+import { SkeletonGameCardList } from "@/components/shared/skeletons";
 import dynamic from "next/dynamic";
 
 const GameForm = dynamic(
@@ -123,7 +124,7 @@ export default function AdminGamesPage() {
       </AdminPageHeader>
 
       <div className="p-6 space-y-3">
-        <LoadingErrorEmpty loading={loading} error={error} isEmpty={games.length === 0} onRetry={loadData}>
+        <LoadingErrorEmpty loading={loading} error={error} isEmpty={games.length === 0} onRetry={loadData} skeleton={<SkeletonGameCardList count={6} />}>
           {games.map((game) => {
             const opponentTeam = teams.find((t) => t.id === game.opponent_team_id);
             const opponentName = opponentTeam?.name ?? game.opponent ?? tg("unknownOpponent");
