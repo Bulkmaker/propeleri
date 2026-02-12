@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, Loader2, Plus, Trash2, X, Check } from "lucide-react";
+import { ChevronLeft, Loader2, Plus, Trash2, X, Check, LayoutGrid, Rows } from "lucide-react";
 import type { Profile, PlayerPosition, LineupDesignation, SlotPosition, GameLineup } from "@/types/database";
 import { POSITION_COLORS, POSITION_COLORS_HEX, SLOT_TO_POSITION } from "@/lib/utils/constants";
 
@@ -102,6 +102,9 @@ export function GameLineupEditor({
   const isSavingRef = useRef(false);
   const [isTournamentGame, setIsTournamentGame] = useState(false);
   const [registeredPlayersCount, setRegisteredPlayersCount] = useState<number | null>(null);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<"tabs" | "all">("tabs");
 
   // Drag state (only used in edit mode)
   const [dragSource, setDragSource] = useState<{
@@ -623,159 +626,335 @@ export function GameLineupEditor({
         </p>
       )}
 
-      {/* Line tabs */}
-      <div className="flex items-center justify-center gap-2 mb-4">
-        {lines.map((_, i) => (
+      {/* View Toggle & Line Tabs */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+        {/* View Mode Toggle */}
+        <div className="flex bg-secondary/30 p-1 rounded-lg">
           <button
-            key={i}
-            onClick={() => setActiveLineIndex(i)}
-            className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${activeLineIndex === i
-              ? "bg-primary text-primary-foreground shadow-md"
-              : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
+            onClick={() => setViewMode("tabs")}
+            className={`p-2 rounded-md transition-all ${viewMode === "tabs"
+              ? "bg-background shadow text-foreground"
+              : "text-muted-foreground hover:text-foreground"
               }`}
+            title={t("viewTabs")}
           >
-            {readOnly ? `${i + 1} ${t("line").toLowerCase()}` : i + 1}
+            <Rows className="h-4 w-4" />
           </button>
-        ))}
-        {!readOnly && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full border-dashed border-border/60 text-muted-foreground hover:text-foreground"
-              onClick={addLine}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              {t("addLine")}
-            </Button>
-            {lines.length > 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-full text-muted-foreground hover:text-destructive ml-auto"
-                onClick={() => {
-                  removeLine(activeLineIndex);
-                  if (activeLineIndex >= lines.length - 1) setActiveLineIndex(Math.max(0, activeLineIndex - 1));
-                }}
+          <button
+            onClick={() => setViewMode("all")}
+            className={`p-2 rounded-md transition-all ${viewMode === "all"
+              ? "bg-background shadow text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
+            title={t("viewAll")}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Tabs (only visible in tabs mode) */}
+        {viewMode === "tabs" && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {lines.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveLineIndex(i)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${activeLineIndex === i
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
+                  }`}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                {t("removeLine")}
-              </Button>
+                {readOnly ? `${i + 1} ${t("line").toLowerCase()}` : i + 1}
+              </button>
+            ))}
+            {!readOnly && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full border-dashed border-border/60 text-muted-foreground hover:text-foreground h-9 w-9 p-0 bg-transparent shrink-0"
+                  onClick={addLine}
+                  title={t("addLine")}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                {lines.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-muted-foreground hover:text-destructive h-9 w-9 p-0 shrink-0"
+                    onClick={() => {
+                      removeLine(activeLineIndex);
+                      if (activeLineIndex >= lines.length - 1) setActiveLineIndex(Math.max(0, activeLineIndex - 1));
+                    }}
+                    title={t("removeLine")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
             )}
-          </>
+          </div>
         )}
+
+        {/* Spacer for centering logic on desktop if needed, or just keep it simple */}
+        <div className="hidden md:block w-[88px]" />
       </div>
 
-      {/* Rink with slots */}
-      <div className="relative w-full max-w-2xl mx-auto mb-6">
-        {/* SVG Rink background */}
-        <svg
-          viewBox="0 0 600 520"
-          className="w-full h-auto"
-          style={{ filter: "drop-shadow(0 0 20px rgba(30, 64, 175, 0.15))" }}
-        >
-          <defs>
-            <linearGradient id="iceGradientEditor" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f0f4f8" />
-              <stop offset="50%" stopColor="#e2e8f0" />
-              <stop offset="100%" stopColor="#d5dce6" />
-            </linearGradient>
-            <clipPath id="rinkClipEditor">
-              <path d="M 25 20 H 575 V 400 Q 575 500 480 500 H 120 Q 25 500 25 400 Z" />
-            </clipPath>
-          </defs>
-          <path
-            d="M 15 10 H 585 V 405 Q 585 510 485 510 H 115 Q 15 510 15 405 Z"
-            fill="#1a2744"
-            stroke="#2563eb"
-            strokeWidth="3"
-          />
-          <path
-            d="M 25 20 H 575 V 400 Q 575 500 480 500 H 120 Q 25 500 25 400 Z"
-            fill="url(#iceGradientEditor)"
-            stroke="#b0bec5"
-            strokeWidth="1"
-          />
-          <g clipPath="url(#rinkClipEditor)" opacity="0.08">
-            <line x1="25" y1="100" x2="575" y2="100" stroke="#94a3b8" strokeWidth="0.5" />
-            <line x1="25" y1="200" x2="575" y2="200" stroke="#94a3b8" strokeWidth="0.5" />
-            <line x1="25" y1="300" x2="575" y2="300" stroke="#94a3b8" strokeWidth="0.5" />
-            <line x1="25" y1="400" x2="575" y2="400" stroke="#94a3b8" strokeWidth="0.5" />
-          </g>
-          <line x1="15" y1="12" x2="585" y2="12" stroke="#dc2626" strokeWidth="5" />
-          <line x1="25" y1="140" x2="575" y2="140" stroke="#2563eb" strokeWidth="4" opacity="0.8" />
-          <circle cx="180" cy="340" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
-          <circle cx="180" cy="340" r="4" fill="#dc2626" opacity="0.3" />
-          <circle cx="420" cy="340" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
-          <circle cx="420" cy="340" r="4" fill="#dc2626" opacity="0.3" />
-          <path
-            d="M 265 480 Q 265 450 300 450 Q 335 450 335 480"
-            fill="rgba(37, 99, 235, 0.15)"
-            stroke="#2563eb"
-            strokeWidth="2"
-            opacity="0.7"
-          />
-          <line x1="245" y1="480" x2="355" y2="480" stroke="#dc2626" strokeWidth="3" opacity="0.6" />
-        </svg>
+      {/* Tabs View: Rink with slots */}
+      {viewMode === "tabs" && (
+        <div className="relative w-full max-w-2xl mx-auto mb-6">
+          {/* SVG Rink background */}
+          <svg
+            viewBox="0 0 600 520"
+            className="w-full h-auto"
+            style={{ filter: "drop-shadow(0 0 20px rgba(30, 64, 175, 0.15))" }}
+          >
+            <defs>
+              <linearGradient id="iceGradientEditor" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f0f4f8" />
+                <stop offset="50%" stopColor="#e2e8f0" />
+                <stop offset="100%" stopColor="#d5dce6" />
+              </linearGradient>
+              <clipPath id="rinkClipEditor">
+                <path d="M 25 20 H 575 V 400 Q 575 500 480 500 H 120 Q 25 500 25 400 Z" />
+              </clipPath>
+            </defs>
+            <path
+              d="M 15 10 H 585 V 405 Q 585 510 485 510 H 115 Q 15 510 15 405 Z"
+              fill="#1a2744"
+              stroke="#2563eb"
+              strokeWidth="3"
+            />
+            <path
+              d="M 25 20 H 575 V 400 Q 575 500 480 500 H 120 Q 25 500 25 400 Z"
+              fill="url(#iceGradientEditor)"
+              stroke="#b0bec5"
+              strokeWidth="1"
+            />
+            <g clipPath="url(#rinkClipEditor)" opacity="0.08">
+              <line x1="25" y1="100" x2="575" y2="100" stroke="#94a3b8" strokeWidth="0.5" />
+              <line x1="25" y1="200" x2="575" y2="200" stroke="#94a3b8" strokeWidth="0.5" />
+              <line x1="25" y1="300" x2="575" y2="300" stroke="#94a3b8" strokeWidth="0.5" />
+              <line x1="25" y1="400" x2="575" y2="400" stroke="#94a3b8" strokeWidth="0.5" />
+            </g>
+            <line x1="15" y1="12" x2="585" y2="12" stroke="#dc2626" strokeWidth="5" />
+            <line x1="25" y1="140" x2="575" y2="140" stroke="#2563eb" strokeWidth="4" opacity="0.8" />
+            <circle cx="180" cy="340" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
+            <circle cx="180" cy="340" r="4" fill="#dc2626" opacity="0.3" />
+            <circle cx="420" cy="340" r="55" fill="none" stroke="#dc2626" strokeWidth="1" opacity="0.25" />
+            <circle cx="420" cy="340" r="4" fill="#dc2626" opacity="0.3" />
+            <path
+              d="M 265 480 Q 265 450 300 450 Q 335 450 335 480"
+              fill="rgba(37, 99, 235, 0.15)"
+              stroke="#2563eb"
+              strokeWidth="2"
+              opacity="0.7"
+            />
+            <line x1="245" y1="480" x2="355" y2="480" stroke="#dc2626" strokeWidth="3" opacity="0.6" />
+          </svg>
 
-        {/* Overlaid position slots */}
-        {(() => {
-          const lineIndex = activeLineIndex;
-          const line = lines[lineIndex];
-          if (!line) return null;
+          {/* Overlaid position slots */}
+          {(() => {
+            const lineIndex = activeLineIndex;
+            const line = lines[lineIndex];
+            const hasLine = !!line;
 
-          return (
-            <>
-              {/* Line slot positions */}
-              {(["LW", "C", "RW", "LD", "RD"] as const).map((slotKey) => (
+            return (
+              <>
+                {/* Line slot positions */}
+                {hasLine && (["LW", "C", "RW", "LD", "RD"] as const).map((slotKey) => (
+                  <div
+                    key={`${lineIndex}-${slotKey}`}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 ${SLOT_LOCATION_CLASSES[slotKey]}`}
+                  >
+                    <PositionSlot
+                      slotPosition={slotKey}
+                      label={t(SLOT_LABEL_KEYS[slotKey])}
+                      assignment={line.slots[slotKey]}
+                      player={getPlayer(line.slots[slotKey].playerId)}
+                      availablePlayers={sortedPlayersForSlot(slotKey)}
+                      positionTranslations={tp}
+                      gameTranslations={t}
+                      readOnly={readOnly}
+                      onAssign={(pid) => assignLineSlot(lineIndex, slotKey, pid)}
+                      onClear={() => clearLineSlot(lineIndex, slotKey)}
+                      onToggleDesignation={() => toggleDesignation("line", lineIndex, slotKey)}
+                      onDragStart={(e) => handleDragStart(e, { type: "line", lineIndex, slot: slotKey })}
+                      onDrop={(e) => handleDrop(e, { type: "line", lineIndex, slot: slotKey })}
+                      onDragOver={handleDragOver}
+                    />
+                  </div>
+                ))}
+
+                {/* Goalie on rink */}
                 <div
-                  key={`${lineIndex}-${slotKey}`}
-                  className={`absolute -translate-x-1/2 -translate-y-1/2 ${SLOT_LOCATION_CLASSES[slotKey]}`}
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 ${SLOT_LOCATION_CLASSES.GK}`}
                 >
                   <PositionSlot
-                    slotPosition={slotKey}
-                    label={t(SLOT_LABEL_KEYS[slotKey])}
-                    assignment={line.slots[slotKey]}
-                    player={getPlayer(line.slots[slotKey].playerId)}
-                    availablePlayers={sortedPlayersForSlot(slotKey)}
+                    slotPosition="GK"
+                    label={t("gk")}
+                    assignment={goalieSlots[0]}
+                    player={getPlayer(goalieSlots[0].playerId)}
+                    availablePlayers={sortedPlayersForSlot("GK")}
                     positionTranslations={tp}
                     gameTranslations={t}
                     readOnly={readOnly}
-                    onAssign={(pid) => assignLineSlot(lineIndex, slotKey, pid)}
-                    onClear={() => clearLineSlot(lineIndex, slotKey)}
-                    onToggleDesignation={() => toggleDesignation("line", lineIndex, slotKey)}
-                    onDragStart={(e) => handleDragStart(e, { type: "line", lineIndex, slot: slotKey })}
-                    onDrop={(e) => handleDrop(e, { type: "line", lineIndex, slot: slotKey })}
+                    onAssign={(pid) => assignGoalie(0, pid)}
+                    onClear={() => clearGoalie(0)}
+                    onToggleDesignation={() => toggleDesignation("goalie", 0, undefined, 0)}
+                    onDragStart={(e) => handleDragStart(e, { type: "goalie", goalieIndex: 0 })}
+                    onDrop={(e) => handleDrop(e, { type: "goalie", goalieIndex: 0 })}
                     onDragOver={handleDragOver}
                   />
                 </div>
-              ))}
+              </>
+            );
+          })()}
+        </div>
+      )}
 
-              {/* Goalie on rink */}
-              <div
-                className={`absolute -translate-x-1/2 -translate-y-1/2 ${SLOT_LOCATION_CLASSES.GK}`}
-              >
+      {/* All Lines View */}
+      {viewMode === "all" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {lines.map((line, lineIndex) => (
+            <Card key={lineIndex} className="overflow-hidden border-border/60">
+              <CardHeader className="bg-secondary/20 py-3 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm">
+                    {readOnly ? `${lineIndex + 1} ${t("line").toLowerCase()}` : `${t("line")} ${lineIndex + 1}`}
+                  </span>
+                  {!readOnly && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeLine(lineIndex)}
+                      disabled={lines.length <= 1}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-6">
+                <div className="flex flex-col gap-6">
+                  {/* Forwards Row */}
+                  <div className="flex justify-between items-center px-2">
+                    {(["LW", "C", "RW"] as const).map((slotKey) => (
+                      <div key={slotKey} className="relative">
+                        <PositionSlot
+                          slotPosition={slotKey}
+                          label={t(SLOT_LABEL_KEYS[slotKey])}
+                          assignment={line.slots[slotKey]}
+                          player={getPlayer(line.slots[slotKey].playerId)}
+                          availablePlayers={sortedPlayersForSlot(slotKey)}
+                          positionTranslations={tp}
+                          gameTranslations={t}
+                          readOnly={readOnly}
+                          onAssign={(pid) => assignLineSlot(lineIndex, slotKey, pid)}
+                          onClear={() => clearLineSlot(lineIndex, slotKey)}
+                          onToggleDesignation={() => toggleDesignation("line", lineIndex, slotKey)}
+                          onDragStart={(e) => handleDragStart(e, { type: "line", lineIndex, slot: slotKey })}
+                          onDrop={(e) => handleDrop(e, { type: "line", lineIndex, slot: slotKey })}
+                          onDragOver={handleDragOver}
+                          compact
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Defenders Row */}
+                  <div className="flex justify-center gap-12 sm:gap-20">
+                    {(["LD", "RD"] as const).map((slotKey) => (
+                      <div key={slotKey} className="relative">
+                        <PositionSlot
+                          slotPosition={slotKey}
+                          label={t(SLOT_LABEL_KEYS[slotKey])}
+                          assignment={line.slots[slotKey]}
+                          player={getPlayer(line.slots[slotKey].playerId)}
+                          availablePlayers={sortedPlayersForSlot(slotKey)}
+                          positionTranslations={tp}
+                          gameTranslations={t}
+                          readOnly={readOnly}
+                          onAssign={(pid) => assignLineSlot(lineIndex, slotKey, pid)}
+                          onClear={() => clearLineSlot(lineIndex, slotKey)}
+                          onToggleDesignation={() => toggleDesignation("line", lineIndex, slotKey)}
+                          onDragStart={(e) => handleDragStart(e, { type: "line", lineIndex, slot: slotKey })}
+                          onDrop={(e) => handleDrop(e, { type: "line", lineIndex, slot: slotKey })}
+                          onDragOver={handleDragOver}
+                          compact
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {!readOnly && (
+            <button
+              onClick={addLine}
+              className="flex flex-col items-center justify-center gap-2 min-h-[300px] border-2 border-dashed border-border/40 rounded-xl hover:border-primary/50 hover:bg-secondary/20 transition-all text-muted-foreground hover:text-primary"
+            >
+              <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center">
+                <Plus className="h-6 w-6" />
+              </div>
+              <span className="font-semibold text-sm">{t("addLine")}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Goalies Section for All Lines View (since they are separate) */}
+      {viewMode === "all" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="overflow-hidden border-border/60">
+            <CardHeader className="bg-secondary/20 py-3 border-b border-border/40">
+              <span className="font-bold text-sm">{t("gk")}</span>
+            </CardHeader>
+            <CardContent className="p-4 py-8 flex justify-center gap-8">
+              {/* Goalie 1 */}
+              <PositionSlot
+                slotPosition="GK"
+                label={t("gk")}
+                assignment={goalieSlots[0]}
+                player={getPlayer(goalieSlots[0].playerId)}
+                availablePlayers={sortedPlayersForSlot("GK")}
+                positionTranslations={tp}
+                gameTranslations={t}
+                readOnly={readOnly}
+                onAssign={(pid) => assignGoalie(0, pid)}
+                onClear={() => clearGoalie(0)}
+                onToggleDesignation={() => toggleDesignation("goalie", 0, undefined, 0)}
+                onDragStart={(e) => handleDragStart(e, { type: "goalie", goalieIndex: 0 })}
+                onDrop={(e) => handleDrop(e, { type: "goalie", goalieIndex: 0 })}
+                onDragOver={handleDragOver}
+                compact
+              />
+              {/* Goalie 2 */}
+              {(readOnly ? hasSecondGoalie : true) && (
                 <PositionSlot
                   slotPosition="GK"
-                  label={t("gk")}
-                  assignment={goalieSlots[0]}
-                  player={getPlayer(goalieSlots[0].playerId)}
+                  label={`${t("gk")} 2`}
+                  assignment={goalieSlots[1]}
+                  player={getPlayer(goalieSlots[1]?.playerId)}
                   availablePlayers={sortedPlayersForSlot("GK")}
                   positionTranslations={tp}
                   gameTranslations={t}
                   readOnly={readOnly}
-                  onAssign={(pid) => assignGoalie(0, pid)}
-                  onClear={() => clearGoalie(0)}
-                  onToggleDesignation={() => toggleDesignation("goalie", 0, undefined, 0)}
-                  onDragStart={(e) => handleDragStart(e, { type: "goalie", goalieIndex: 0 })}
-                  onDrop={(e) => handleDrop(e, { type: "goalie", goalieIndex: 0 })}
+                  onAssign={(pid) => assignGoalie(1, pid)}
+                  onClear={() => clearGoalie(1)}
+                  onToggleDesignation={() => toggleDesignation("goalie", 0, undefined, 1)}
+                  onDragStart={(e) => handleDragStart(e, { type: "goalie", goalieIndex: 1 })}
+                  onDrop={(e) => handleDrop(e, { type: "goalie", goalieIndex: 1 })}
                   onDragOver={handleDragOver}
+                  compact
                 />
-              </div>
-            </>
-          );
-        })()}
-      </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Second goalie (edit mode: always show; read-only: only if filled) */}
       {(readOnly ? hasSecondGoalie : goalieSlots.length > 1) && (
@@ -878,6 +1057,7 @@ interface PositionSlotProps {
   onDragStart: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
+  compact?: boolean;
 }
 
 function PositionSlot({
@@ -895,6 +1075,7 @@ function PositionSlot({
   onDragStart,
   onDrop,
   onDragOver,
+  compact = false,
 }: PositionSlotProps) {
   const [open, setOpen] = useState(false);
   const color = POSITION_COLORS_HEX[SLOT_TO_POSITION[slotPosition]];
@@ -909,14 +1090,21 @@ function PositionSlot({
     ? (player.nickname || player.last_name || player.first_name || "")
     : "";
 
+  // Dynamic sizes based on compact mode and responsiveness
+  const containerWidth = compact ? "w-20 sm:w-24 md:w-28" : "w-20 sm:w-28 md:w-32";
+  const circleSize = compact
+    ? "w-14 h-14 sm:w-20 sm:h-20"
+    : "w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28";
+  const textSize = compact ? "text-xs sm:text-sm" : "text-xs sm:text-lg";
+
   const nameLabel = (
-    <div className="text-center z-10 -mt-3 sm:-mt-4">
+    <div className={`text-center z-10 ${compact ? "-mt-2" : "-mt-3 sm:-mt-4"}`}>
       {!isEmpty && player ? (
-        <p className="inline-block px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-team-navy/90 text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap shadow-md border border-white/10">
+        <p className="inline-block px-1.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-team-navy/90 text-[9px] sm:text-xs font-semibold text-white whitespace-nowrap shadow-md border border-white/10 max-w-[120%] truncate">
           #{player.jersey_number ?? ""} {displayName}
         </p>
       ) : (
-        <p className="text-[10px] font-medium text-team-navy/50">{label}</p>
+        <p className={`text-[10px] font-medium text-team-navy/50 whitespace-nowrap ${compact ? "opacity-70" : ""}`}>{label}</p>
       )}
     </div>
   );
@@ -924,7 +1112,7 @@ function PositionSlot({
   // Player circle content (shared between readOnly and edit modes)
   const playerCircle = (
     <div
-      className={`relative w-16 h-16 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
+      className={`relative ${circleSize} rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
         ? readOnly
           ? "bg-white/40"
           : "bg-white/60 hover:bg-white/80 cursor-pointer"
@@ -944,13 +1132,13 @@ function PositionSlot({
       {isEmpty ? (
         <>
           <span
-            className="text-lg font-bold"
+            className={`${textSize} font-bold`}
             style={{ color }}
           >
             {label}
           </span>
-          {!readOnly && (
-            <span className="text-[9px] text-team-navy/50 mt-0.5">
+          {!readOnly && !compact && (
+            <span className="text-[9px] text-team-navy/50 mt-0.5 hidden sm:inline">
               {t("emptySlot")}
             </span>
           )}
@@ -960,7 +1148,7 @@ function PositionSlot({
           {/* Designation badge */}
           {assignment.designation !== "player" && (
             <div
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white z-10"
+              className={`absolute -top-1 -right-1 ${compact ? "w-4 h-4 text-[8px]" : "w-5 h-5 text-[9px]"} rounded-full flex items-center justify-center font-bold text-white z-10 shadow-sm`}
               style={{ backgroundColor: "#e8732a" }}
               onClick={readOnly ? undefined : (e) => {
                 e.stopPropagation();
@@ -982,7 +1170,7 @@ function PositionSlot({
             </div>
           ) : (
             <div
-              className="w-full h-full rounded-full flex items-center justify-center text-white text-xs sm:text-lg font-bold"
+              className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold ${textSize}`}
               style={{ backgroundColor: color }}
             >
               {player
@@ -998,7 +1186,7 @@ function PositionSlot({
   // Read-only mode: no Popover, no drag
   if (readOnly) {
     return (
-      <div className="flex flex-col items-center w-32">
+      <div className={`flex flex-col items-center ${containerWidth}`}>
         {playerCircle}
         {nameLabel}
       </div>
@@ -1007,7 +1195,7 @@ function PositionSlot({
 
   // Edit mode: full Popover + drag & drop
   return (
-    <div className="flex flex-col items-center w-32">
+    <div className={`flex flex-col items-center ${containerWidth}`}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div
