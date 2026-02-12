@@ -1,5 +1,3 @@
-import heic2any from "heic2any";
-
 /**
  * Checks if the file is a HEIC/HEIF image and converts it to JPEG.
  * If it's not a HEIC image, returns the original file.
@@ -13,6 +11,9 @@ export async function processImageFile(file: File): Promise<File> {
         file.name.toLowerCase().endsWith(".heif")
     ) {
         try {
+            // Dynamic import to avoid SSR issues with 'window is not defined'
+            const heic2any = (await import("heic2any")).default;
+
             // Convert to blob (JPEG)
             const convertedBlob = await heic2any({
                 blob: file,

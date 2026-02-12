@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Pencil, Plus, Upload } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import imageCompression from "browser-image-compression";
@@ -180,6 +180,21 @@ export default function AdminTeamsPage() {
     setDialogOpen(false);
     setSaving(false);
     await loadData();
+  }
+
+  async function handleDelete(teamId: string) {
+    if (!window.confirm(tc("deleteConfirm"))) return;
+
+    setSaving(true);
+    const { error } = await supabase.from("teams").delete().eq("id", teamId);
+
+    if (error) {
+      console.error("Error deleting team:", error);
+      alert(error.message);
+    } else {
+      await loadData();
+    }
+    setSaving(false);
   }
 
   const historyByTeam = useMemo(() => {
@@ -352,7 +367,7 @@ export default function AdminTeamsPage() {
         </Dialog>
       </AdminPageHeader>
 
-      <div className="p-6 space-y-2">
+      <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map((team) => {
           const history = historyByTeam.get(team.id) ?? [];
           const recentHistory = history.slice(0, 5);
@@ -361,63 +376,75 @@ export default function AdminTeamsPage() {
           const draws = history.filter((game) => game.result === "draw").length;
 
           return (
-            <Card key={team.id} className="border-border/40">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <TeamAvatar
-                      name={team.name}
-                      logoUrl={team.logo_url}
-                      country={team.country}
-                      size="md"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold">{team.name}</p>
-                        {team.is_propeleri && (
-                          <Badge className="bg-primary/20 text-primary">{tt("propeleri")}</Badge>
-                        )}
-                      </div>
-                      {(team.city || team.country) && (
-                        <p className="text-xs text-muted-foreground">
-                          {[team.city, team.country ? countryDisplayName(team.country) : null].filter(Boolean).join(", ")}
-                        </p>
-                      )}
-                    </div>
+            <Card key={team.id} className="border-border/40 relative group overflow-hidden">
+              <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
+                <Button size="icon" variant="ghost" className="h-8 w-8 bg-background/50 backdrop-blur-sm hover:bg-background/80" onClick={() => openEditDialog(team)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive hover:text-destructive bg-background/50 backdrop-blur-sm hover:bg-destructive/10"
+                  onClick={() => void handleDelete(team.id)}
+                  disabled={saving}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <CardContent className="p-6 flex flex-col items-center gap-4 text-center pt-8">
+                <TeamAvatar
+                  name={team.name}
+                  logoUrl={team.logo_url}
+                  country={team.country}
+                  className="h-40 w-40 text-7xl"
+                />
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="font-semibold text-lg leading-none">{team.name}</p>
+                    {team.is_propeleri && (
+                      <Badge className="bg-primary/20 text-primary text-[10px] h-5 px-1.5">{tt("propeleri")}</Badge>
+                    )}
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => openEditDialog(team)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  {(team.city || team.country) && (
+                    <p className="text-sm text-muted-foreground">
+                      {[team.city, team.country ? countryDisplayName(team.country) : null].filter(Boolean).join(", ")}
+                    </p>
+                  )}
                 </div>
 
                 {!team.is_propeleri && (
-                  <div className="space-y-2 rounded-md border border-border/40 p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-muted-foreground">{tt("opponentHistory")}</p>
-                      <div className="flex items-center gap-1 text-xs">
-                        <Badge className={`${RESULT_COLORS.win}`}>{tg("result.win")}: {wins}</Badge>
-                        <Badge className={`${RESULT_COLORS.loss}`}>{tg("result.loss")}: {losses}</Badge>
-                        <Badge className={`${RESULT_COLORS.draw}`}>{tg("result.draw")}: {draws}</Badge>
+                  <div className="w-full space-y-3 pt-2 border-t border-border/40 mt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-muted-foreground">{tt("opponentHistory")}</span>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className={`h-5 px-1.5 border-0 bg-opacity-20 ${RESULT_COLORS.win.replace('bg-', 'bg-opacity-20 bg-')}`}>{wins}</Badge>
+                        <Badge variant="outline" className={`h-5 px-1.5 border-0 bg-opacity-20 ${RESULT_COLORS.loss.replace('bg-', 'bg-opacity-20 bg-')}`}>{losses}</Badge>
+                        <Badge variant="outline" className={`h-5 px-1.5 border-0 bg-opacity-20 ${RESULT_COLORS.draw.replace('bg-', 'bg-opacity-20 bg-')}`}>{draws}</Badge>
                       </div>
                     </div>
 
                     {recentHistory.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">{tt("noMatches")}</p>
+                      <p className="text-xs text-muted-foreground text-center py-2">{tt("noMatches")}</p>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {recentHistory.map((game) => (
                           <div
                             key={game.id}
-                            className="text-xs text-muted-foreground flex items-center justify-between"
+                            className="text-xs text-muted-foreground flex items-center justify-between bg-muted/30 p-1.5 rounded"
                           >
                             <span>{formatInBelgrade(game.game_date, "sr-Latn", { dateStyle: "short" })}</span>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">
-                                {game.is_home ? game.home_score : game.away_score} : {game.is_home ? game.away_score : game.home_score}
+                              {/* Always show US first for consistency or keep Home/Away logic? 
+                                 Usually in lists "Us vs Them" logic is preferred, but let's stick to Home/Away score display but maybe clarify "Win 5:2"
+                              */}
+                              <span className="font-mono text-foreground">
+                                {game.is_home ? game.home_score : game.away_score}:{game.is_home ? game.away_score : game.home_score}
                               </span>
-                              <Badge className={`text-[10px] ${RESULT_COLORS[game.result as GameResult]}`}>
-                                {tg(`result.${game.result}`)}
-                              </Badge>
+                              <div className={`w-2 h-2 rounded-full ${game.result === 'win' ? 'bg-green-500' :
+                                game.result === 'loss' ? 'bg-red-500' : 'bg-yellow-500'
+                                }`} />
                             </div>
                           </div>
                         ))}
