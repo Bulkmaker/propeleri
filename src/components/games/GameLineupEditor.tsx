@@ -68,13 +68,13 @@ interface GameLineupEditorProps {
   lineup?: ReadOnlyPlayer[];
 }
 
-const SLOT_POSITIONS: Record<string, { left: string; top: string }> = {
-  LW: { left: "20%", top: "15%" },
-  C: { left: "50%", top: "33%" },
-  RW: { left: "80%", top: "15%" },
-  LD: { left: "27%", top: "56%" },
-  RD: { left: "73%", top: "56%" },
-  GK: { left: "50%", top: "70%" },
+const SLOT_LOCATION_CLASSES: Record<string, string> = {
+  LW: "left-[15%] sm:left-[20%] top-[15%]",
+  C: "left-[50%] top-[33%]",
+  RW: "left-[85%] sm:left-[80%] top-[15%]",
+  LD: "left-[12%] sm:left-[27%] top-[56%]",
+  RD: "left-[88%] sm:left-[73%] top-[56%]",
+  GK: "left-[50%] top-[70%]",
 };
 
 export function GameLineupEditor({
@@ -629,11 +629,10 @@ export function GameLineupEditor({
           <button
             key={i}
             onClick={() => setActiveLineIndex(i)}
-            className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-              activeLineIndex === i
+            className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${activeLineIndex === i
                 ? "bg-primary text-primary-foreground shadow-md"
                 : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
-            }`}
+              }`}
           >
             {readOnly ? `${i + 1} ${t("line").toLowerCase()}` : i + 1}
           </button>
@@ -731,8 +730,7 @@ export function GameLineupEditor({
               {(["LW", "C", "RW", "LD", "RD"] as const).map((slotKey) => (
                 <div
                   key={`${lineIndex}-${slotKey}`}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: SLOT_POSITIONS[slotKey].left, top: SLOT_POSITIONS[slotKey].top }}
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 ${SLOT_LOCATION_CLASSES[slotKey]}`}
                 >
                   <PositionSlot
                     slotPosition={slotKey}
@@ -755,8 +753,7 @@ export function GameLineupEditor({
 
               {/* Goalie on rink */}
               <div
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: SLOT_POSITIONS.GK.left, top: SLOT_POSITIONS.GK.top }}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 ${SLOT_LOCATION_CLASSES.GK}`}
               >
                 <PositionSlot
                   slotPosition="GK"
@@ -927,23 +924,14 @@ function PositionSlot({
   // Player circle content (shared between readOnly and edit modes)
   const playerCircle = (
     <div
-      className={`relative w-18 h-18 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all ${
-        isEmpty
+      className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all ${isEmpty
           ? readOnly
-            ? "border-2 border-dashed border-team-navy/20 bg-white/40"
-            : "border-2 border-dashed border-team-navy/30 bg-white/60 hover:border-primary/50 hover:bg-white/80 cursor-pointer"
+            ? "bg-white/40"
+            : "bg-white/60 hover:bg-white/80 cursor-pointer"
           : readOnly
-            ? "border-[3px] border-solid"
-            : "border-[3px] border-solid hover:scale-105 active:cursor-grabbing cursor-pointer"
-      }`}
-      style={
-        isEmpty
-          ? undefined
-          : {
-              borderColor: color,
-              backgroundColor: `${color}10`,
-            }
-      }
+            ? ""
+            : "hover:scale-105 active:cursor-grabbing cursor-pointer"
+        }`}
     >
       {isEmpty ? (
         <>
@@ -1002,7 +990,7 @@ function PositionSlot({
   // Read-only mode: no Popover, no drag
   if (readOnly) {
     return (
-      <div className="flex flex-col items-center gap-1 w-32">
+      <div className="flex flex-col-reverse sm:flex-col items-center gap-1 w-32">
         {playerCircle}
         {nameLabel}
       </div>
@@ -1011,7 +999,7 @@ function PositionSlot({
 
   // Edit mode: full Popover + drag & drop
   return (
-    <div className="flex flex-col items-center gap-1 w-32">
+    <div className="flex flex-col-reverse sm:flex-col items-center gap-1 w-32">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div
@@ -1132,9 +1120,8 @@ function PlayerPickerItem({
 }) {
   return (
     <button
-      className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors ${
-        highlight ? "bg-primary/5" : ""
-      }`}
+      className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors ${highlight ? "bg-primary/5" : ""
+        }`}
       onClick={onClick}
     >
       <span className="text-primary font-bold text-xs min-w-6">
