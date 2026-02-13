@@ -734,7 +734,7 @@ export default function TrainingStatsEntryPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 sm:px-6 py-3 sm:py-4">
         <Link
           href="/admin/training"
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
@@ -742,12 +742,12 @@ export default function TrainingStatsEntryPage() {
           <ChevronLeft className="h-4 w-4 mr-1" />
           {tc("back")}
         </Link>
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold">
             {session?.title || tt("session")} · {tt("attendance")} & {ts("title")}
           </h1>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground min-w-[130px] text-right">
+            <span className="text-xs text-muted-foreground text-right hidden sm:block min-w-32.5">
               {autosaveStatus === "saving"
                 ? tt("autosaveSaving")
                 : autosaveStatus === "saved"
@@ -762,8 +762,8 @@ export default function TrainingStatsEntryPage() {
               onClick={autoAssignTeams}
               className="border-primary/30 text-primary"
             >
-              <Wand2 className="h-4 w-4 mr-2" />
-              {tt("autoAssign")}
+              <Wand2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{tt("autoAssign")}</span>
             </Button>
             <Button
               size="sm"
@@ -774,15 +774,15 @@ export default function TrainingStatsEntryPage() {
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="h-4 w-4 sm:mr-2" />
               )}
-              {tc("save")}
+              <span className="hidden sm:inline">{tc("save")}</span>
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <Card className="border-border/40">
           <CardHeader>
             <CardTitle>{tt("sessionInfo")}</CardTitle>
