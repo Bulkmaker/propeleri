@@ -34,6 +34,7 @@ import { CheckCircle, Users, Loader2, Pencil, UserPlus, Upload, Trash2 } from "l
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import { SkeletonTable } from "@/components/shared/skeletons";
+import { PlayerEditForm } from "@/components/shared/PlayerEditForm";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
 import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
 import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
@@ -560,333 +561,57 @@ export default function AdminPlayersPage() {
           </div>
           {/* Edit Player Dialog */}
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
+            <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>
                   {t("editPlayer")}
                   {editingPlayer ? ` — ${formatPlayerName(editingPlayer)}` : ""}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                {editingPlayer && (
-                  <div className="flex flex-col items-center gap-3 border border-border/60 rounded-lg p-4">
-                    <Avatar className="h-20 w-20 ring-2 ring-primary/20">
-                      <AvatarImage src={editingPlayer.avatar_url ?? undefined} />
-                      <AvatarFallback className="text-lg font-semibold">
-                        {(editingPlayer.first_name?.[0] ?? "") + (editingPlayer.last_name?.[0] ?? "")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*,.heic,.heif"
-                        className="hidden"
-                        onChange={handleFileSelect}
-                        disabled={uploadingAvatar}
-                      />
-                      <Button variant="outline" size="sm" asChild disabled={uploadingAvatar}>
-                        <span>
-                          {uploadingAvatar ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="mr-2 h-4 w-4" />
-                          )}
-                          {tpr("changeAvatar")}
-                        </span>
-                      </Button>
-                    </label>
-                    <AvatarCropDialog
-                      open={cropDialogOpen}
-                      imageSrc={cropImageSrc}
-                      onClose={() => {
-                        setCropDialogOpen(false);
-                        if (cropImageSrc) {
-                          URL.revokeObjectURL(cropImageSrc);
-                          setCropImageSrc(null);
-                        }
-                      }}
-                      onConfirm={handleCroppedUpload}
-                      title={tpr("cropAvatar")}
-                      saveLabel={tpr("cropSave")}
-                      cancelLabel={tc("cancel")}
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>{ta("firstName")}</Label>
-                    <Input
-                      value={form.first_name}
-                      onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{ta("lastName")}</Label>
-                    <Input
-                      value={form.last_name}
-                      onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{tpr("nickname")}</Label>
-                    <Input
-                      value={form.nickname}
-                      onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>{tpr("jerseyNumber")}</Label>
-                    <Input
-                      type="number"
-                      value={form.jersey_number}
-                      onChange={(e) => setForm({ ...form, jersey_number: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{tpr("position")}</Label>
-                    <Select
-                      value={form.position ?? "none"}
-                      onValueChange={(v) => setForm({ ...form, position: v === "none" ? null : v as PlayerPosition })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {POSITIONS.map((pos) => (
-                          <SelectItem key={pos} value={pos}>
-                            {tp(pos)}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="none">{t("noPosition")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{tpr("dateOfBirth")}</Label>
-                    <Input
-                      type="date"
-                      value={form.date_of_birth}
-                      onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>{tpr("height")}</Label>
-                    <Input
-                      type="number"
-                      value={form.height}
-                      onChange={(e) => setForm({ ...form, height: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{tpr("weight")}</Label>
-                    <Input
-                      type="number"
-                      value={form.weight}
-                      onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>{tpr("nationality")}</Label>
-                      <CountrySelect
-                        value={form.nationality}
-                        onChange={(val) => setForm({ ...form, nationality: val })}
-                        className="bg-background"
-                      />
-                    </div>
-
-                    {!form.second_nationality && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setForm({ ...form, second_nationality: "none" })}
-                        className="gap-2 text-muted-foreground w-full"
-                      >
-                        <span className="text-lg leading-none">+</span>
-                        {tpr("secondNationality")}
-                      </Button>
-                    )}
-
-                    {form.second_nationality !== null && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label>{tpr("secondNationality")}</Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-4 w-4 text-muted-foreground hover:text-destructive"
-                            onClick={() => setForm({ ...form, second_nationality: null })}
-                          >
-                            <span className="sr-only">{tc("delete")}</span>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <CountrySelect
-                          value={form.second_nationality === "none" ? null : form.second_nationality}
-                          onChange={(val) => setForm({ ...form, second_nationality: val })}
-                          className="bg-background"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{tpr("phone")}</Label>
-                    <Input
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className="bg-background"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{tpr("bio")}</Label>
-                  <Input
-                    value={form.bio}
-                    onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t("loginField")}</Label>
-                    <Input
-                      value={credentialsForm.login}
-                      onChange={(e) =>
-                        setCredentialsForm({ ...credentialsForm, login: e.target.value })
-                      }
-                      placeholder={t("credentialsOptional")}
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("loginPassword")}</Label>
-                    <Input
-                      type="text"
-                      value={credentialsForm.password}
-                      onChange={(e) =>
-                        setCredentialsForm({ ...credentialsForm, password: e.target.value })
-                      }
-                      placeholder={t("credentialsOptional")}
-                      className="bg-background"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">{t("credentialsHint")}</p>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t("teamRoleColumn")}</Label>
-                    <Select
-                      value={form.team_role}
-                      onValueChange={(v) => setForm({ ...form, team_role: v as PlayerRole })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="player">{tr("player")}</SelectItem>
-                        <SelectItem value="captain">{tr("captain")}</SelectItem>
-                        <SelectItem value="assistant_captain">{tr("assistantCaptain")}</SelectItem>
-                        <SelectItem value="coach">{tr("coach")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("appRole")}</Label>
-                    <Select
-                      value={form.app_role}
-                      onValueChange={(v) => setForm({ ...form, app_role: v as AppRole })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="player">{tr("player")}</SelectItem>
-                        <SelectItem value="admin">{tc("admin")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("defaultTeam")}</Label>
-                    <Select
-                      value={form.default_training_team}
-                      onValueChange={(v) => setForm({ ...form, default_training_team: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">{tt("noTeam")}</SelectItem>
-                        <SelectItem value="team_a">{tt("teamA")}</SelectItem>
-                        <SelectItem value="team_b">{tt("teamB")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.is_guest}
-                      onChange={(e) => setForm({ ...form, is_guest: e.target.checked })}
-                      className="rounded border-border"
-                    />
-                    <span className="text-sm">{tt("guest")}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.is_active}
-                      onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                      className="rounded border-border"
-                    />
-                    <span className="text-sm">{t("active")}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.is_approved}
-                      onChange={(e) => setForm({ ...form, is_approved: e.target.checked })}
-                      className="rounded border-border"
-                    />
-                    <span className="text-sm">{t("approved")}</span>
-                  </label>
-                </div>
-
-                {error && (
-                  <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                    {error}
-                  </p>
-                )}
-                <Button
-                  onClick={handleSave}
-                  disabled={saving || !form.first_name.trim()}
-                  className="w-full bg-primary"
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {tc("save")}
-                </Button>
-              </div>
+              <PlayerEditForm
+                avatarUrl={editingPlayer?.avatar_url ?? null}
+                avatarInitials={
+                  (editingPlayer?.first_name?.[0] ?? "") + (editingPlayer?.last_name?.[0] ?? "")
+                }
+                onAvatarFileSelect={handleFileSelect}
+                uploadingAvatar={uploadingAvatar}
+                cropDialogOpen={cropDialogOpen}
+                cropImageSrc={cropImageSrc}
+                onCropClose={() => {
+                  setCropDialogOpen(false);
+                  if (cropImageSrc) {
+                    URL.revokeObjectURL(cropImageSrc);
+                    setCropImageSrc(null);
+                  }
+                }}
+                onCropConfirm={handleCroppedUpload}
+                form={form}
+                onFormChange={(updated) => setForm((prev) => ({ ...prev, ...updated }))}
+                adminFields={{
+                  login: credentialsForm.login,
+                  password: credentialsForm.password,
+                  team_role: form.team_role,
+                  app_role: form.app_role,
+                  is_guest: form.is_guest,
+                  is_active: form.is_active,
+                  is_approved: form.is_approved,
+                }}
+                onAdminFieldsChange={(fields) => {
+                  setCredentialsForm({ login: fields.login, password: fields.password });
+                  setForm((prev) => ({
+                    ...prev,
+                    team_role: fields.team_role,
+                    app_role: fields.app_role,
+                    is_guest: fields.is_guest,
+                    is_active: fields.is_active,
+                    is_approved: fields.is_approved,
+                  }));
+                }}
+                onSave={handleSave}
+                saving={saving}
+                error={error}
+                saveDisabled={!form.first_name.trim()}
+              />
             </DialogContent>
           </Dialog>
 
