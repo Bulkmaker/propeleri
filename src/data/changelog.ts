@@ -17,23 +17,30 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
-  // ── 2026-02-14 ──────────────────────────────────────────────
+  // ── 2026-02-13 (cont.) ─────────────────────────────────────
   {
-    date: "2026-02-14",
+    date: "2026-02-13",
+    category: "feature",
+    description: "Lepljivi zaglavlja na svim admin stranicama, uklonjen nepotreban skrol",
+    description_ru: "Липкие заголовки на всех страницах админки, убран лишний скролл",
+    description_en: "Sticky headers on all admin pages, removed unnecessary scroll",
+  },
+  {
+    date: "2026-02-13",
     category: "feature",
     description: "Stranica treninga: sledeći trening istaknut, ostali u sklopivim sekcijama",
     description_ru: "Страница тренировок: ближайшая тренировка выделена, остальные в сворачиваемых секциях",
     description_en: "Training page: next session highlighted, others in collapsible sections",
   },
   {
-    date: "2026-02-14",
+    date: "2026-02-13",
     category: "feature",
     description: "Brzo uređivanje utakmica, treninga i igrača direktno sa javnih stranica za admine",
     description_ru: "Быстрое редактирование матчей, тренировок и игроков прямо с публичных страниц для админов",
     description_en: "Quick edit buttons for games, training sessions, and players on public pages for admins",
   },
   {
-    date: "2026-02-14",
+    date: "2026-02-13",
     category: "feature",
     description: "Dodata uloga trenera za članove tima",
     description_ru: "Добавлена роль тренера для членов команды",
