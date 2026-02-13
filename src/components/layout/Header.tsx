@@ -25,7 +25,6 @@ const LocaleSwitcher = dynamic(
 
 const navLinks = [
   { href: "/roster", key: "roster" },
-  { href: "/schedule", key: "schedule" },
   { href: "/games", key: "games" },
   { href: "/training", key: "training" },
   { href: "/stats", key: "stats" },
