@@ -416,7 +416,7 @@ function PlayerEditDialogInner({
             </div>
 
             {/* Name fields */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{ta("firstName")}</Label>
                 <Input
@@ -450,7 +450,7 @@ function PlayerEditDialogInner({
             </div>
 
             {/* Jersey, Position, DOB */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{tpr("jerseyNumber")}</Label>
                 <Input
@@ -501,7 +501,7 @@ function PlayerEditDialogInner({
             </div>
 
             {/* Height, Weight, Nationality */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{tpr("height")}</Label>
                 <Input
@@ -603,7 +603,7 @@ function PlayerEditDialogInner({
             {/* Credentials (admin only) */}
             {showCredentials && (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>{t("loginField")}</Label>
                     <Input
@@ -641,7 +641,7 @@ function PlayerEditDialogInner({
             )}
 
             {/* Roles */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>{t("teamRoleColumn")}</Label>
                 <Select

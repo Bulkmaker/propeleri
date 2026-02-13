@@ -207,7 +207,7 @@ export function GameDetailView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="relative max-w-4xl mx-auto">
         <GameMatchCard
           teamName="Propeleri"
           opponentName={opponentName}
@@ -237,8 +237,7 @@ export function GameDetailView({
         />
         <AdminEditButton
           href={`/admin/games/${game.id}?tab=details`}
-          variant="button"
-          className="ml-4"
+          className="absolute top-2 right-2 z-10"
         />
       </div>
 

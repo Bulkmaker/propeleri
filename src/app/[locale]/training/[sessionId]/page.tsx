@@ -129,7 +129,7 @@ export default async function TrainingDetailPage({
 
       {/* Session Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <h1 className="text-3xl font-bold">{session.title || t("session")}</h1>
           <AdminEditButton
             href={`/admin/training/${session.id}`}

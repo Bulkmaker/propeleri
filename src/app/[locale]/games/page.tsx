@@ -139,7 +139,7 @@ export default async function GamesPage({
                     minute: "2-digit",
                   });
                   return (
-                    <div key={game.id} className="relative">
+                    <div key={game.id} className="relative max-w-4xl mx-auto">
                       <GameMatchCard
                         href={`/games/${game.id}`}
                         teamName={tt("propeleri")}
@@ -164,7 +164,7 @@ export default async function GamesPage({
                       />
                       <AdminEditButton
                         href={`/admin/games/${game.id}`}
-                        className="absolute top-3 right-3 z-10"
+                        className="absolute top-2 right-2 z-10"
                       />
                     </div>
                   );
@@ -195,7 +195,7 @@ export default async function GamesPage({
                   minute: "2-digit",
                 });
                 return (
-                  <div key={game.id} className="relative">
+                  <div key={game.id} className="relative max-w-4xl mx-auto">
                     <GameMatchCard
                       href={`/games/${game.id}`}
                       teamName={tt("propeleri")}
@@ -220,7 +220,7 @@ export default async function GamesPage({
                     />
                     <AdminEditButton
                       href={`/admin/games/${game.id}`}
-                      className="absolute top-3 right-3 z-10"
+                      className="absolute top-2 right-2 z-10"
                     />
                   </div>
                 );

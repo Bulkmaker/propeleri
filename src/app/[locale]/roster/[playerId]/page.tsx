@@ -91,7 +91,7 @@ export default async function PlayerProfilePage({
               #{player.jersey_number}
             </span>
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-center md:justify-start flex-wrap">
             <h1 className="text-3xl font-bold">
               {formatPlayerName(player)}
             </h1>
