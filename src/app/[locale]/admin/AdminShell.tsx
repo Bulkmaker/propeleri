@@ -43,7 +43,7 @@ export default function AdminShell({
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
 
-    // Lock body scroll, hide footer, and make outer main fill the remaining viewport
+    // Lock body scroll, hide footer, constrain outer main so inner scroll works
     useEffect(() => {
         const body = document.body;
         const mainContent = document.getElementById("main-content");
@@ -51,11 +51,19 @@ export default function AdminShell({
 
         body.style.height = "100dvh";
         body.style.overflow = "hidden";
+        if (mainContent) {
+            mainContent.style.overflow = "hidden";
+            mainContent.style.minHeight = "0";
+        }
         if (footer?.tagName === "FOOTER") footer.style.display = "none";
 
         return () => {
             body.style.height = "";
             body.style.overflow = "";
+            if (mainContent) {
+                mainContent.style.overflow = "";
+                mainContent.style.minHeight = "";
+            }
             if (footer?.tagName === "FOOTER") footer.style.display = "";
         };
     }, []);
