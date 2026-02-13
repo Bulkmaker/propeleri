@@ -33,6 +33,7 @@ import type { ReadOnlyPlayer } from "@/components/games/GameLineupEditor";
 
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { Button } from "@/components/ui/button";
+import { YouTubeEmbed } from "@/components/shared/YouTubeEmbed";
 
 type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
   line_number: number | null;
@@ -247,6 +248,18 @@ export function GameDetailView({
           </div>
         )}
       </div>
+
+      {/* YouTube Video */}
+      {game.youtube_url && (
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle>{t("gameVideo")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <YouTubeEmbed url={game.youtube_url} title={`${opponentName} - ${dateLabel}`} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hockey Rink Visualization */}
       {lineup.length > 0 && (

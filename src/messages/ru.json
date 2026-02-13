@@ -40,7 +40,8 @@
     "searchCountry": "Поиск страны",
     "countryNotFound": "Страна не найдена",
     "error_title": "Что-то пошло не так!",
-    "try_again": "Попробовать снова"
+    "try_again": "Попробовать снова",
+    "changelog": "Изменения"
   },
   "locale": {
     "sr": "Сербский",
@@ -202,7 +203,11 @@
     "errorOpponentRequired": "Соперник обязателен",
     "errorOpponentNotFound": "Выбранная команда-соперник не найдена",
     "errorInvalidGameDate": "Неверная дата матча",
-    "errorSaving": "Ошибка сохранения матча"
+    "errorSaving": "Ошибка сохранения матча",
+    "youtubeUrl": "Ссылка на видео YouTube",
+    "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
+    "youtubeUrlInvalid": "Введите корректную ссылку на YouTube",
+    "gameVideo": "Видео матча"
   },
   "training": {
     "title": "Тренировки",
@@ -261,7 +266,12 @@
     "deleteConfirm": "Удалить тренировку и всю связанную статистику?",
     "errorScorerTeam": "Автор гола должен быть из выбранной команды и отмечен как присутствующий.",
     "errorAssistTeam": "Ассист должен быть из той же команды и не совпадать с автором гола.",
-    "statsSaved": "Статистика и матч сохранены."
+    "statsSaved": "Статистика и матч сохранены.",
+    "youtubeUrl": "Ссылка на видео YouTube",
+    "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
+    "youtubeUrlInvalid": "Введите корректную ссылку на YouTube",
+    "sessionVideo": "Видео тренировки",
+    "hasVideo": "Видео"
   },
   "stats": {
     "title": "Статистика",
@@ -546,5 +556,19 @@
     "club": "HC Propeleri Нови Сад",
     "description": "Любительский хоккейный клуб из Нови Сада",
     "rights": "Все права защищены"
+  },
+  "changelog": {
+    "title": "История изменений",
+    "description": "Полная история развития сайта",
+    "categories": {
+      "feature": "Новое",
+      "fix": "Исправление",
+      "refactor": "Рефакторинг",
+      "style": "Стиль",
+      "perf": "Производительность",
+      "security": "Безопасность",
+      "docs": "Документация",
+      "chore": "Техническое"
+    }
   }
 }

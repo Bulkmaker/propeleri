@@ -33,6 +33,7 @@ import {
 } from "@/lib/utils/datetime";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import { SkeletonCardList } from "@/components/shared/skeletons";
+import { isValidYouTubeUrl } from "@/lib/utils/youtube";
 
 const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
 const WEEKDAY_OPTIONS = [
@@ -89,6 +90,7 @@ export default function AdminTrainingPage() {
     location: "",
     status: "planned" as TrainingSessionStatus,
     notes: "",
+    youtube_url: "",
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [scheduleForm, setScheduleForm] = useState({
@@ -166,6 +168,7 @@ export default function AdminTrainingPage() {
       location: "",
       status: "planned",
       notes: "",
+      youtube_url: "",
     });
     setDialogOpen(true);
   }
@@ -180,6 +183,7 @@ export default function AdminTrainingPage() {
       location: session.location ?? "",
       status: normalizeStatus(session.status),
       notes: session.notes ?? "",
+      youtube_url: session.youtube_url ?? "",
     });
     setDialogOpen(true);
   }
@@ -201,6 +205,7 @@ export default function AdminTrainingPage() {
       title: form.title || null,
       location: form.location || null,
       notes: form.notes.trim() || null,
+      youtube_url: form.youtube_url.trim() || null,
     };
 
     const res = editingId
@@ -481,6 +486,19 @@ export default function AdminTrainingPage() {
                       placeholder={tt("reportPlaceholder")}
                       className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{tt("youtubeUrl")}</Label>
+                    <Input
+                      value={form.youtube_url}
+                      onChange={(e) => setForm({ ...form, youtube_url: e.target.value })}
+                      placeholder={tt("youtubeUrlPlaceholder")}
+                      className="bg-background"
+                      type="url"
+                    />
+                    {form.youtube_url && !isValidYouTubeUrl(form.youtube_url) && (
+                      <p className="text-xs text-destructive">{tt("youtubeUrlInvalid")}</p>
+                    )}
                   </div>
                   {error && (
                     <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">

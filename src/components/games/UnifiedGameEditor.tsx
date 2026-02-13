@@ -33,6 +33,7 @@ import {
   Loader2,
   Save,
 } from "lucide-react";
+import { isValidYouTubeUrl } from "@/lib/utils/youtube";
 import type {
   Game,
   LineupDesignation,
@@ -386,6 +387,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         away_score: game.away_score,
         is_home: game.is_home,
         result: game.result,
+        youtube_url: game.youtube_url,
       })
       .eq("id", gameId);
 
@@ -717,6 +719,19 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{tg("youtubeUrl")}</Label>
+                    <Input
+                      value={game.youtube_url || ""}
+                      onChange={(e) => setGame({ ...game, youtube_url: e.target.value || null })}
+                      placeholder={tg("youtubeUrlPlaceholder")}
+                      type="url"
+                    />
+                    {game.youtube_url && !isValidYouTubeUrl(game.youtube_url) && (
+                      <p className="text-xs text-destructive">{tg("youtubeUrlInvalid")}</p>
+                    )}
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-3">

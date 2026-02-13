@@ -4,8 +4,9 @@ import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrainingScoreView } from "@/components/training/TrainingScoreView";
-import { CalendarDays, MapPin, Users } from "lucide-react";
-import type { TrainingSession, TrainingSessionStatus } from "@/types/database";
+import { TrainingFilters } from "@/components/training/TrainingFilters";
+import { CalendarDays, MapPin, Users, Video } from "lucide-react";
+import type { TrainingSession, TrainingSessionStatus, Season } from "@/types/database";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
@@ -22,21 +23,15 @@ function statusBadgeClass(status: TrainingSessionStatus) {
   return "bg-blue-500/10 text-blue-500 border-blue-500/20";
 }
 
-function getEndOfCurrentWeek(date: Date) {
-  const endOfWeek = new Date(date);
-  const dayOfWeek = endOfWeek.getDay(); // 0 = Sunday
-  const daysUntilSunday = (7 - dayOfWeek) % 7;
-  endOfWeek.setDate(endOfWeek.getDate() + daysUntilSunday);
-  endOfWeek.setHours(23, 59, 59, 999);
-  return endOfWeek;
-}
-
 export default async function TrainingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale } = await params;
+  const query = await searchParams;
   setRequestLocale(locale);
 
   const t = await getTranslations("training");
@@ -44,22 +39,50 @@ export default async function TrainingPage({
   const ts = await getTranslations("schedule");
 
   const supabase = await createClient();
+
+  const { data: seasonsData } = await supabase
+    .from("seasons")
+    .select("*")
+    .order("start_date", { ascending: false });
+
+  const seasons = (seasonsData ?? []) as Season[];
+  const currentSeason = seasons.find((s) => s.is_current) ?? seasons[0];
+
+  const selectedSeasonId =
+    (typeof query.season === "string" && seasons.some((s) => s.id === query.season)
+      ? query.season
+      : null) ?? currentSeason?.id;
+
+  const videoFilter = query.video === "1";
+
+  if (!selectedSeasonId) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-20 text-muted-foreground">
+          <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
+          <p>{tc("noData")}</p>
+        </div>
+      </div>
+    );
+  }
+
   const { data: sessions } = await supabase
     .from("training_sessions")
     .select("*")
+    .eq("season_id", selectedSeasonId)
     .order("session_date", { ascending: false });
 
   const allSessions = (sessions ?? []) as TrainingSession[];
   const now = new Date();
-  const endOfWeek = getEndOfCurrentWeek(now);
 
   const sessionsWithMatch = allSessions
     .map((session) => ({
       session,
       date: new Date(session.session_date),
       matchData: parseTrainingMatchData(session.match_data),
+      hasVideo: Boolean(session.youtube_url),
     }))
-    .filter(({ date }) => date < now || date <= endOfWeek);
+    .filter((item) => !videoFilter || item.hasVideo);
 
   const upcomingSessions = sessionsWithMatch
     .filter(({ date }) => date >= now)
@@ -71,11 +94,19 @@ export default async function TrainingPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="h-10 w-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-          <Users className="h-5 w-5 text-blue-400" />
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <Users className="h-5 w-5 text-blue-400" />
+          </div>
+          <h1 className="text-3xl font-bold">{t("title")}</h1>
         </div>
-        <h1 className="text-3xl font-bold">{t("title")}</h1>
+        <TrainingFilters
+          seasons={seasons.map((s) => ({ id: s.id, name: s.name }))}
+          currentSeasonId={selectedSeasonId}
+          videoFilter={videoFilter}
+          videoLabel={t("hasVideo")}
+        />
       </div>
 
       {sessionsWithMatch.length === 0 ? (
@@ -92,7 +123,7 @@ export default async function TrainingPage({
                 {ts("thisWeek")}
               </h2>
               <div className="space-y-4 md:space-y-5">
-                {upcomingSessions.map(({ session, matchData }) => (
+                {upcomingSessions.map(({ session, matchData, hasVideo }) => (
                   <Link key={session.id} href={`/training/${session.id}`} className="block">
                     <Card className="border-border/40 card-hover bg-card cursor-pointer rounded-xl overflow-hidden">
                       <CardContent className="px-4 py-4 md:px-5">
@@ -110,6 +141,12 @@ export default async function TrainingPage({
                                 >
                                   {t(`status.${normalizeStatus(session.status)}`)}
                                 </Badge>
+                                {hasVideo && (
+                                  <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                                    <Video className="h-3 w-3" />
+                                    Video
+                                  </Badge>
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {formatInBelgrade(session.session_date, "sr-Latn", {
@@ -158,7 +195,7 @@ export default async function TrainingPage({
                 {ts("pastEvents")}
               </h2>
               <div className="space-y-4 md:space-y-5">
-                {pastSessions.map(({ session, matchData }) => (
+                {pastSessions.map(({ session, matchData, hasVideo }) => (
                   <Link key={session.id} href={`/training/${session.id}`} className="block">
                     <Card className="border-border/40 card-hover bg-card cursor-pointer rounded-xl overflow-hidden">
                       <CardContent className="px-4 py-4 md:px-5">
@@ -176,6 +213,12 @@ export default async function TrainingPage({
                                 >
                                   {t(`status.${normalizeStatus(session.status)}`)}
                                 </Badge>
+                                {hasVideo && (
+                                  <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                                    <Video className="h-3 w-3" />
+                                    Video
+                                  </Badge>
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {formatInBelgrade(session.session_date, "sr-Latn", {

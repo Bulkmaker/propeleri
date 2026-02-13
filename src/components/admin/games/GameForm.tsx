@@ -34,6 +34,7 @@ import {
     formatInBelgrade,
 } from "@/lib/utils/datetime";
 import { updateGameStats } from "@/lib/utils/game-stats";
+import { isValidYouTubeUrl } from "@/lib/utils/youtube";
 
 
 // --- Types ---
@@ -48,6 +49,7 @@ export type GameFormData = {
     home_score: number;
     away_score: number;
     result: GameResult;
+    youtube_url: string;
 };
 
 
@@ -201,6 +203,7 @@ export function GameForm({
         home_score: initialData?.home_score ?? 0,
         away_score: initialData?.away_score ?? 0,
         result: initialData?.result ?? "pending",
+        youtube_url: initialData?.youtube_url ?? "",
     });
 
     const [error, setError] = useState("");
@@ -393,6 +396,7 @@ export function GameForm({
                 away_score: form.away_score,
                 result: form.result,
                 notes: notesValue,
+                youtube_url: form.youtube_url.trim() || null,
             };
 
             // 5. Call onSave
@@ -536,6 +540,20 @@ export function GameForm({
                         disabled={isManagedByTournament}
                     />
                 </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label>{tg("youtubeUrl")}</Label>
+                <Input
+                    value={form.youtube_url}
+                    onChange={(e) => setForm({ ...form, youtube_url: e.target.value })}
+                    placeholder={tg("youtubeUrlPlaceholder")}
+                    className="bg-background"
+                    type="url"
+                />
+                {form.youtube_url && !isValidYouTubeUrl(form.youtube_url) && (
+                    <p className="text-xs text-destructive">{tg("youtubeUrlInvalid")}</p>
+                )}
             </div>
 
             {initialData && !isManagedByTournament && (

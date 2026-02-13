@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/hooks/use-user";
-import { Menu, User, Shield, LogOut } from "lucide-react";
+import { Menu, User, Shield, LogOut, ScrollText } from "lucide-react";
 import Image from "next/image";
 
 const LocaleSwitcher = dynamic(
@@ -27,6 +27,7 @@ const navLinks = [
   { href: "/roster", key: "roster" },
   { href: "/schedule", key: "schedule" },
   { href: "/games", key: "games" },
+  { href: "/training", key: "training" },
   { href: "/stats", key: "stats" },
   { href: "/gallery", key: "gallery" },
   { href: "/events", key: "events" },
@@ -100,6 +101,15 @@ export function Header() {
 
         {/* Right side: locale switcher + auth + mobile menu */}
         <div className="flex items-center gap-2">
+          <Link href="/changelog" aria-label={t("changelog")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+            >
+              <ScrollText className="h-4 w-4" />
+            </Button>
+          </Link>
           <LocaleSwitcher />
 
           {/* Desktop auth */}
@@ -182,6 +192,18 @@ export function Header() {
                     </Link>
                   );
                 })}
+                <Link
+                  href="/changelog"
+                  onClick={() => setOpen(false)}
+                  className={`px-4 py-3 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
+                    pathname === "/changelog"
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
+                >
+                  <ScrollText className="h-4 w-4" />
+                  {t("changelog")}
+                </Link>
                 <div className="border-t border-border my-2" />
                 {user ? (
                   <>

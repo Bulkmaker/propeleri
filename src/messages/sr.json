@@ -40,7 +40,8 @@
     "searchCountry": "Pretraži državu",
     "countryNotFound": "Država nije pronađena",
     "error_title": "Nešto je pošlo po zlu!",
-    "try_again": "Pokušaj ponovo"
+    "try_again": "Pokušaj ponovo",
+    "changelog": "Izmene"
   },
   "locale": {
     "sr": "Srpski",
@@ -202,7 +203,11 @@
     "errorOpponentRequired": "Protivnik je obavezan",
     "errorOpponentNotFound": "Odabrani protivnicki tim nije pronadjen",
     "errorInvalidGameDate": "Neispravan datum utakmice",
-    "errorSaving": "Greska pri cuvanju utakmice"
+    "errorSaving": "Greska pri cuvanju utakmice",
+    "youtubeUrl": "YouTube video link",
+    "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
+    "youtubeUrlInvalid": "Unesite ispravan YouTube link",
+    "gameVideo": "Video utakmice"
   },
   "training": {
     "title": "Treninzi",
@@ -261,7 +266,12 @@
     "deleteConfirm": "Obrisati trening i svu povezanu statistiku?",
     "errorScorerTeam": "Autor gola mora biti iz odabrane ekipe i oznacen kao prisustan.",
     "errorAssistTeam": "Asistencija mora biti iz iste ekipe i ne sme biti isti igrac kao autor gola.",
-    "statsSaved": "Statistika i mec sacuvani."
+    "statsSaved": "Statistika i mec sacuvani.",
+    "youtubeUrl": "YouTube video link",
+    "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
+    "youtubeUrlInvalid": "Unesite ispravan YouTube link",
+    "sessionVideo": "Video treninga",
+    "hasVideo": "Video"
   },
   "stats": {
     "title": "Statistika",
@@ -546,5 +556,19 @@
     "club": "HC Propeleri Novi Sad",
     "description": "Amaterski hokejaski klub iz Novog Sada",
     "rights": "Sva prava zadrzana"
+  },
+  "changelog": {
+    "title": "Istorija izmena",
+    "description": "Kompletna istorija razvoja sajta",
+    "categories": {
+      "feature": "Novo",
+      "fix": "Ispravka",
+      "refactor": "Refaktorisanje",
+      "style": "Stil",
+      "perf": "Performanse",
+      "security": "Bezbednost",
+      "docs": "Dokumentacija",
+      "chore": "Tehnicko"
+    }
   }
 }

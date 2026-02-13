@@ -18,6 +18,7 @@ import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle, Swords } from 
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatPlayerName, formatPlayerNameWithNumber } from "@/lib/utils/player-name";
+import { YouTubeEmbed } from "@/components/shared/YouTubeEmbed";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import type {
   PlayerPosition,
@@ -162,6 +163,17 @@ export default async function TrainingDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{session.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {session.youtube_url && (
+        <Card className="border-border/40 mb-6">
+          <CardHeader>
+            <CardTitle>{t("sessionVideo")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <YouTubeEmbed url={session.youtube_url} title={session.title || t("session")} />
           </CardContent>
         </Card>
       )}

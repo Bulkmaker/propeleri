@@ -75,6 +75,7 @@ export interface Game {
   result: GameResult;
   auto_generated_from_tournament: boolean;
   notes: string | null;
+  youtube_url: string | null;
   created_at: string;
   updated_at: string;
 
@@ -115,6 +116,7 @@ export interface TrainingSession {
   location: string | null;
   notes: string | null;
   match_data: TrainingMatchData | null;
+  youtube_url: string | null;
   created_at: string;
   updated_at: string;
 }

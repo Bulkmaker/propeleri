@@ -40,7 +40,8 @@
     "searchCountry": "Search country",
     "countryNotFound": "Country not found",
     "error_title": "Something went wrong!",
-    "try_again": "Try again"
+    "try_again": "Try again",
+    "changelog": "Changelog"
   },
   "locale": {
     "sr": "Serbian",
@@ -202,7 +203,11 @@
     "errorOpponentRequired": "Opponent is required",
     "errorOpponentNotFound": "Selected opponent team not found",
     "errorInvalidGameDate": "Invalid game date",
-    "errorSaving": "Error saving game"
+    "errorSaving": "Error saving game",
+    "youtubeUrl": "YouTube Video URL",
+    "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
+    "youtubeUrlInvalid": "Enter a valid YouTube URL",
+    "gameVideo": "Game Video"
   },
   "training": {
     "title": "Training Sessions",
@@ -261,7 +266,12 @@
     "deleteConfirm": "Delete training and all related stats?",
     "errorScorerTeam": "Goal scorer must be from the selected team and marked as attended.",
     "errorAssistTeam": "Assist must be from the same team and not the same player as the goal scorer.",
-    "statsSaved": "Stats and match saved."
+    "statsSaved": "Stats and match saved.",
+    "youtubeUrl": "YouTube Video URL",
+    "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
+    "youtubeUrlInvalid": "Enter a valid YouTube URL",
+    "sessionVideo": "Training Video",
+    "hasVideo": "Video"
   },
   "stats": {
     "title": "Statistics",
@@ -546,5 +556,19 @@
     "club": "HC Propeleri Novi Sad",
     "description": "Amateur ice hockey club from Novi Sad",
     "rights": "All rights reserved"
+  },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Complete history of website development",
+    "categories": {
+      "feature": "Feature",
+      "fix": "Fix",
+      "refactor": "Refactor",
+      "style": "Style",
+      "perf": "Performance",
+      "security": "Security",
+      "docs": "Docs",
+      "chore": "Chore"
+    }
   }
 }

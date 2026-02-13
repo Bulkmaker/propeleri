@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
-import { Swords, Award } from "lucide-react";
+import { Swords, Award, Video } from "lucide-react";
 import type { Game, GameResult, Team, Tournament } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
@@ -154,6 +154,12 @@ export default async function GamesPage({
                       resultClassName={RESULT_COLORS[game.result as GameResult]}
                       matchTimeLabel={tg("matchTime")}
                       variant="poster"
+                      badges={game.youtube_url ? (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                          <Video className="h-3 w-3" />
+                          Video
+                        </Badge>
+                      ) : undefined}
                     />
                   );
                 })}
@@ -199,6 +205,12 @@ export default async function GamesPage({
                     resultClassName={RESULT_COLORS[game.result as GameResult]}
                     matchTimeLabel={tg("matchTime")}
                     variant="poster"
+                    badges={game.youtube_url ? (
+                      <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                        <Video className="h-3 w-3" />
+                        Video
+                      </Badge>
+                    ) : undefined}
                   />
                 );
               })}
