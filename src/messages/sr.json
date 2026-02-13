@@ -56,7 +56,8 @@
   "roles": {
     "captain": "Kapiten",
     "assistantCaptain": "Pomocni kapiten",
-    "player": "Igrac"
+    "player": "Igrac",
+    "coach": "Trener"
   },
   "home": {
     "hero": {
@@ -84,6 +85,8 @@
     "weight": "Tezina",
     "captain": "Kapiten",
     "assistant_captain": "Asistent",
+    "coach": "Trener",
+    "coachesSection": "Treneri",
     "gamesPlayed": "Utakmice",
     "goals": "Golovi",
     "assists": "Asistencije",
@@ -221,6 +224,7 @@
     "teams": "Timovi",
     "autoAssign": "Automatski",
     "noTeam": "Bez tima",
+    "noPosition": "Bez pozicije",
     "sessionStatus": "Status",
     "report": "Izvestaj treninga",
     "reportPlaceholder": "Sta je radjeno, rezultat, napomene...",
@@ -347,7 +351,8 @@
     "nationality": "Nacionalnost",
     "secondNationality": "Druga nacionalnost",
     "saved": "Profil sacuvan!",
-    "notFound": "Profil nije pronadjen. Molimo pokusajte ponovo kasnije."
+    "notFound": "Profil nije pronadjen. Molimo pokusajte ponovo kasnije.",
+    "noPosition": "Bez pozicije"
   },
   "admin": {
     "dashboard": "Kontrolna tabla",

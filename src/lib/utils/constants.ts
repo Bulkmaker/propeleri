@@ -6,6 +6,7 @@ export const ROLES: PlayerRole[] = [
   "player",
   "captain",
   "assistant_captain",
+  "coach",
 ];
 
 export const GAME_RESULTS: GameResult[] = ["win", "loss", "draw", "pending"];

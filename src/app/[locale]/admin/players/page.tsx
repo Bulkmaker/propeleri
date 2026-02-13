@@ -53,7 +53,7 @@ interface PlayerForm {
   last_name: string;
   nickname: string;
   jersey_number: string;
-  position: PlayerPosition;
+  position: PlayerPosition | null;
   team_role: PlayerRole;
   app_role: AppRole;
   height: string;
@@ -110,7 +110,7 @@ export default function AdminPlayersPage() {
     first_name: "",
     is_guest: false,
     jersey_number: "",
-    position: "forward" as PlayerPosition,
+    position: "forward" as PlayerPosition | null,
   });
   const [credentialsForm, setCredentialsForm] = useState({
     login: "",
@@ -121,7 +121,7 @@ export default function AdminPlayersPage() {
     last_name: "",
     nickname: "",
     jersey_number: "",
-    position: "forward",
+    position: "forward" as PlayerPosition | null,
     team_role: "player",
     app_role: "player",
     height: "",
@@ -236,7 +236,7 @@ export default function AdminPlayersPage() {
         last_name: form.last_name,
         nickname: form.nickname.trim() || null,
         jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
-        position: form.position,
+        position: form.position || null,
         team_role: form.team_role,
         app_role: form.app_role,
         height: form.height ? parseInt(form.height) : null,
@@ -426,8 +426,9 @@ export default function AdminPlayersPage() {
           }
 
           if (sortBy === "position") {
-            const posDiff = POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position);
-            return posDiff || byName(a, b);
+            const posA = a.position ? POSITIONS.indexOf(a.position) : POSITIONS.length;
+            const posB = b.position ? POSITIONS.indexOf(b.position) : POSITIONS.length;
+            return posA - posB || byName(a, b);
           }
 
           if (sortBy === "training_team") {
@@ -480,7 +481,7 @@ export default function AdminPlayersPage() {
           loginFromEmail,
           player.email,
           player.jersey_number?.toString() ?? "",
-          player.position,
+          player.position ?? "",
           player.default_training_team ?? "",
         ];
 
@@ -652,8 +653,8 @@ export default function AdminPlayersPage() {
                   <div className="space-y-2">
                     <Label>{tpr("position")}</Label>
                     <Select
-                      value={form.position}
-                      onValueChange={(v) => setForm({ ...form, position: v as PlayerPosition })}
+                      value={form.position ?? "none"}
+                      onValueChange={(v) => setForm({ ...form, position: v === "none" ? null : v as PlayerPosition })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -664,6 +665,7 @@ export default function AdminPlayersPage() {
                             {tp(pos)}
                           </SelectItem>
                         ))}
+                        <SelectItem value="none">{t("noPosition")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -804,6 +806,7 @@ export default function AdminPlayersPage() {
                         <SelectItem value="player">{tr("player")}</SelectItem>
                         <SelectItem value="captain">{tr("captain")}</SelectItem>
                         <SelectItem value="assistant_captain">{tr("assistantCaptain")}</SelectItem>
+                        <SelectItem value="coach">{tr("coach")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -940,8 +943,8 @@ export default function AdminPlayersPage() {
                   <div className="space-y-2">
                     <Label>{tpr("position")}</Label>
                     <Select
-                      value={createForm.position}
-                      onValueChange={(v) => setCreateForm({ ...createForm, position: v as PlayerPosition })}
+                      value={createForm.position ?? "none"}
+                      onValueChange={(v) => setCreateForm({ ...createForm, position: v === "none" ? null : v as PlayerPosition })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -952,6 +955,7 @@ export default function AdminPlayersPage() {
                             {tp(pos)}
                           </SelectItem>
                         ))}
+                        <SelectItem value="none">{t("noPosition")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1181,6 +1185,11 @@ export default function AdminPlayersPage() {
                                 {tr("assistantCaptain")}
                               </Badge>
                             )}
+                            {player.team_role === "coach" && (
+                              <Badge className="bg-green-500/20 text-green-400 border border-green-500/40">
+                                {tr("coach")}
+                              </Badge>
+                            )}
                             {player.is_guest && (
                               <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
                                 {tt("guest")}
@@ -1193,9 +1202,13 @@ export default function AdminPlayersPage() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
-                            {tp(player.position)}
-                          </Badge>
+                          {player.position ? (
+                            <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
+                              {tp(player.position)}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {player.default_training_team ? (

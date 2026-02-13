@@ -42,7 +42,7 @@ export function PlayerTable({ players }: PlayerTableProps) {
                     </TableHeader>
                     <TableBody>
                         {players.map((player) => {
-                            const positionColor = POSITION_COLORS[player.position] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
+                            const positionColor = player.position ? POSITION_COLORS[player.position] : "bg-gray-500/20 text-gray-400 border-gray-500/30";
 
                             return (
                                 <TableRow
@@ -72,13 +72,19 @@ export function PlayerTable({ players }: PlayerTableProps) {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={cn("capitalize whitespace-nowrap text-xs", positionColor)}>
-                                            {tp(player.position)}
-                                        </Badge>
+                                        {player.position ? (
+                                            <Badge variant="outline" className={cn("capitalize whitespace-nowrap text-xs", positionColor)}>
+                                                {tp(player.position)}
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">—</span>
+                                        )}
                                     </TableCell>
                                     <TableCell className="hidden md:table-cell">
                                         {player.team_role !== "player" && (
-                                            <Badge variant="secondary" className="capitalize text-xs">
+                                            <Badge variant="secondary" className={cn("capitalize text-xs",
+                                                player.team_role === "coach" && "bg-green-500/20 text-green-400 border border-green-500/40"
+                                            )}>
                                                 {t(player.team_role)}
                                             </Badge>
                                         )}

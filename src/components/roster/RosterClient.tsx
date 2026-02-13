@@ -96,9 +96,11 @@ export default function RosterClient({ players }: { players: Profile[] }) {
     return sorted;
   }, [filteredPlayers, sortBy, sortDirection]);
 
-  const forwards = sortedPlayers.filter((player) => player.position === "forward");
-  const defense = sortedPlayers.filter((player) => player.position === "defense");
-  const goalies = sortedPlayers.filter((player) => player.position === "goalie");
+  const coaches = sortedPlayers.filter((player) => player.team_role === "coach");
+  const nonCoachPlayers = sortedPlayers.filter((player) => player.team_role !== "coach");
+  const forwards = nonCoachPlayers.filter((player) => player.position === "forward");
+  const defense = nonCoachPlayers.filter((player) => player.position === "defense");
+  const goalies = nonCoachPlayers.filter((player) => player.position === "goalie");
 
   return (
     <div className="space-y-8">
@@ -185,6 +187,9 @@ export default function RosterClient({ players }: { players: Profile[] }) {
               {goalies.length > 0 && (
                 <PositionSection title={tp("goalie")} players={goalies} />
               )}
+              {coaches.length > 0 && (
+                <PositionSection title={t("coachesSection")} players={coaches} />
+              )}
             </div>
           ) : (
             <PlayerTable players={sortedPlayers} />
@@ -219,6 +224,7 @@ function PositionSection({
 
 function PlayerCard({ player }: { player: Profile }) {
   const tp = useTranslations("positions");
+  const tr = useTranslations("roles");
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
 
   return (
@@ -241,15 +247,21 @@ function PlayerCard({ player }: { player: Profile }) {
           <p className="font-semibold text-sm">
             {formatPlayerName(player)}
           </p>
-          <Badge
-            variant="secondary"
-            className={`mt-2 text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}
-          >
-            {tp(player.position)}
-          </Badge>
+          {player.position && (
+            <Badge
+              variant="secondary"
+              className={`mt-2 text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}
+            >
+              {tp(player.position)}
+            </Badge>
+          )}
           {player.team_role !== "player" && (
-            <Badge variant="outline" className="mt-1 text-xs border-primary/30 text-primary">
-              {player.team_role === "captain" ? "C" : "A"}
+            <Badge variant="outline" className={cn("mt-1 text-xs",
+              player.team_role === "coach"
+                ? "border-green-500/30 text-green-400"
+                : "border-primary/30 text-primary"
+            )}>
+              {player.team_role === "captain" ? "C" : player.team_role === "assistant_captain" ? "A" : tr("coach")}
             </Badge>
           )}
         </CardContent>

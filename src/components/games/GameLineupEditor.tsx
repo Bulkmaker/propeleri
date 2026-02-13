@@ -1006,12 +1006,14 @@ export function GameLineupEditor({
                   <span className="text-xs font-medium">
                     {player.nickname || player.last_name || player.first_name}
                   </span>
-                  <Badge
-                    variant="secondary"
-                    className={`text-[9px] px-1.5 py-0 ${POSITION_COLORS[player.position as PlayerPosition]}`}
-                  >
-                    {tp(player.position)}
-                  </Badge>
+                  {player.position && (
+                    <Badge
+                      variant="secondary"
+                      className={`text-[9px] px-1.5 py-0 ${POSITION_COLORS[player.position as PlayerPosition]}`}
+                    >
+                      {tp(player.position)}
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>
@@ -1326,12 +1328,14 @@ function PlayerPickerItem({
       <span className="flex-1 text-left truncate text-xs">
         {player.nickname || player.last_name || player.first_name}
       </span>
-      <Badge
-        variant="secondary"
-        className={`text-[9px] px-1 py-0 ${POSITION_COLORS[player.position as PlayerPosition]}`}
-      >
-        {tp(player.position)}
-      </Badge>
+      {player.position && (
+        <Badge
+          variant="secondary"
+          className={`text-[9px] px-1 py-0 ${POSITION_COLORS[player.position as PlayerPosition]}`}
+        >
+          {tp(player.position)}
+        </Badge>
+      )}
     </button>
   );
 }

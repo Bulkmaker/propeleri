@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { POSITION_COLORS } from "@/lib/utils/constants";
+import { cn } from "@/lib/utils";
 import type { PlayerPosition, PlayerSeasonStats } from "@/types/database";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Trophy, TrendingUp } from "lucide-react";
@@ -97,10 +98,16 @@ export default async function PlayerProfilePage({
               {tp(player.position)}
             </Badge>
             {player.team_role !== "player" && (
-              <Badge variant="outline" className="border-primary/30 text-primary">
+              <Badge variant="outline" className={cn(
+                player.team_role === "coach"
+                  ? "border-green-500/30 text-green-400"
+                  : "border-primary/30 text-primary"
+              )}>
                 {player.team_role === "captain"
                   ? tr("captain")
-                  : tr("assistantCaptain")}
+                  : player.team_role === "assistant_captain"
+                    ? tr("assistantCaptain")
+                    : tr("coach")}
               </Badge>
             )}
           </div>

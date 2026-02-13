@@ -311,11 +311,11 @@ export default function ProfilePage() {
               <div className="space-y-2">
                 <Label>{t("position")}</Label>
                 <Select
-                  value={profile.position}
+                  value={profile.position ?? "none"}
                   onValueChange={(v) =>
                     setProfile({
                       ...profile,
-                      position: v as PlayerPosition,
+                      position: v === "none" ? null : (v as PlayerPosition),
                     })
                   }
                 >
@@ -328,6 +328,7 @@ export default function ProfilePage() {
                         {tp(pos)}
                       </SelectItem>
                     ))}
+                    <SelectItem value="none">{t("noPosition")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

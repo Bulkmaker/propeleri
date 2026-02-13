@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
+  // ── 2026-02-14 ──────────────────────────────────────────────
+  {
+    date: "2026-02-14",
+    category: "feature",
+    description: "Dodata uloga trenera za članove tima",
+    description_ru: "Добавлена роль тренера для членов команды",
+    description_en: "Added coach role for team members",
+  },
   // ── 2026-02-13 ──────────────────────────────────────────────
   {
     date: "2026-02-13",

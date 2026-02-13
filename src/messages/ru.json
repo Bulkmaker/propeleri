@@ -56,7 +56,8 @@
   "roles": {
     "captain": "Капитан",
     "assistantCaptain": "Помощник капитана",
-    "player": "Игрок"
+    "player": "Игрок",
+    "coach": "Тренер"
   },
   "home": {
     "hero": {
@@ -84,6 +85,8 @@
     "weight": "Вес",
     "captain": "Капитан",
     "assistant_captain": "Ассистент",
+    "coach": "Тренер",
+    "coachesSection": "Тренеры",
     "gamesPlayed": "Игры",
     "goals": "Голы",
     "assists": "Передачи",
@@ -221,6 +224,7 @@
     "teams": "Команды",
     "autoAssign": "Автоматически",
     "noTeam": "Без команды",
+    "noPosition": "Без позиции",
     "sessionStatus": "Статус",
     "report": "Отчёт по тренировке",
     "reportPlaceholder": "Кратко: что отрабатывали, итоги, замечания...",
@@ -347,7 +351,8 @@
     "nationality": "Гражданство",
     "secondNationality": "Второе гражданство",
     "saved": "Профиль сохранён!",
-    "notFound": "Профиль не найден. Пожалуйста, попробуйте войти снова."
+    "notFound": "Профиль не найден. Пожалуйста, попробуйте войти снова.",
+    "noPosition": "Без позиции"
   },
   "admin": {
     "dashboard": "Панель управления",

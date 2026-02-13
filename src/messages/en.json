@@ -56,7 +56,8 @@
   "roles": {
     "captain": "Captain",
     "assistantCaptain": "Assistant Captain",
-    "player": "Player"
+    "player": "Player",
+    "coach": "Coach"
   },
   "home": {
     "hero": {
@@ -84,6 +85,8 @@
     "weight": "Weight",
     "captain": "Captain",
     "assistant_captain": "Assistant",
+    "coach": "Coach",
+    "coachesSection": "Coaches",
     "gamesPlayed": "Games",
     "goals": "Goals",
     "assists": "Assists",
@@ -221,6 +224,7 @@
     "teams": "Teams",
     "autoAssign": "Auto-assign",
     "noTeam": "No team",
+    "noPosition": "No position",
     "sessionStatus": "Status",
     "report": "Training Report",
     "reportPlaceholder": "What was practiced, results, notes...",
@@ -347,7 +351,8 @@
     "nationality": "Nationality",
     "secondNationality": "Second Nationality",
     "saved": "Profile saved!",
-    "notFound": "Profile not found. Please try logging in again."
+    "notFound": "Profile not found. Please try logging in again.",
+    "noPosition": "No position"
   },
   "admin": {
     "dashboard": "Dashboard",

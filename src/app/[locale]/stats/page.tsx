@@ -146,12 +146,14 @@ export default async function StatsPage({
                               <span className="font-medium">
                                 {player.first_name} {player.last_name}
                               </span>
-                              <Badge
-                                variant="secondary"
-                                className={`text-xs ml-1 ${POSITION_COLORS[player.position as PlayerPosition]}`}
-                              >
-                                {tp(player.position)}
-                              </Badge>
+                              {player.position && (
+                                <Badge
+                                  variant="secondary"
+                                  className={`text-xs ml-1 ${POSITION_COLORS[player.position as PlayerPosition]}`}
+                                >
+                                  {tp(player.position)}
+                                </Badge>
+                              )}
                             </Link>
                           </TableCell>
                           <TableCell className="text-center">{player.games_played}</TableCell>

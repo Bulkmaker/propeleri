@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       last_name: normalizedLastName,
       nickname: typeof nickname === "string" && nickname.trim().length > 0 ? nickname.trim() : null,
       jersey_number: parsedJerseyNumber,
-      position: position || "forward",
+      position: position || null,
       is_guest: normalizedIsGuest,
       is_approved: true,
       is_active: true,

@@ -1,5 +1,5 @@
 export type PlayerPosition = "forward" | "defense" | "goalie";
-export type PlayerRole = "player" | "captain" | "assistant_captain";
+export type PlayerRole = "player" | "captain" | "assistant_captain" | "coach";
 export type AppRole = "admin" | "player";
 export type EventType = "game" | "training" | "tournament" | "social";
 export type LineupDesignation = "captain" | "assistant_captain" | "player";
@@ -33,7 +33,7 @@ export interface Profile {
   last_name: string;
   nickname: string | null;
   jersey_number: number | null;
-  position: PlayerPosition;
+  position: PlayerPosition | null;
   team_role: PlayerRole;
   app_role: AppRole;
   avatar_url: string | null;
@@ -270,7 +270,7 @@ export interface PlayerGameTotals {
   first_name: string;
   last_name: string;
   jersey_number: number | null;
-  position: PlayerPosition;
+  position: PlayerPosition | null;
   games_played: number;
   total_goals: number;
   total_assists: number;
