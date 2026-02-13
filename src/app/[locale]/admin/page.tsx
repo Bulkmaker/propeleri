@@ -46,7 +46,7 @@ export default async function AdminDashboardPage({
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
         <h1 className="text-2xl font-bold">{t("dashboard")}</h1>
       </div>
 

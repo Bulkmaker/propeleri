@@ -380,7 +380,7 @@ export default function AdminTrainingPage() {
   return (
     <LoadingErrorEmpty loading={loading} isEmpty={sessions.length === 0} onRetry={loadData} skeleton={<SkeletonCardList count={8} />}>
       <div>
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 md:px-6 py-4 flex items-center justify-between gap-4">
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 md:px-6 py-4 flex items-center justify-between gap-4">
           <h1 className="text-xl md:text-2xl font-bold truncate">{t("manageTraining")}</h1>
           <div className="flex items-center gap-2">
             <Button

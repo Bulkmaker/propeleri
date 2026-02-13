@@ -48,7 +48,7 @@ export default async function LocaleLayout({
           Skip to content
         </a>
         <Header />
-        <main id="main-content" tabIndex={-1} className="flex-1 outline-none overflow-x-hidden">
+        <main id="main-content" tabIndex={-1} className="flex-1 outline-none overflow-x-clip">
           {children}
         </main>
         <Footer />

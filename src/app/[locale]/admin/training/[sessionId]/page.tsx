@@ -734,7 +734,7 @@ export default function TrainingStatsEntryPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 sm:px-6 py-3 sm:py-4">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 lg:px-6 py-3 sm:py-4">
         <Link
           href="/admin/training"
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
@@ -782,7 +782,7 @@ export default function TrainingStatsEntryPage() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="px-4 lg:px-6 pt-4 space-y-4">
         <Card className="border-border/40">
           <CardHeader>
             <CardTitle>{tt("sessionInfo")}</CardTitle>

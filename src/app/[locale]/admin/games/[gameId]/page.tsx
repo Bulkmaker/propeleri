@@ -92,36 +92,40 @@ export default function AdminGameEditPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href={tournament ? `/admin/tournaments/${tournament.id}` : "/admin/games"}>
-          <Button variant="ghost" size="icon">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">
-              {opponentTeam?.name ?? game.opponent} - {new Date(game.game_date).toLocaleDateString()}
-            </h1>
-            {tournament && (
-              <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
-                <Trophy className="h-3 w-3 mr-1" />
-                {tournament.name}
-              </Badge>
-            )}
+    <div>
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 lg:px-6 py-4">
+        <div className="flex items-center gap-4">
+          <Link href={tournament ? `/admin/tournaments/${tournament.id}` : "/admin/games"}>
+            <Button variant="ghost" size="icon">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-2xl font-bold truncate">
+                {opponentTeam?.name ?? game.opponent} - {new Date(game.game_date).toLocaleDateString()}
+              </h1>
+              {tournament && (
+                <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-600 bg-yellow-500/10 shrink-0">
+                  <Trophy className="h-3 w-3 mr-1" />
+                  {tournament.name}
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground text-sm truncate">
+              {game.is_home ? "Home" : "Away"} • {game.result}
+              {tournament && ` • ${tournament.name}`}
+            </p>
           </div>
-          <p className="text-muted-foreground text-sm">
-            {game.is_home ? "Home" : "Away"} • {game.result}
-            {tournament && ` • ${tournament.name}`}
-          </p>
+          <Button variant="destructive" size="icon" onClick={handleDelete} className="shrink-0">
+            <Trash2 className="h-5 w-5" />
+          </Button>
         </div>
-        <Button variant="destructive" size="icon" onClick={handleDelete}>
-          <Trash2 className="h-5 w-5" />
-        </Button>
       </div>
 
-      <UnifiedGameEditor gameId={gameId} onRefresh={loadData} />
+      <div className="px-4 lg:px-6 py-6 space-y-6">
+        <UnifiedGameEditor gameId={gameId} onRefresh={loadData} />
+      </div>
     </div>
   );
 }

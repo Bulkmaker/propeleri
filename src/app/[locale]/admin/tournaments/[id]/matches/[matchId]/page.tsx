@@ -576,7 +576,7 @@ export default function TournamentMatchEditorPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40 px-6 py-4">
         <div className="flex items-center gap-3">
           <Link href={`/admin/tournaments/${tournament.id}`}>
             <Button size="icon" variant="ghost">

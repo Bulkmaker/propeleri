@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -43,6 +43,23 @@ export default function AdminShell({
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
 
+    // Lock body scroll, hide footer, and make outer main fill the remaining viewport
+    useEffect(() => {
+        const body = document.body;
+        const mainContent = document.getElementById("main-content");
+        const footer = mainContent?.nextElementSibling as HTMLElement | null;
+
+        body.style.height = "100dvh";
+        body.style.overflow = "hidden";
+        if (footer?.tagName === "FOOTER") footer.style.display = "none";
+
+        return () => {
+            body.style.height = "";
+            body.style.overflow = "";
+            if (footer?.tagName === "FOOTER") footer.style.display = "";
+        };
+    }, []);
+
     const SidebarContent = () => (
         <div className="flex h-full flex-col gap-4">
             <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
@@ -81,22 +98,22 @@ export default function AdminShell({
     );
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-4rem)] w-full">
+        <div className="flex h-full w-full overflow-hidden">
             {/* Desktop Sidebar */}
             <aside className="hidden border-r bg-muted/40 md:block fixed top-16 left-0 h-[calc(100vh-4rem)] w-[220px] lg:w-[280px] z-30 overflow-y-auto">
                 <SidebarContent />
             </aside>
 
             {/* Mobile Header & Content */}
-            <div className="flex-1 md:ml-[220px] lg:ml-[280px]">
+            <div className="flex-1 flex flex-col md:ml-[220px] lg:ml-[280px] overflow-hidden">
                 {/* Mobile Header */}
-                <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6 md:hidden sticky top-0 z-40">
+                <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 md:hidden shrink-0">
                     <Sheet open={open} onOpenChange={setOpen}>
                         <SheetTrigger asChild>
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="shrink-0 md:hidden"
+                                className="shrink-0"
                             >
                                 <Menu className="h-5 w-5" />
                                 <span className="sr-only">Toggle navigation menu</span>
@@ -112,8 +129,8 @@ export default function AdminShell({
                     </div>
                 </header>
 
-                {/* Main Content */}
-                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20">
+                {/* Main Content — scrollable area */}
+                <main className="flex-1 overflow-y-auto pb-20">
                     {children}
                 </main>
             </div>
