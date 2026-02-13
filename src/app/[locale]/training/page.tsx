@@ -196,59 +196,66 @@ function SessionCard({
       <Link href={`/training/${session.id}`} className="block">
         <Card className="border-border/40 card-hover bg-card cursor-pointer rounded-xl overflow-hidden">
           <CardContent className="px-4 py-4 md:px-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <CalendarDays className="h-5 w-5 text-blue-400" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm flex items-center gap-2">
-                    {session.title || t("session")}
-                    <Badge
-                      variant="outline"
-                      className={statusBadgeClass(normalizeStatus(session.status))}
-                    >
-                      {t(`status.${normalizeStatus(session.status)}`)}
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                <CalendarDays className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm flex items-center gap-2 flex-wrap">
+                  {session.title || t("session")}
+                  <Badge
+                    variant="outline"
+                    className={statusBadgeClass(normalizeStatus(session.status))}
+                  >
+                    {t(`status.${normalizeStatus(session.status)}`)}
+                  </Badge>
+                  {hasVideo && (
+                    <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                      <Video className="h-3 w-3" />
+                      Video
                     </Badge>
-                    {hasVideo && (
-                      <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
-                        <Video className="h-3 w-3" />
-                        Video
-                      </Badge>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatInBelgrade(session.session_date, "sr-Latn", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </p>
-                  {session.notes && (
-                    <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
-                      {session.notes}
-                    </p>
                   )}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {matchData && (
-                  <TrainingScoreView
-                    teamAScore={matchData.team_a_score}
-                    teamBScore={matchData.team_b_score}
-                    teamALabel={t("teamA")}
-                    teamBLabel={t("teamB")}
-                  />
-                )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatInBelgrade(session.session_date, "sr-Latn", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
                 {session.location && (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
+                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <MapPin className="h-3 w-3 shrink-0" />
                     {session.location}
-                  </span>
+                  </p>
+                )}
+                {session.notes && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {session.notes}
+                  </p>
                 )}
               </div>
+              {matchData && (
+                <TrainingScoreView
+                  teamAScore={matchData.team_a_score}
+                  teamBScore={matchData.team_b_score}
+                  teamALabel={t("teamA")}
+                  teamBLabel={t("teamB")}
+                  className="shrink-0 hidden sm:block"
+                />
+              )}
             </div>
+            {matchData && (
+              <div className="mt-3 sm:hidden">
+                <TrainingScoreView
+                  teamAScore={matchData.team_a_score}
+                  teamBScore={matchData.team_b_score}
+                  teamALabel={t("teamA")}
+                  teamBLabel={t("teamB")}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </Link>
