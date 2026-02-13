@@ -21,6 +21,7 @@ import type { Profile, PlayerPosition } from "@/types/database";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import { formatPlayerName } from "@/lib/utils/player-name";
 import { LayoutGrid, List } from "lucide-react";
+import { PlayerEditButton } from "@/components/players/PlayerEditButton";
 import { PlayerTable } from "./PlayerTable";
 
 type RosterSort = "name" | "number";
@@ -228,44 +229,50 @@ function PlayerCard({ player }: { player: Profile }) {
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
 
   return (
-    <Link href={`/roster/${player.id}`}>
-      <Card className="border-border/40 card-hover bg-card group cursor-pointer h-full">
-        <CardContent className="p-4 text-center">
-          <Avatar className="h-20 w-20 mx-auto mb-3 ring-2 ring-border group-hover:ring-primary/50 transition-all">
-            <AvatarImage src={player.avatar_url ?? undefined} alt={`${player.first_name} ${player.last_name}`} />
-            <AvatarFallback className="bg-secondary text-lg font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <p className="text-2xl font-black text-primary mb-1 min-h-8 leading-8 tabular-nums">
-            {player.jersey_number != null ? (
-              `#${player.jersey_number}`
-            ) : (
-              <span className="opacity-0">#00</span>
+    <div className="relative h-full">
+      <Link href={`/roster/${player.id}`}>
+        <Card className="border-border/40 card-hover bg-card group cursor-pointer h-full">
+          <CardContent className="p-4 text-center">
+            <Avatar className="h-20 w-20 mx-auto mb-3 ring-2 ring-border group-hover:ring-primary/50 transition-all">
+              <AvatarImage src={player.avatar_url ?? undefined} alt={`${player.first_name} ${player.last_name}`} />
+              <AvatarFallback className="bg-secondary text-lg font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <p className="text-2xl font-black text-primary mb-1 min-h-8 leading-8 tabular-nums">
+              {player.jersey_number != null ? (
+                `#${player.jersey_number}`
+              ) : (
+                <span className="opacity-0">#00</span>
+              )}
+            </p>
+            <p className="font-semibold text-sm">
+              {formatPlayerName(player)}
+            </p>
+            {player.position && (
+              <Badge
+                variant="secondary"
+                className={`mt-2 text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}
+              >
+                {tp(player.position)}
+              </Badge>
             )}
-          </p>
-          <p className="font-semibold text-sm">
-            {formatPlayerName(player)}
-          </p>
-          {player.position && (
-            <Badge
-              variant="secondary"
-              className={`mt-2 text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}
-            >
-              {tp(player.position)}
-            </Badge>
-          )}
-          {player.team_role !== "player" && (
-            <Badge variant="outline" className={cn("mt-1 text-xs",
-              player.team_role === "coach"
-                ? "border-green-500/30 text-green-400"
-                : "border-primary/30 text-primary"
-            )}>
-              {player.team_role === "captain" ? "C" : player.team_role === "assistant_captain" ? "A" : tr("coach")}
-            </Badge>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+            {player.team_role !== "player" && (
+              <Badge variant="outline" className={cn("mt-1 text-xs",
+                player.team_role === "coach"
+                  ? "border-green-500/30 text-green-400"
+                  : "border-primary/30 text-primary"
+              )}>
+                {player.team_role === "captain" ? "C" : player.team_role === "assistant_captain" ? "A" : tr("coach")}
+              </Badge>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
+      <PlayerEditButton
+        playerId={player.id}
+        className="absolute top-2 right-2 z-10"
+      />
+    </div>
   );
 }

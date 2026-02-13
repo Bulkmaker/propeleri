@@ -16,6 +16,7 @@ import { formatPlayerName } from "@/lib/utils/player-name";
 import { Badge } from "@/components/ui/badge";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import { cn } from "@/lib/utils";
+import { PlayerEditButton } from "@/components/players/PlayerEditButton";
 
 interface PlayerTableProps {
     players: Profile[];
@@ -38,6 +39,7 @@ export function PlayerTable({ players }: PlayerTableProps) {
                             <TableHead className="hidden md:table-cell min-w-25">{t("role")}</TableHead>
                             <TableHead className="hidden sm:table-cell text-right min-w-20">{t("height")}</TableHead>
                             <TableHead className="hidden sm:table-cell text-right min-w-20">{t("weight")}</TableHead>
+                            <TableHead className="w-10"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -94,6 +96,9 @@ export function PlayerTable({ players }: PlayerTableProps) {
                                     </TableCell>
                                     <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground text-sm">
                                         {player.weight ? `${player.weight} kg` : "-"}
+                                    </TableCell>
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                        <PlayerEditButton playerId={player.id} />
                                     </TableCell>
                                 </TableRow>
                             );

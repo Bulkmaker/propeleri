@@ -431,7 +431,8 @@
     "stats": "Stats",
     "homeScore": "Home score",
     "awayScore": "Away score",
-    "result": "Result"
+    "result": "Result",
+    "noPosition": "No position"
   },
   "tournament": {
     "title": "Tournaments",

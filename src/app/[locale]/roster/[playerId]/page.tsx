@@ -18,6 +18,7 @@ import type { PlayerPosition, PlayerSeasonStats } from "@/types/database";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Trophy, TrendingUp } from "lucide-react";
 import { formatPlayerName } from "@/lib/utils/player-name";
+import { PlayerEditButton } from "@/components/players/PlayerEditButton";
 
 export default async function PlayerProfilePage({
   params,
@@ -90,9 +91,12 @@ export default async function PlayerProfilePage({
               #{player.jersey_number}
             </span>
           )}
-          <h1 className="text-3xl font-bold">
-            {formatPlayerName(player)}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">
+              {formatPlayerName(player)}
+            </h1>
+            <PlayerEditButton playerId={player.id} variant="button" />
+          </div>
           <div className="flex items-center gap-2 mt-2 justify-center md:justify-start">
             <Badge className={POSITION_COLORS[player.position as PlayerPosition]}>
               {tp(player.position)}

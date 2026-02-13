@@ -431,7 +431,8 @@
     "stats": "Статистика",
     "homeScore": "Голы дома",
     "awayScore": "Голы гостей",
-    "result": "Результат"
+    "result": "Результат",
+    "noPosition": "Без позиции"
   },
   "tournament": {
     "title": "Турниры",

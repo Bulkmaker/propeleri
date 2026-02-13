@@ -431,7 +431,8 @@
     "stats": "Statistika",
     "homeScore": "Domaci gol",
     "awayScore": "Gosti gol",
-    "result": "Rezultat"
+    "result": "Rezultat",
+    "noPosition": "Bez pozicije"
   },
   "tournament": {
     "title": "Turniri",

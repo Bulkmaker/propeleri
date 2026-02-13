@@ -28,9 +28,9 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
     date: "2026-02-14",
     category: "feature",
-    description: "Brzo uređivanje utakmica i treninga direktno sa javnih stranica za admine",
-    description_ru: "Быстрое редактирование матчей и тренировок прямо с публичных страниц для админов",
-    description_en: "Quick edit buttons for games and training sessions on public pages for admins",
+    description: "Brzo uređivanje utakmica, treninga i igrača direktno sa javnih stranica za admine",
+    description_ru: "Быстрое редактирование матчей, тренировок и игроков прямо с публичных страниц для админов",
+    description_en: "Quick edit buttons for games, training sessions, and players on public pages for admins",
   },
   {
     date: "2026-02-14",
