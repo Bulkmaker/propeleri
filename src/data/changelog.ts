@@ -21,6 +21,20 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
     date: "2026-02-14",
     category: "feature",
+    description: "Stranica treninga: sledeći trening istaknut, ostali u sklopivim sekcijama",
+    description_ru: "Страница тренировок: ближайшая тренировка выделена, остальные в сворачиваемых секциях",
+    description_en: "Training page: next session highlighted, others in collapsible sections",
+  },
+  {
+    date: "2026-02-14",
+    category: "feature",
+    description: "Brzo uređivanje utakmica i treninga direktno sa javnih stranica za admine",
+    description_ru: "Быстрое редактирование матчей и тренировок прямо с публичных страниц для админов",
+    description_en: "Quick edit buttons for games and training sessions on public pages for admins",
+  },
+  {
+    date: "2026-02-14",
+    category: "feature",
     description: "Dodata uloga trenera za članove tima",
     description_ru: "Добавлена роль тренера для членов команды",
     description_en: "Added coach role for team members",

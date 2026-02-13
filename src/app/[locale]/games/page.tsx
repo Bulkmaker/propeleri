@@ -8,6 +8,7 @@ import { Swords, Award, Video } from "lucide-react";
 import type { Game, GameResult, Team, Tournament } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
+import { AdminEditButton } from "@/components/shared/AdminEditButton";
 
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -138,29 +139,34 @@ export default async function GamesPage({
                     minute: "2-digit",
                   });
                   return (
-                    <GameMatchCard
-                      key={game.id}
-                      href={`/games/${game.id}`}
-                      teamName={tt("propeleri")}
-                      opponentName={opponentName}
-                      opponentLogoUrl={opponent?.logo_url || null}
-                      opponentCountry={opponent?.country || null}
-                      teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
-                      opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
-                      dateLabel={dateLabel}
-                      timeLabel={timeLabel}
-                      location={game.location}
-                      resultLabel={tg(`result.${game.result}`)}
-                      resultClassName={RESULT_COLORS[game.result as GameResult]}
-                      matchTimeLabel={tg("matchTime")}
-                      variant="poster"
-                      badges={game.youtube_url ? (
-                        <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
-                          <Video className="h-3 w-3" />
-                          Video
-                        </Badge>
-                      ) : undefined}
-                    />
+                    <div key={game.id} className="relative">
+                      <GameMatchCard
+                        href={`/games/${game.id}`}
+                        teamName={tt("propeleri")}
+                        opponentName={opponentName}
+                        opponentLogoUrl={opponent?.logo_url || null}
+                        opponentCountry={opponent?.country || null}
+                        teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
+                        opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
+                        dateLabel={dateLabel}
+                        timeLabel={timeLabel}
+                        location={game.location}
+                        resultLabel={tg(`result.${game.result}`)}
+                        resultClassName={RESULT_COLORS[game.result as GameResult]}
+                        matchTimeLabel={tg("matchTime")}
+                        variant="poster"
+                        badges={game.youtube_url ? (
+                          <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                            <Video className="h-3 w-3" />
+                            Video
+                          </Badge>
+                        ) : undefined}
+                      />
+                      <AdminEditButton
+                        href={`/admin/games/${game.id}`}
+                        className="absolute top-3 right-3 z-10"
+                      />
+                    </div>
                   );
                 })}
               </div>
@@ -189,29 +195,34 @@ export default async function GamesPage({
                   minute: "2-digit",
                 });
                 return (
-                  <GameMatchCard
-                    key={game.id}
-                    href={`/games/${game.id}`}
-                    teamName={tt("propeleri")}
-                    opponentName={opponentName}
-                    opponentLogoUrl={opponent?.logo_url || null}
-                    opponentCountry={opponent?.country || null}
-                    teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
-                    opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
-                    dateLabel={dateLabel}
-                    timeLabel={timeLabel}
-                    location={game.location}
-                    resultLabel={tg(`result.${game.result}`)}
-                    resultClassName={RESULT_COLORS[game.result as GameResult]}
-                    matchTimeLabel={tg("matchTime")}
-                    variant="poster"
-                    badges={game.youtube_url ? (
-                      <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
-                        <Video className="h-3 w-3" />
-                        Video
-                      </Badge>
-                    ) : undefined}
-                  />
+                  <div key={game.id} className="relative">
+                    <GameMatchCard
+                      href={`/games/${game.id}`}
+                      teamName={tt("propeleri")}
+                      opponentName={opponentName}
+                      opponentLogoUrl={opponent?.logo_url || null}
+                      opponentCountry={opponent?.country || null}
+                      teamScore={game.result === "pending" ? undefined : game.is_home ? game.home_score : game.away_score}
+                      opponentScore={game.result === "pending" ? undefined : game.is_home ? game.away_score : game.home_score}
+                      dateLabel={dateLabel}
+                      timeLabel={timeLabel}
+                      location={game.location}
+                      resultLabel={tg(`result.${game.result}`)}
+                      resultClassName={RESULT_COLORS[game.result as GameResult]}
+                      matchTimeLabel={tg("matchTime")}
+                      variant="poster"
+                      badges={game.youtube_url ? (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                          <Video className="h-3 w-3" />
+                          Video
+                        </Badge>
+                      ) : undefined}
+                    />
+                    <AdminEditButton
+                      href={`/admin/games/${game.id}`}
+                      className="absolute top-3 right-3 z-10"
+                    />
+                  </div>
                 );
               })}
             </div>

@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
-import { Shield, Swords, Pencil } from "lucide-react";
+import { Shield, Swords } from "lucide-react";
 import { RESULT_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
 import type {
   Game,
@@ -32,8 +32,8 @@ import { GameLineupEditor } from "@/components/games/GameLineupEditor";
 import type { ReadOnlyPlayer } from "@/components/games/GameLineupEditor";
 
 import { formatInBelgrade } from "@/lib/utils/datetime";
-import { Button } from "@/components/ui/button";
 import { YouTubeEmbed } from "@/components/shared/YouTubeEmbed";
+import { AdminEditButton } from "@/components/shared/AdminEditButton";
 
 type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
   line_number: number | null;
@@ -75,7 +75,6 @@ interface GameDetailViewProps {
   tournaments: Tournament[];
   tournamentMatch?: TournamentMatch | null;
   locale: string;
-  isAdmin?: boolean;
 }
 
 // Goal period values for validation
@@ -148,7 +147,6 @@ export function GameDetailView({
   teams,
   tournaments,
   locale,
-  isAdmin = false,
 }: GameDetailViewProps) {
   const t = useTranslations("game");
   const ts = useTranslations("stats");
@@ -237,16 +235,11 @@ export function GameDetailView({
             </>
           }
         />
-        {isAdmin && (
-          <div className="ml-4">
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/admin/games/${game.id}?tab=details`}>
-                <Pencil className="h-4 w-4 mr-2" />
-                {tc("edit")}
-              </Link>
-            </Button>
-          </div>
-        )}
+        <AdminEditButton
+          href={`/admin/games/${game.id}?tab=details`}
+          variant="button"
+          className="ml-4"
+        />
       </div>
 
       {/* YouTube Video */}

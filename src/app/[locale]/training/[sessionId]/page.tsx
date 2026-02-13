@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, CalendarDays, MapPin, CheckCircle, XCircle, Swords } from "lucide-react";
+import { AdminEditButton } from "@/components/shared/AdminEditButton";
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatPlayerName, formatPlayerNameWithNumber } from "@/lib/utils/player-name";
@@ -130,6 +131,10 @@ export default async function TrainingDetailPage({
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
           <h1 className="text-3xl font-bold">{session.title || t("session")}</h1>
+          <AdminEditButton
+            href={`/admin/training/${session.id}`}
+            variant="button"
+          />
           <Badge
             variant="outline"
             className={statusBadgeClass(normalizeStatus(session.status))}

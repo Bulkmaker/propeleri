@@ -225,6 +225,7 @@
     "autoAssign": "Auto-assign",
     "noTeam": "No team",
     "noPosition": "No position",
+    "sessionInfo": "Session Info",
     "sessionStatus": "Status",
     "report": "Training Report",
     "reportPlaceholder": "What was practiced, results, notes...",
@@ -275,7 +276,10 @@
     "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
     "youtubeUrlInvalid": "Enter a valid YouTube URL",
     "sessionVideo": "Training Video",
-    "hasVideo": "Video"
+    "hasVideo": "Video",
+    "nextSession": "Next Session",
+    "otherUpcoming": "Other Upcoming ({count})",
+    "pastSessions": "Past Sessions ({count})"
   },
   "stats": {
     "title": "Statistics",

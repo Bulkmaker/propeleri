@@ -225,6 +225,7 @@
     "autoAssign": "Automatski",
     "noTeam": "Bez tima",
     "noPosition": "Bez pozicije",
+    "sessionInfo": "Informacije o treningu",
     "sessionStatus": "Status",
     "report": "Izvestaj treninga",
     "reportPlaceholder": "Sta je radjeno, rezultat, napomene...",
@@ -275,7 +276,10 @@
     "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
     "youtubeUrlInvalid": "Unesite ispravan YouTube link",
     "sessionVideo": "Video treninga",
-    "hasVideo": "Video"
+    "hasVideo": "Video",
+    "nextSession": "Sledeci trening",
+    "otherUpcoming": "Ostali predstojecci ({count})",
+    "pastSessions": "Prethodni treninzi ({count})"
   },
   "stats": {
     "title": "Statistika",

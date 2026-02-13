@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrainingScoreView } from "@/components/training/TrainingScoreView";
 import { TrainingFilters } from "@/components/training/TrainingFilters";
-import { CalendarDays, MapPin, Users, Video } from "lucide-react";
+import { CalendarDays, ChevronRight, MapPin, Users, Video } from "lucide-react";
+import { AdminEditButton } from "@/components/shared/AdminEditButton";
 import type { TrainingSession, TrainingSessionStatus, Season } from "@/types/database";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
@@ -115,152 +116,146 @@ export default async function TrainingPage({
           <p>{tc("noData")}</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {upcomingSessions.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="h-1 w-6 bg-primary rounded-full" />
-                {ts("thisWeek")}
-              </h2>
-              <div className="space-y-4 md:space-y-5">
-                {upcomingSessions.map(({ session, matchData, hasVideo }) => (
-                  <Link key={session.id} href={`/training/${session.id}`} className="block">
-                    <Card className="border-border/40 card-hover bg-card cursor-pointer rounded-xl overflow-hidden">
-                      <CardContent className="px-4 py-4 md:px-5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                              <CalendarDays className="h-5 w-5 text-blue-400" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm flex items-center gap-2">
-                                {session.title || t("session")}
-                                <Badge
-                                  variant="outline"
-                                  className={statusBadgeClass(normalizeStatus(session.status))}
-                                >
-                                  {t(`status.${normalizeStatus(session.status)}`)}
-                                </Badge>
-                                {hasVideo && (
-                                  <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
-                                    <Video className="h-3 w-3" />
-                                    Video
-                                  </Badge>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatInBelgrade(session.session_date, "sr-Latn", {
-                                  weekday: "long",
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                })}
-                              </p>
-                              {session.notes && (
-                                <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
-                                  {session.notes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {matchData && (
-                              <TrainingScoreView
-                                teamAScore={matchData.team_a_score}
-                                teamBScore={matchData.team_b_score}
-                                teamALabel={t("teamA")}
-                                teamBLabel={t("teamB")}
-                              />
-                            )}
-                            {session.location && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {session.location}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+            <>
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <span className="h-1 w-6 bg-primary rounded-full" />
+                  {t("nextSession")}
+                </h2>
+                <SessionCard
+                  session={upcomingSessions[0].session}
+                  matchData={upcomingSessions[0].matchData}
+                  hasVideo={upcomingSessions[0].hasVideo}
+                  t={t}
+                />
               </div>
-            </div>
+
+              {upcomingSessions.length > 1 && (
+                <details className="group">
+                  <summary className="text-lg font-semibold mb-4 flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                    <span className="h-1 w-6 bg-primary rounded-full" />
+                    {t("otherUpcoming", { count: upcomingSessions.length - 1 })}
+                  </summary>
+                  <div className="space-y-4 md:space-y-5">
+                    {upcomingSessions.slice(1).map(({ session, matchData, hasVideo }) => (
+                      <SessionCard
+                        key={session.id}
+                        session={session}
+                        matchData={matchData}
+                        hasVideo={hasVideo}
+                        t={t}
+                      />
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
           )}
 
           {pastSessions.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-muted-foreground">
                 <span className="h-1 w-6 bg-muted-foreground/30 rounded-full" />
-                {ts("pastEvents")}
+                {t("pastSessions", { count: pastSessions.length })}
               </h2>
               <div className="space-y-4 md:space-y-5">
                 {pastSessions.map(({ session, matchData, hasVideo }) => (
-                  <Link key={session.id} href={`/training/${session.id}`} className="block">
-                    <Card className="border-border/40 card-hover bg-card cursor-pointer rounded-xl overflow-hidden">
-                      <CardContent className="px-4 py-4 md:px-5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                              <CalendarDays className="h-5 w-5 text-blue-400" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm flex items-center gap-2">
-                                {session.title || t("session")}
-                                <Badge
-                                  variant="outline"
-                                  className={statusBadgeClass(normalizeStatus(session.status))}
-                                >
-                                  {t(`status.${normalizeStatus(session.status)}`)}
-                                </Badge>
-                                {hasVideo && (
-                                  <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
-                                    <Video className="h-3 w-3" />
-                                    Video
-                                  </Badge>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatInBelgrade(session.session_date, "sr-Latn", {
-                                  weekday: "long",
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                })}
-                              </p>
-                              {session.notes && (
-                                <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
-                                  {session.notes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {matchData && (
-                              <TrainingScoreView
-                                teamAScore={matchData.team_a_score}
-                                teamBScore={matchData.team_b_score}
-                                teamALabel={t("teamA")}
-                                teamBLabel={t("teamB")}
-                              />
-                            )}
-                            {session.location && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {session.location}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    matchData={matchData}
+                    hasVideo={hasVideo}
+                    t={t}
+                  />
                 ))}
               </div>
             </div>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function SessionCard({
+  session,
+  matchData,
+  hasVideo,
+  t,
+}: {
+  session: TrainingSession;
+  matchData: ReturnType<typeof parseTrainingMatchData>;
+  hasVideo: boolean;
+  t: Awaited<ReturnType<typeof getTranslations<"training">>>;
+}) {
+  return (
+    <div className="relative">
+      <Link href={`/training/${session.id}`} className="block">
+        <Card className="border-border/40 card-hover bg-card cursor-pointer rounded-xl overflow-hidden">
+          <CardContent className="px-4 py-4 md:px-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <CalendarDays className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm flex items-center gap-2">
+                    {session.title || t("session")}
+                    <Badge
+                      variant="outline"
+                      className={statusBadgeClass(normalizeStatus(session.status))}
+                    >
+                      {t(`status.${normalizeStatus(session.status)}`)}
+                    </Badge>
+                    {hasVideo && (
+                      <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
+                        <Video className="h-3 w-3" />
+                        Video
+                      </Badge>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatInBelgrade(session.session_date, "sr-Latn", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                  {session.notes && (
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
+                      {session.notes}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {matchData && (
+                  <TrainingScoreView
+                    teamAScore={matchData.team_a_score}
+                    teamBScore={matchData.team_b_score}
+                    teamALabel={t("teamA")}
+                    teamBLabel={t("teamB")}
+                  />
+                )}
+                {session.location && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {session.location}
+                  </span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+      <AdminEditButton
+        href={`/admin/training/${session.id}`}
+        className="absolute top-4 right-4 z-10"
+      />
     </div>
   );
 }

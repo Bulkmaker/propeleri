@@ -16,17 +16,31 @@ import {
 } from "@/components/ui/select";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Loader2, Save, CheckCircle, XCircle, Wand2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import type {
   Profile,
+  Season,
   TrainingGoalEvent,
   TrainingMatchData,
   TrainingSession,
+  TrainingSessionStatus,
   TrainingStats,
   TrainingTeam,
 } from "@/types/database";
 import { formatPlayerName, formatPlayerNameWithNumber } from "@/lib/utils/player-name";
+import {
+  belgradeDateTimeLocalInputToUtcIso,
+  utcToBelgradeDateTimeLocalInput,
+} from "@/lib/utils/datetime";
+import { isValidYouTubeUrl } from "@/lib/utils/youtube";
 
 const NONE_OPTION = "__none__";
+const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
+
+function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
+  if (status === "completed" || status === "canceled") return status;
+  return "planned";
+}
 
 interface TrainingRow {
   player_id: string;
@@ -151,6 +165,7 @@ export default function TrainingStatsEntryPage() {
   const tc = useTranslations("common");
   const ts = useTranslations("stats");
   const tt = useTranslations("training");
+  const ta = useTranslations("admin");
 
   const [rows, setRows] = useState<TrainingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,9 +173,22 @@ export default function TrainingStatsEntryPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [session, setSession] = useState<TrainingSession | null>(null);
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle"
   );
+
+  const [sessionForm, setSessionForm] = useState({
+    season_id: "",
+    title: "",
+    session_date: "",
+    location: "",
+    status: "planned" as TrainingSessionStatus,
+    notes: "",
+    youtube_url: "",
+  });
+  const [sessionFormSaving, setSessionFormSaving] = useState(false);
+  const [sessionFormMessage, setSessionFormMessage] = useState("");
 
   const [matchScoreA, setMatchScoreA] = useState(0);
   const [matchScoreB, setMatchScoreB] = useState(0);
@@ -175,7 +203,7 @@ export default function TrainingStatsEntryPage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: sessionData }, { data: players }, { data: existing }] =
+      const [{ data: sessionData }, { data: players }, { data: existing }, { data: seasonsData }] =
         await Promise.all([
           supabase.from("training_sessions").select("*").eq("id", sessionId).single(),
           supabase
@@ -185,7 +213,10 @@ export default function TrainingStatsEntryPage() {
             .eq("is_approved", true)
             .order("jersey_number"),
           supabase.from("training_stats").select("*").eq("session_id", sessionId),
+          supabase.from("seasons").select("*").order("start_date", { ascending: false }),
         ]);
+
+      setSeasons((seasonsData ?? []) as Season[]);
 
       const statsMap = new Map((existing ?? []).map((s: TrainingStats) => [s.player_id, s]));
 
@@ -210,6 +241,18 @@ export default function TrainingStatsEntryPage() {
 
       const loadedSession = (sessionData ?? null) as TrainingSession | null;
       setSession(loadedSession);
+
+      if (loadedSession) {
+        setSessionForm({
+          season_id: loadedSession.season_id,
+          title: loadedSession.title ?? "",
+          session_date: utcToBelgradeDateTimeLocalInput(loadedSession.session_date),
+          location: loadedSession.location ?? "",
+          status: normalizeStatus(loadedSession.status),
+          notes: loadedSession.notes ?? "",
+          youtube_url: loadedSession.youtube_url ?? "",
+        });
+      }
 
       const parsedMatch = parseTrainingMatchData(loadedSession?.match_data);
       if (parsedMatch) {
@@ -523,6 +566,51 @@ export default function TrainingStatsEntryPage() {
     }
   }
 
+  async function handleSaveSessionInfo() {
+    setSessionFormSaving(true);
+    setSessionFormMessage("");
+    setError("");
+
+    const sessionDateUtc = belgradeDateTimeLocalInputToUtcIso(sessionForm.session_date);
+    if (!sessionDateUtc) {
+      setError(tt("invalidDate"));
+      setSessionFormSaving(false);
+      return;
+    }
+
+    const data = {
+      season_id: sessionForm.season_id,
+      session_date: sessionDateUtc,
+      title: sessionForm.title || null,
+      location: sessionForm.location || null,
+      status: sessionForm.status,
+      notes: sessionForm.notes.trim() || null,
+      youtube_url: sessionForm.youtube_url.trim() || null,
+    };
+
+    const res = await supabase
+      .from("training_sessions")
+      .update(data)
+      .eq("id", sessionId);
+
+    if (res.error) {
+      setError(res.error.message);
+      setSessionFormSaving(false);
+      return;
+    }
+
+    setSession((prev) =>
+      prev
+        ? {
+            ...prev,
+            ...data,
+          }
+        : prev
+    );
+    setSessionFormMessage(tt("statsSaved"));
+    setSessionFormSaving(false);
+  }
+
   useEffect(() => {
     if (loading) return;
 
@@ -695,6 +783,116 @@ export default function TrainingStatsEntryPage() {
       </div>
 
       <div className="p-6 space-y-4">
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle>{tt("sessionInfo")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{ta("season")}</Label>
+                <Select
+                  value={sessionForm.season_id}
+                  onValueChange={(v) => setSessionForm({ ...sessionForm, season_id: v })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seasons.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{ta("titleOptional")}</Label>
+                <Input
+                  value={sessionForm.title}
+                  onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })}
+                  placeholder={tt("titlePlaceholder")}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>{ta("dateAndTime")}</Label>
+                <Input
+                  type="datetime-local"
+                  value={sessionForm.session_date}
+                  onChange={(e) => setSessionForm({ ...sessionForm, session_date: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{ta("location")}</Label>
+                <Input
+                  value={sessionForm.location}
+                  onChange={(e) => setSessionForm({ ...sessionForm, location: e.target.value })}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{tt("sessionStatus")}</Label>
+                <Select
+                  value={sessionForm.status}
+                  onValueChange={(v) => setSessionForm({ ...sessionForm, status: normalizeStatus(v) })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SESSION_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {tt(`status.${status}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{tt("report")}</Label>
+              <textarea
+                value={sessionForm.notes}
+                onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
+                placeholder={tt("reportPlaceholder")}
+                className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{tt("youtubeUrl")}</Label>
+              <Input
+                value={sessionForm.youtube_url}
+                onChange={(e) => setSessionForm({ ...sessionForm, youtube_url: e.target.value })}
+                placeholder={tt("youtubeUrlPlaceholder")}
+                className="bg-background"
+                type="url"
+              />
+              {sessionForm.youtube_url && !isValidYouTubeUrl(sessionForm.youtube_url) && (
+                <p className="text-xs text-destructive">{tt("youtubeUrlInvalid")}</p>
+              )}
+            </div>
+            {sessionFormMessage && (
+              <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
+                {sessionFormMessage}
+              </p>
+            )}
+            <Button
+              onClick={handleSaveSessionInfo}
+              disabled={sessionFormSaving || !sessionForm.session_date}
+              className="bg-primary"
+            >
+              {sessionFormSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Save className="mr-2 h-4 w-4" />
+              {tc("save")}
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card className="border-border/40">
           <CardHeader>
             <CardTitle>{tt("trainingMatch")}</CardTitle>

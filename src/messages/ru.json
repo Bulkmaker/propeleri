@@ -225,6 +225,7 @@
     "autoAssign": "Автоматически",
     "noTeam": "Без команды",
     "noPosition": "Без позиции",
+    "sessionInfo": "Информация о тренировке",
     "sessionStatus": "Статус",
     "report": "Отчёт по тренировке",
     "reportPlaceholder": "Кратко: что отрабатывали, итоги, замечания...",
@@ -275,7 +276,10 @@
     "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
     "youtubeUrlInvalid": "Введите корректную ссылку на YouTube",
     "sessionVideo": "Видео тренировки",
-    "hasVideo": "Видео"
+    "hasVideo": "Видео",
+    "nextSession": "Ближайшая тренировка",
+    "otherUpcoming": "Другие предстоящие ({count})",
+    "pastSessions": "Прошедшие тренировки ({count})"
   },
   "stats": {
     "title": "Статистика",

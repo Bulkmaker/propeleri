@@ -85,7 +85,6 @@ export default async function GameDetailPage({
         tournaments={tournaments}
         tournamentMatch={tournamentMatch}
         locale={locale}
-        isAdmin={false}
       />
     </div>
   );
