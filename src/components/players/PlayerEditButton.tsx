@@ -5,51 +5,49 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Pencil, Loader2, Upload, Trash2 } from "lucide-react";
-import { POSITIONS } from "@/lib/utils/constants";
-import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
-import { CountrySelect } from "@/components/shared/CountrySelect";
+import { Pencil, Loader2 } from "lucide-react";
+import { PlayerEditForm } from "@/components/shared/PlayerEditForm";
+import type { PlayerFormData, AdminFields } from "@/components/shared/PlayerEditForm";
 import { normalizeLogin } from "@/lib/auth/login";
 import { formatPlayerName } from "@/lib/utils/player-name";
 import { processImageFile } from "@/lib/utils/image-processing";
 import { cn } from "@/lib/utils";
-import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
+import type { Profile } from "@/types/database";
 
-interface PlayerForm {
-  first_name: string;
-  last_name: string;
-  nickname: string;
-  jersey_number: string;
-  position: PlayerPosition | null;
-  team_role: PlayerRole;
-  app_role: AppRole;
-  height: string;
-  weight: string;
-  date_of_birth: string;
-  phone: string;
-  bio: string;
-  nationality: string | null;
-  second_nationality: string | null;
-  default_training_team: string;
-  is_guest: boolean;
-  is_active: boolean;
-  is_approved: boolean;
+function formFromPlayer(player: Profile): PlayerFormData {
+  return {
+    first_name: player.first_name,
+    last_name: player.last_name,
+    nickname: player.nickname ?? "",
+    jersey_number: player.jersey_number?.toString() ?? "",
+    position: player.position,
+    default_training_team: player.default_training_team ?? "none",
+    height: player.height?.toString() ?? "",
+    weight: player.weight?.toString() ?? "",
+    date_of_birth: player.date_of_birth ?? "",
+    nationality: player.nationality,
+    second_nationality: player.second_nationality,
+    phone: player.phone ?? "",
+    bio: player.bio ?? "",
+  };
+}
+
+function adminFromPlayer(player: Profile): AdminFields {
+  return {
+    login: "",
+    password: "",
+    team_role: player.team_role,
+    app_role: player.app_role,
+    is_guest: player.is_guest ?? false,
+    is_active: player.is_active,
+    is_approved: player.is_approved,
+  };
 }
 
 interface PlayerEditButtonProps {
@@ -57,29 +55,6 @@ interface PlayerEditButtonProps {
   variant?: "icon" | "button";
   className?: string;
   onSaved?: () => void;
-}
-
-function formFromPlayer(player: Profile): PlayerForm {
-  return {
-    first_name: player.first_name,
-    last_name: player.last_name,
-    nickname: player.nickname ?? "",
-    jersey_number: player.jersey_number?.toString() ?? "",
-    position: player.position,
-    team_role: player.team_role,
-    app_role: player.app_role,
-    height: player.height?.toString() ?? "",
-    weight: player.weight?.toString() ?? "",
-    date_of_birth: player.date_of_birth ?? "",
-    phone: player.phone ?? "",
-    bio: player.bio ?? "",
-    nationality: player.nationality,
-    second_nationality: player.second_nationality,
-    default_training_team: player.default_training_team ?? "none",
-    is_guest: player.is_guest ?? false,
-    is_active: player.is_active,
-    is_approved: player.is_approved,
-  };
 }
 
 export function PlayerEditButton({
@@ -150,12 +125,7 @@ function PlayerEditDialogInner({
   showCredentials: boolean;
 }) {
   const t = useTranslations("admin");
-  const tp = useTranslations("positions");
-  const tr = useTranslations("roles");
   const tc = useTranslations("common");
-  const tt = useTranslations("training");
-  const ta = useTranslations("auth");
-  const tpr = useTranslations("profile");
 
   const supabase = useMemo(() => createClient(), []);
   const [player, setPlayer] = useState<Profile | null>(null);
@@ -165,26 +135,28 @@ function PlayerEditDialogInner({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
-  const [credentialsForm, setCredentialsForm] = useState({
-    login: "",
-    password: "",
-  });
-  const [form, setForm] = useState<PlayerForm>({
+
+  const [form, setForm] = useState<PlayerFormData>({
     first_name: "",
     last_name: "",
     nickname: "",
     jersey_number: "",
     position: "forward",
-    team_role: "player",
-    app_role: "player",
+    default_training_team: "none",
     height: "",
     weight: "",
     date_of_birth: "",
-    phone: "",
-    bio: "",
     nationality: null,
     second_nationality: null,
-    default_training_team: "none",
+    phone: "",
+    bio: "",
+  });
+
+  const [adminFields, setAdminFields] = useState<AdminFields>({
+    login: "",
+    password: "",
+    team_role: "player",
+    app_role: "player",
     is_guest: false,
     is_active: true,
     is_approved: true,
@@ -200,8 +172,10 @@ function PlayerEditDialogInner({
         .single();
       if (!mounted) return;
       if (data) {
-        setPlayer(data as Profile);
-        setForm(formFromPlayer(data as Profile));
+        const p = data as Profile;
+        setPlayer(p);
+        setForm(formFromPlayer(p));
+        setAdminFields(adminFromPlayer(p));
       }
       setLoading(false);
     }
@@ -224,8 +198,8 @@ function PlayerEditDialogInner({
         nickname: form.nickname.trim() || null,
         jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
         position: form.position || null,
-        team_role: form.team_role,
-        app_role: form.app_role,
+        team_role: adminFields.team_role,
+        app_role: adminFields.app_role,
         height: form.height ? parseInt(form.height) : null,
         weight: form.weight ? parseInt(form.weight) : null,
         date_of_birth: form.date_of_birth || null,
@@ -237,9 +211,9 @@ function PlayerEditDialogInner({
           form.default_training_team === "none"
             ? null
             : form.default_training_team,
-        is_guest: form.is_guest,
-        is_active: form.is_active,
-        is_approved: form.is_approved,
+        is_guest: adminFields.is_guest,
+        is_active: adminFields.is_active,
+        is_approved: adminFields.is_approved,
       })
       .eq("id", player.id);
 
@@ -250,8 +224,8 @@ function PlayerEditDialogInner({
     }
 
     if (showCredentials) {
-      const credLogin = normalizeLogin(credentialsForm.login);
-      const credPassword = credentialsForm.password;
+      const credLogin = normalizeLogin(adminFields.login);
+      const credPassword = adminFields.password;
       const credProvided = Boolean(credLogin) || Boolean(credPassword);
       if (credProvided) {
         if (!credLogin || !credPassword) {
@@ -364,396 +338,34 @@ function PlayerEditDialogInner({
         ) : !player ? (
           <p className="text-sm text-destructive py-4">{tc("noData")}</p>
         ) : (
-          <div className="space-y-4">
-            {/* Avatar */}
-            <div className="flex flex-col items-center gap-3 border border-border/60 rounded-lg p-4">
-              <Avatar className="h-20 w-20 ring-2 ring-primary/20">
-                <AvatarImage src={player.avatar_url ?? undefined} />
-                <AvatarFallback className="text-lg font-semibold">
-                  {(player.first_name?.[0] ?? "") +
-                    (player.last_name?.[0] ?? "")}
-                </AvatarFallback>
-              </Avatar>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*,.heic,.heif"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  disabled={uploadingAvatar}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  disabled={uploadingAvatar}
-                >
-                  <span>
-                    {uploadingAvatar ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="mr-2 h-4 w-4" />
-                    )}
-                    {tpr("changeAvatar")}
-                  </span>
-                </Button>
-              </label>
-              <AvatarCropDialog
-                open={cropDialogOpen}
-                imageSrc={cropImageSrc}
-                onClose={() => {
-                  setCropDialogOpen(false);
-                  if (cropImageSrc) {
-                    URL.revokeObjectURL(cropImageSrc);
-                    setCropImageSrc(null);
-                  }
-                }}
-                onConfirm={handleCroppedUpload}
-                title={tpr("cropAvatar")}
-                saveLabel={tpr("cropSave")}
-                cancelLabel={tc("cancel")}
-              />
-            </div>
-
-            {/* Name fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{ta("firstName")}</Label>
-                <Input
-                  value={form.first_name}
-                  onChange={(e) =>
-                    setForm({ ...form, first_name: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{ta("lastName")}</Label>
-                <Input
-                  value={form.last_name}
-                  onChange={(e) =>
-                    setForm({ ...form, last_name: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("nickname")}</Label>
-                <Input
-                  value={form.nickname}
-                  onChange={(e) =>
-                    setForm({ ...form, nickname: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-            </div>
-
-            {/* Jersey, Position, DOB */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{tpr("jerseyNumber")}</Label>
-                <Input
-                  type="number"
-                  value={form.jersey_number}
-                  onChange={(e) =>
-                    setForm({ ...form, jersey_number: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("position")}</Label>
-                <Select
-                  value={form.position ?? "none"}
-                  onValueChange={(v) =>
-                    setForm({
-                      ...form,
-                      position:
-                        v === "none" ? null : (v as PlayerPosition),
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {POSITIONS.map((pos) => (
-                      <SelectItem key={pos} value={pos}>
-                        {tp(pos)}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="none">{t("noPosition")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("dateOfBirth")}</Label>
-                <Input
-                  type="date"
-                  value={form.date_of_birth}
-                  onChange={(e) =>
-                    setForm({ ...form, date_of_birth: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-            </div>
-
-            {/* Height, Weight, Nationality */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{tpr("height")}</Label>
-                <Input
-                  type="number"
-                  value={form.height}
-                  onChange={(e) =>
-                    setForm({ ...form, height: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("weight")}</Label>
-                <Input
-                  type="number"
-                  value={form.weight}
-                  onChange={(e) =>
-                    setForm({ ...form, weight: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>{tpr("nationality")}</Label>
-                  <CountrySelect
-                    value={form.nationality}
-                    onChange={(val) => setForm({ ...form, nationality: val })}
-                    className="bg-background"
-                  />
-                </div>
-                {!form.second_nationality && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setForm({ ...form, second_nationality: "none" })
-                    }
-                    className="gap-2 text-muted-foreground w-full"
-                  >
-                    <span className="text-lg leading-none">+</span>
-                    {tpr("secondNationality")}
-                  </Button>
-                )}
-                {form.second_nationality !== null && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>{tpr("secondNationality")}</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 text-muted-foreground hover:text-destructive"
-                        onClick={() =>
-                          setForm({ ...form, second_nationality: null })
-                        }
-                      >
-                        <span className="sr-only">{tc("delete")}</span>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <CountrySelect
-                      value={
-                        form.second_nationality === "none"
-                          ? null
-                          : form.second_nationality
-                      }
-                      onChange={(val) =>
-                        setForm({ ...form, second_nationality: val })
-                      }
-                      className="bg-background"
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>{tpr("phone")}</Label>
-                <Input
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm({ ...form, phone: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-            </div>
-
-            {/* Bio */}
-            <div className="space-y-2">
-              <Label>{tpr("bio")}</Label>
-              <Input
-                value={form.bio}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                className="bg-background"
-              />
-            </div>
-
-            {/* Credentials (admin only) */}
-            {showCredentials && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t("loginField")}</Label>
-                    <Input
-                      value={credentialsForm.login}
-                      onChange={(e) =>
-                        setCredentialsForm({
-                          ...credentialsForm,
-                          login: e.target.value,
-                        })
-                      }
-                      placeholder={t("credentialsOptional")}
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("loginPassword")}</Label>
-                    <Input
-                      type="text"
-                      value={credentialsForm.password}
-                      onChange={(e) =>
-                        setCredentialsForm({
-                          ...credentialsForm,
-                          password: e.target.value,
-                        })
-                      }
-                      placeholder={t("credentialsOptional")}
-                      className="bg-background"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("credentialsHint")}
-                </p>
-              </>
-            )}
-
-            {/* Roles */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{t("teamRoleColumn")}</Label>
-                <Select
-                  value={form.team_role}
-                  onValueChange={(v) =>
-                    setForm({ ...form, team_role: v as PlayerRole })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="player">{tr("player")}</SelectItem>
-                    <SelectItem value="captain">{tr("captain")}</SelectItem>
-                    <SelectItem value="assistant_captain">
-                      {tr("assistantCaptain")}
-                    </SelectItem>
-                    <SelectItem value="coach">{tr("coach")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("appRole")}</Label>
-                <Select
-                  value={form.app_role}
-                  onValueChange={(v) =>
-                    setForm({ ...form, app_role: v as AppRole })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="player">{tr("player")}</SelectItem>
-                    <SelectItem value="admin">{tc("admin")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("defaultTeam")}</Label>
-                <Select
-                  value={form.default_training_team}
-                  onValueChange={(v) =>
-                    setForm({ ...form, default_training_team: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{tt("noTeam")}</SelectItem>
-                    <SelectItem value="team_a">{tt("teamA")}</SelectItem>
-                    <SelectItem value="team_b">{tt("teamB")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Flags */}
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_guest}
-                  onChange={(e) =>
-                    setForm({ ...form, is_guest: e.target.checked })
-                  }
-                  className="rounded border-border"
-                />
-                <span className="text-sm">{tt("guest")}</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) =>
-                    setForm({ ...form, is_active: e.target.checked })
-                  }
-                  className="rounded border-border"
-                />
-                <span className="text-sm">{t("active")}</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_approved}
-                  onChange={(e) =>
-                    setForm({ ...form, is_approved: e.target.checked })
-                  }
-                  className="rounded border-border"
-                />
-                <span className="text-sm">{t("approved")}</span>
-              </label>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            {/* Save */}
-            <Button
-              onClick={handleSave}
-              disabled={saving || !form.first_name.trim()}
-              className="w-full bg-primary"
-            >
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tc("save")}
-            </Button>
-          </div>
+          <PlayerEditForm
+            avatarUrl={player.avatar_url}
+            avatarInitials={
+              (player.first_name?.[0] ?? "") + (player.last_name?.[0] ?? "")
+            }
+            onAvatarFileSelect={handleFileSelect}
+            uploadingAvatar={uploadingAvatar}
+            cropDialogOpen={cropDialogOpen}
+            cropImageSrc={cropImageSrc}
+            onCropClose={() => {
+              setCropDialogOpen(false);
+              if (cropImageSrc) {
+                URL.revokeObjectURL(cropImageSrc);
+                setCropImageSrc(null);
+              }
+            }}
+            onCropConfirm={handleCroppedUpload}
+            form={form}
+            onFormChange={(updated) => setForm(updated)}
+            adminFields={showCredentials ? adminFields : undefined}
+            onAdminFieldsChange={
+              showCredentials ? (fields) => setAdminFields(fields) : undefined
+            }
+            onSave={handleSave}
+            saving={saving}
+            error={error}
+            saveDisabled={!form.first_name.trim()}
+          />
         )}
       </DialogContent>
     </Dialog>

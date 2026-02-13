@@ -17,6 +17,29 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
+  // ── 2026-02-13 (refactor) ────────────────────────────────────
+  {
+    date: "2026-02-13",
+    category: "refactor",
+    description: "Ujednačen popup za uređivanje igrača: isti dizajn na javnim stranicama i u admin panelu",
+    description_ru: "Унифицирован попап редактирования игрока: одинаковый дизайн на публичных страницах и в админке",
+    description_en: "Unified player edit popup: same design on public pages and in admin panel",
+  },
+  // ── 2026-02-13 (SEO) ───────────────────────────────────────
+  {
+    date: "2026-02-13",
+    category: "feature",
+    description: "Kompletna SEO optimizacija: metadata za sve stranice, Open Graph tagovi, robots.txt, sitemap.xml, manifest, JSON-LD strukturirani podaci, višejezični hreflang linkovi",
+    description_ru: "Полная SEO-оптимизация: метаданные для всех страниц, Open Graph теги, robots.txt, sitemap.xml, манифест, JSON-LD структурированные данные, мультиязычные hreflang ссылки",
+    description_en: "Full SEO optimization: metadata for all pages, Open Graph tags, robots.txt, sitemap.xml, manifest, JSON-LD structured data, multilingual hreflang links",
+  },
+  {
+    date: "2026-02-13",
+    category: "fix",
+    description: "Ispravljen atribut lang na HTML elementu — sada se menja prema izabranom jeziku",
+    description_ru: "Исправлен атрибут lang на HTML элементе — теперь меняется в зависимости от выбранного языка",
+    description_en: "Fixed lang attribute on HTML element — now changes based on selected locale",
+  },
   // ── 2026-02-13 (cont.) ─────────────────────────────────────
   {
     date: "2026-02-13",
