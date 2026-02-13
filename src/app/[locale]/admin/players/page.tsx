@@ -36,7 +36,7 @@ import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import { SkeletonTable } from "@/components/shared/skeletons";
 import { PlayerEditForm } from "@/components/shared/PlayerEditForm";
 import type { Profile, PlayerRole, AppRole, PlayerPosition, TrainingTeam } from "@/types/database";
-import { POSITION_COLORS, POSITIONS } from "@/lib/utils/constants";
+import { POSITION_COLORS, POSITION_COLORS_HEX, POSITIONS } from "@/lib/utils/constants";
 import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
 import { CountrySelect } from "@/components/shared/CountrySelect";
 import { countryFlagEmoji } from "@/lib/utils/country";
@@ -725,11 +725,11 @@ export default function AdminPlayersPage() {
                   </Badge>
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="pending-players-sort" className="text-xs text-muted-foreground">
+                  <Label htmlFor="pending-players-sort" className="text-xs text-muted-foreground shrink-0">
                     {t("sortBy")}
                   </Label>
                   <Select value={pendingSort} onValueChange={(value) => setPendingSort(value as ActivePlayersSort)}>
-                    <SelectTrigger id="pending-players-sort" className="w-[220px]">
+                    <SelectTrigger id="pending-players-sort">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -743,7 +743,7 @@ export default function AdminPlayersPage() {
                     value={pendingSortDirection}
                     onValueChange={(value) => setPendingSortDirection(value as SortDirection)}
                   >
-                    <SelectTrigger id="pending-players-sort-direction" className="w-[180px]">
+                    <SelectTrigger id="pending-players-sort-direction" className="hidden sm:flex">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -822,11 +822,11 @@ export default function AdminPlayersPage() {
                 {normalizedSearchQuery ? `/${approved.length}` : ""})
               </CardTitle>
               <div className="flex items-center gap-2">
-                <Label htmlFor="active-players-sort" className="text-xs text-muted-foreground">
+                <Label htmlFor="active-players-sort" className="text-xs text-muted-foreground shrink-0">
                   {t("sortBy")}
                 </Label>
                 <Select value={activeSort} onValueChange={(value) => setActiveSort(value as ActivePlayersSort)}>
-                  <SelectTrigger id="active-players-sort" className="w-[220px]">
+                  <SelectTrigger id="active-players-sort">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -840,7 +840,7 @@ export default function AdminPlayersPage() {
                   value={activeSortDirection}
                   onValueChange={(value) => setActiveSortDirection(value as SortDirection)}
                 >
-                  <SelectTrigger id="active-players-sort-direction" className="w-[180px]">
+                  <SelectTrigger id="active-players-sort-direction" className="hidden sm:flex">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -857,11 +857,11 @@ export default function AdminPlayersPage() {
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="w-[50px]">#</TableHead>
                     <TableHead>{t("playerColumn")}</TableHead>
-                    <TableHead>{t("positionColumn")}</TableHead>
-                    <TableHead>{t("trainingTeamColumn")}</TableHead>
-                    <TableHead>{tpr("dateOfBirth")}</TableHead>
-                    <TableHead className="text-center">{t("statusColumn")}</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="hidden sm:table-cell">{t("positionColumn")}</TableHead>
+                    <TableHead className="hidden sm:table-cell">{t("trainingTeamColumn")}</TableHead>
+                    <TableHead className="hidden md:table-cell">{tpr("dateOfBirth")}</TableHead>
+                    <TableHead className="hidden sm:table-cell text-center">{t("statusColumn")}</TableHead>
+                    <TableHead className="hidden sm:table-cell w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -872,113 +872,120 @@ export default function AdminPlayersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredApproved.map((player) => (
-                      <TableRow key={player.id}>
-                        <TableCell>
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={player.avatar_url ?? undefined} />
-                            <AvatarFallback>
-                              {(player.first_name?.[0] ?? "") + (player.last_name?.[0] ?? "")}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="text-primary font-bold">
-                          {player.jersey_number ?? "-"}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="flex items-center gap-1">
-                              {formatPlayerName(player)}
-                              {player.nationality && (
-                                <span title={player.nationality} className="ml-1">
-                                  {countryFlagEmoji(player.nationality)}
-                                </span>
+                    filteredApproved.map((player) => {
+                      const posColor = player.position
+                        ? POSITION_COLORS_HEX[player.position as PlayerPosition]
+                        : undefined;
+                      return (
+                        <TableRow key={player.id} className="cursor-pointer" onClick={() => openEdit(player)}>
+                          <TableCell className="pr-0">
+                            <Avatar
+                              className="h-8 w-8 ring-2"
+                              style={{ boxShadow: posColor ? `0 0 0 2px ${posColor}` : undefined }}
+                            >
+                              <AvatarImage src={player.avatar_url ?? undefined} />
+                              <AvatarFallback className="text-xs">
+                                {(player.first_name?.[0] ?? "") + (player.last_name?.[0] ?? "")}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TableCell>
+                          <TableCell className="text-primary font-bold px-2">
+                            {player.jersey_number ?? "-"}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <span className="flex items-center gap-1">
+                                {formatPlayerName(player)}
+                                {player.nationality && (
+                                  <span title={player.nationality}>
+                                    {countryFlagEmoji(player.nationality)}
+                                  </span>
+                                )}
+                                {player.second_nationality && (
+                                  <span title={player.second_nationality}>
+                                    {countryFlagEmoji(player.second_nationality)}
+                                  </span>
+                                )}
+                              </span>
+                              {player.team_role === "captain" && (
+                                <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                                  {tr("captain")}
+                                </Badge>
                               )}
-                              {player.second_nationality && (
-                                <span title={player.second_nationality}>
-                                  {countryFlagEmoji(player.second_nationality)}
-                                </span>
+                              {player.team_role === "assistant_captain" && (
+                                <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40">
+                                  {tr("assistantCaptain")}
+                                </Badge>
                               )}
+                              {player.team_role === "coach" && (
+                                <Badge className="bg-green-500/20 text-green-400 border border-green-500/40">
+                                  {tr("coach")}
+                                </Badge>
+                              )}
+                              {player.is_guest && (
+                                <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                                  {tt("guest")}
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {renderPlayerLogin(player)}
                             </span>
-                            {player.team_role === "captain" && (
-                              <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                                {tr("captain")}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {player.position ? (
+                              <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
+                                {tp(player.position)}
                               </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
                             )}
-                            {player.team_role === "assistant_captain" && (
-                              <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40">
-                                {tr("assistantCaptain")}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {player.default_training_team ? (
+                              <Badge variant="outline" className="text-xs">
+                                {player.default_training_team === "team_a" ? tt("teamA") : tt("teamB")}
                               </Badge>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">{tt("noTeam")}</span>
                             )}
-                            {player.team_role === "coach" && (
-                              <Badge className="bg-green-500/20 text-green-400 border border-green-500/40">
-                                {tr("coach")}
-                              </Badge>
-                            )}
-                            {player.is_guest && (
-                              <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                                {tt("guest")}
-                              </Badge>
-                            )}
-                          </div>
-                          <br />
-                          <span className="text-xs text-muted-foreground">
-                            {renderPlayerLogin(player)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {player.position ? (
-                            <Badge className={`text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}>
-                              {tp(player.position)}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {player.default_training_team ? (
-                            <Badge variant="outline" className="text-xs">
-                              {player.default_training_team === "team_a" ? tt("teamA") : tt("teamB")}
-                            </Badge>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">{tt("noTeam")}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDateOfBirth(player.date_of_birth)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center">
-                            <span
-                              className={`h-2.5 w-2.5 rounded-full ${player.is_active ? "bg-green-500" : "bg-red-500"}`}
-                              aria-label={player.is_active ? t("active") : t("inactive")}
-                              title={player.is_active ? t("active") : t("inactive")}
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openEdit(player)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => deletePlayer(player.id, formatPlayerName(player))}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="text-sm text-muted-foreground">
+                              {formatDateOfBirth(player.date_of_birth)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center justify-center">
+                              <span
+                                className={`h-2.5 w-2.5 rounded-full ${player.is_active ? "bg-green-500" : "bg-red-500"}`}
+                                aria-label={player.is_active ? t("active") : t("inactive")}
+                                title={player.is_active ? t("active") : t("inactive")}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => { e.stopPropagation(); openEdit(player); }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => { e.stopPropagation(); deletePlayer(player.id, formatPlayerName(player)); }}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
