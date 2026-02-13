@@ -35,7 +35,12 @@
     "error": "Doslo je do greske",
     "retry": "Pokusaj ponovo",
     "deleteConfirm": "Da li ste sigurni da želite da obrišete ovu stavku?",
-    "menu": "Meni"
+    "menu": "Meni",
+    "selectCountry": "Izaberi državu",
+    "searchCountry": "Pretraži državu",
+    "countryNotFound": "Država nije pronađena",
+    "error_title": "Nešto je pošlo po zlu!",
+    "try_again": "Pokušaj ponovo"
   },
   "locale": {
     "sr": "Srpski",
@@ -329,6 +334,8 @@
     "dateOfBirth": "Datum rodjenja",
     "height": "Visina (cm)",
     "weight": "Tezina (kg)",
+    "nationality": "Nacionalnost",
+    "secondNationality": "Druga nacionalnost",
     "saved": "Profil sacuvan!",
     "notFound": "Profil nije pronadjen. Molimo pokusajte ponovo kasnije."
   },

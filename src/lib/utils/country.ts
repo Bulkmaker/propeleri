@@ -35,6 +35,7 @@ export const COUNTRY_OPTIONS: CountryOption[] = [
   { code: "LV", label: "Latvia", aliases: ["Латвия"] },
   { code: "LT", label: "Lithuania", aliases: ["Литва"] },
   { code: "EE", label: "Estonia", aliases: ["Эстония"] },
+  { code: "EG", label: "Egypt", aliases: ["Egipt", "Египет"] },
 ];
 
 function normalizeName(value: string) {

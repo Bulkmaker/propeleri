@@ -42,6 +42,8 @@ export interface Profile {
   phone: string | null;
   height: number | null;
   weight: number | null;
+  nationality: string | null;
+  second_nationality: string | null;
   default_training_team: TrainingTeam | null;
   is_guest: boolean;
   is_active: boolean;

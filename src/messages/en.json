@@ -35,7 +35,12 @@
     "error": "An error occurred",
     "retry": "Retry",
     "deleteConfirm": "Are you sure you want to delete this item?",
-    "menu": "Menu"
+    "menu": "Menu",
+    "selectCountry": "Select country",
+    "searchCountry": "Search country",
+    "countryNotFound": "Country not found",
+    "error_title": "Something went wrong!",
+    "try_again": "Try again"
   },
   "locale": {
     "sr": "Serbian",
@@ -329,6 +334,8 @@
     "dateOfBirth": "Date of Birth",
     "height": "Height (cm)",
     "weight": "Weight (kg)",
+    "nationality": "Nationality",
+    "secondNationality": "Second Nationality",
     "saved": "Profile saved!",
     "notFound": "Profile not found. Please try logging in again."
   },

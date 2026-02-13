@@ -16,11 +16,12 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Save, Upload, User } from "lucide-react";
+import { Loader2, Save, Upload, User, Trash2, Plus } from "lucide-react";
 import type { Profile, PlayerPosition } from "@/types/database";
 import { POSITIONS } from "@/lib/utils/constants";
 import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
 import { processImageFile } from "@/lib/utils/image-processing";
+import { CountrySelect } from "@/components/shared/CountrySelect";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
@@ -86,6 +87,8 @@ export default function ProfilePage() {
         date_of_birth: profile.date_of_birth,
         height: profile.height,
         weight: profile.weight,
+        nationality: profile.nationality,
+        second_nationality: profile.second_nationality,
       })
       .eq("id", profile.id);
 
@@ -343,33 +346,6 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t("phone")}</Label>
-                <Input
-                  value={profile.phone ?? ""}
-                  onChange={(e) =>
-                    setProfile({ ...profile, phone: e.target.value || null })
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("dateOfBirth")}</Label>
-                <Input
-                  type="date"
-                  value={profile.date_of_birth ?? ""}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      date_of_birth: e.target.value || null,
-                    })
-                  }
-                  className="bg-background"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
                 <Label>{t("height")}</Label>
                 <Input
                   type="number"
@@ -397,6 +373,80 @@ export default function ProfilePage() {
                   className="bg-background"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t("phone")}</Label>
+                <Input
+                  value={profile.phone ?? ""}
+                  onChange={(e) =>
+                    setProfile({ ...profile, phone: e.target.value || null })
+                  }
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("dateOfBirth")}</Label>
+                <Input
+                  type="date"
+                  value={profile.date_of_birth ?? ""}
+                  onChange={(e) =>
+                    setProfile({
+                      ...profile,
+                      date_of_birth: e.target.value || null,
+                    })
+                  }
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t("nationality")}</Label>
+                <div className="flex gap-2">
+                  <CountrySelect
+                    value={profile.nationality}
+                    onChange={(val) => setProfile({ ...profile, nationality: val })}
+                    className="bg-background"
+                  />
+                  {!profile.second_nationality && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setProfile({ ...profile, second_nationality: "none" })}
+                      className="shrink-0 text-muted-foreground"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {profile.second_nationality !== null && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>{t("secondNationality")}</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 text-muted-foreground hover:text-destructive"
+                      onClick={() => setProfile({ ...profile, second_nationality: null })}
+                    >
+                      <span className="sr-only">{tc("delete")}</span>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <CountrySelect
+                    value={profile.second_nationality === "none" ? null : profile.second_nationality}
+                    onChange={(val) => setProfile({ ...profile, second_nationality: val })}
+                    className="bg-background"
+                  />
+                </div>
+              )}
             </div>
 
             {message && (
