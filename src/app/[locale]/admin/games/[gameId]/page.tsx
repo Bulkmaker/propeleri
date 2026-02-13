@@ -17,6 +17,7 @@ const UnifiedGameEditor = dynamic(
 );
 import type {
   Game,
+  Team,
   Tournament,
 } from "@/types/database";
 
@@ -28,25 +29,32 @@ export default function AdminGameEditPage() {
 
   const [game, setGame] = useState<Game | null>(null);
   const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [opponentTeam, setOpponentTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
 
   const supabase = useMemo(() => createClient(), []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [gameRes, tournamentRes] = await Promise.all([
-      supabase.from("games").select("*").eq("id", gameId).single(),
-      supabase.from("games").select("tournament_id").eq("id", gameId).single()
-        .then(async (res) => {
-          if (res.data?.tournament_id) {
-            return supabase.from("tournaments").select("*").eq("id", res.data.tournament_id).single();
-          }
-          return { data: null, error: null };
-        })
-    ]);
+    const gameRes = await supabase.from("games").select("*").eq("id", gameId).single();
+    const loadedGame = gameRes.data as Game | null;
 
-    if (gameRes.data) setGame(gameRes.data);
-    if (tournamentRes.data) setTournament(tournamentRes.data);
+    if (loadedGame) {
+      setGame(loadedGame);
+
+      const [tournamentRes, teamRes] = await Promise.all([
+        loadedGame.tournament_id
+          ? supabase.from("tournaments").select("*").eq("id", loadedGame.tournament_id).single()
+          : Promise.resolve({ data: null }),
+        loadedGame.opponent_team_id
+          ? supabase.from("teams").select("*").eq("id", loadedGame.opponent_team_id).single()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      if (tournamentRes.data) setTournament(tournamentRes.data as Tournament);
+      if (teamRes.data) setOpponentTeam(teamRes.data as Team);
+    }
+
     setLoading(false);
   }, [gameId, supabase]);
 
@@ -86,7 +94,7 @@ export default function AdminGameEditPage() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/admin/games">
+        <Link href={tournament ? `/admin/tournaments/${tournament.id}` : "/admin/games"}>
           <Button variant="ghost" size="icon">
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -94,7 +102,7 @@ export default function AdminGameEditPage() {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">
-              {game.opponent} - {new Date(game.game_date).toLocaleDateString()}
+              {opponentTeam?.name ?? game.opponent} - {new Date(game.game_date).toLocaleDateString()}
             </h1>
             {tournament && (
               <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
@@ -105,6 +113,7 @@ export default function AdminGameEditPage() {
           </div>
           <p className="text-muted-foreground text-sm">
             {game.is_home ? "Home" : "Away"} • {game.result}
+            {tournament && ` • ${tournament.name}`}
           </p>
         </div>
         <Button variant="destructive" size="icon" onClick={handleDelete}>

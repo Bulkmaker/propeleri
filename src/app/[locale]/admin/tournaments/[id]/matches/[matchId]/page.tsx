@@ -236,6 +236,12 @@ export default function TournamentMatchEditorPage() {
       return;
     }
 
+    // Redirect Propeleri matches to the unified game editor
+    if (loadedMatch.game_id) {
+      router.replace(`/admin/games/${loadedMatch.game_id}`);
+      return;
+    }
+
     const allTeams = (allTeamsRes.data ?? []) as Team[];
     const tournamentTeams = (junctionsRes.data ?? []) as TournamentTeam[];
     const loadedTeamIds = new Set(tournamentTeams.map((row) => row.team_id));
