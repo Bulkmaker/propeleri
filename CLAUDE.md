@@ -152,3 +152,4 @@ Dark theme defined as CSS variables in `src/app/globals.css`. No light theme. Cu
 - Generic payloads typed as `Record<string, unknown>` — avoid `any`
 - External images use `<img>` with `eslint-disable @next/next/no-img-element` (can't use `next/image` for arbitrary URLs)
 - Language: respond to user in Russian; code comments and identifiers in English
+- Localization: Always update `src/messages/{sr,ru,en}.json` when adding new text strings. Check all three files.

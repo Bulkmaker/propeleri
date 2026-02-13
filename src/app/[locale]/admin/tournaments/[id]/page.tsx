@@ -71,6 +71,55 @@ function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+type GroupStandingRow = {
+  teamId: string;
+  mp: number;
+  w: number;
+  d: number;
+  l: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  pts: number;
+};
+
+function computeGroupStandings(
+  groupId: string,
+  memberTeamIds: string[],
+  allMatches: TournamentMatch[],
+): GroupStandingRow[] {
+  const completed = allMatches.filter(
+    (m) =>
+      m.stage === "group" &&
+      m.group_id === groupId &&
+      m.is_completed &&
+      m.team_a_id &&
+      m.team_b_id
+  );
+
+  const s = new Map(memberTeamIds.map((id) => [id, { mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }]));
+
+  for (const m of completed) {
+    const a = s.get(m.team_a_id!);
+    const b = s.get(m.team_b_id!);
+    if (a) {
+      a.mp++; a.gf += m.score_a; a.ga += m.score_b;
+      if (m.score_a > m.score_b) a.w++; else if (m.score_a < m.score_b) a.l++; else a.d++;
+    }
+    if (b) {
+      b.mp++; b.gf += m.score_b; b.ga += m.score_a;
+      if (m.score_b > m.score_a) b.w++; else if (m.score_b < m.score_a) b.l++; else b.d++;
+    }
+  }
+
+  return memberTeamIds
+    .map((id) => {
+      const r = s.get(id)!;
+      return { teamId: id, ...r, gd: r.gf - r.ga, pts: r.w * 3 + r.d };
+    })
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+}
+
 type TeamForm = {
   name: string;
   city: string;
@@ -105,6 +154,7 @@ export default function AdminTournamentDetailPage() {
   const [groups, setGroups] = useState<TournamentGroup[]>([]);
   const [groupTeams, setGroupTeams] = useState<TournamentGroupTeam[]>([]);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
+  const [dragTeamId, setDragTeamId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -522,6 +572,20 @@ export default function AdminTournamentDetailPage() {
       await supabase.from("tournament_group_teams").insert({ group_id: groupId, team_id: teamId });
     }
 
+    await loadAll();
+  }
+
+  async function moveTeamToGroup(teamId: string, targetGroupId: string | null) {
+    const existing = groupTeams.filter((gt) => gt.team_id === teamId);
+    for (const entry of existing) {
+      await supabase.from("tournament_group_teams").delete().eq("id", entry.id);
+    }
+    if (targetGroupId) {
+      await supabase.from("tournament_group_teams").insert({
+        group_id: targetGroupId,
+        team_id: teamId,
+      });
+    }
     await loadAll();
   }
 
@@ -1165,74 +1229,154 @@ export default function AdminTournamentDetailPage() {
                     const memberIds = groupTeams
                       .filter((item) => item.group_id === group.id)
                       .map((item) => item.team_id);
+                    const standings = computeGroupStandings(group.id, memberIds, matches);
 
                     return (
-                      <Card key={group.id} className="border-border/40">
+                      <Card
+                        key={group.id}
+                        className={`border-border/40 transition-colors ${dragTeamId && !memberIds.includes(dragTeamId) ? "ring-1 ring-primary/30 ring-dashed" : ""}`}
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const tid = e.dataTransfer.getData("text/plain");
+                          if (tid && !memberIds.includes(tid)) void moveTeamToGroup(tid, group.id);
+                        }}
+                      >
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between mb-3">
                             <h3 className="font-medium">{group.name}</h3>
                             <div className="flex items-center gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                onClick={() => moveGroup(group.id, "up")}
-                                disabled={index === 0}
-                              >
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => moveGroup(group.id, "up")} disabled={index === 0}>
                                 <ArrowUp className="h-3 w-3" />
                               </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                onClick={() => moveGroup(group.id, "down")}
-                                disabled={index === groups.length - 1}
-                              >
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => moveGroup(group.id, "down")} disabled={index === groups.length - 1}>
                                 <ArrowDown className="h-3 w-3" />
                               </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                onClick={() => openEditGroupDialog(group)}
-                              >
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditGroupDialog(group)}>
                                 <Pencil className="h-3 w-3" />
                               </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="text-red-400 hover:text-red-300 h-8 w-8"
-                                onClick={() => deleteGroup(group.id)}
-                              >
+                              <Button size="icon" variant="ghost" className="text-red-400 hover:text-red-300 h-8 w-8" onClick={() => deleteGroup(group.id)}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap gap-2">
-                            {teams.map((team) => {
-                              const isMember = memberIds.includes(team.id);
-                              return (
-                                <button
-                                  key={team.id}
-                                  onClick={() => toggleTeamInGroup(group.id, team.id)}
-                                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${isMember
-                                    ? "bg-primary/20 text-primary border-primary/40"
-                                    : "bg-muted/30 text-muted-foreground border-border/40 hover:border-primary/40"
-                                    }`}
-                                >
-                                  {team.name}
-                                  {isMember && <Check className="inline h-3 w-3 ml-1" />}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {standings.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-border/50 text-xs text-muted-foreground">
+                                    <th className="text-left py-1.5 w-5">#</th>
+                                    <th className="text-left py-1.5">{tt("team")}</th>
+                                    <th className="text-center py-1.5 w-8">GP</th>
+                                    <th className="text-center py-1.5 w-8">W</th>
+                                    <th className="text-center py-1.5 w-8">D</th>
+                                    <th className="text-center py-1.5 w-8">L</th>
+                                    <th className="text-center py-1.5 w-8">GF</th>
+                                    <th className="text-center py-1.5 w-8">GA</th>
+                                    <th className="text-center py-1.5 w-8">+/-</th>
+                                    <th className="text-center py-1.5 w-8 font-semibold">P</th>
+                                    <th className="w-7"></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {standings.map((row, i) => {
+                                    const team = teams.find((t) => t.id === row.teamId);
+                                    return (
+                                      <tr
+                                        key={row.teamId}
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.setData("text/plain", row.teamId);
+                                          setDragTeamId(row.teamId);
+                                        }}
+                                        onDragEnd={() => setDragTeamId(null)}
+                                        className="border-b border-border/30 cursor-grab active:cursor-grabbing hover:bg-muted/30"
+                                      >
+                                        <td className="py-1.5 text-muted-foreground text-xs">{i + 1}</td>
+                                        <td className="py-1.5">
+                                          <div className="flex items-center gap-1.5">
+                                            <TeamAvatar name={team?.name ?? "?"} logoUrl={team?.logo_url} country={team?.country} size="xs" />
+                                            <span className={`text-sm ${team?.is_propeleri ? "font-semibold text-primary" : "font-medium"}`}>
+                                              {team?.name ?? "?"}
+                                            </span>
+                                          </div>
+                                        </td>
+                                        <td className="text-center text-xs tabular-nums">{row.mp}</td>
+                                        <td className="text-center text-xs tabular-nums">{row.w}</td>
+                                        <td className="text-center text-xs tabular-nums">{row.d}</td>
+                                        <td className="text-center text-xs tabular-nums">{row.l}</td>
+                                        <td className="text-center text-xs tabular-nums">{row.gf}</td>
+                                        <td className="text-center text-xs tabular-nums">{row.ga}</td>
+                                        <td className="text-center text-xs tabular-nums">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
+                                        <td className="text-center text-xs tabular-nums font-bold">{row.pts}</td>
+                                        <td className="text-center">
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6 text-red-400 hover:text-red-300"
+                                            onClick={() => void toggleTeamInGroup(group.id, row.teamId)}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground text-center py-6 border border-dashed border-border/40 rounded-md">
+                              {tt("noTeams")}
+                            </p>
+                          )}
                         </CardContent>
                       </Card>
                     );
                   })}
               </div>
             )}
+
+            {/* Ungrouped teams */}
+            {(() => {
+              const groupedIds = new Set(groupTeams.map((gt) => gt.team_id));
+              const ungrouped = teams.filter((t) => !groupedIds.has(t.id));
+              if (ungrouped.length === 0) return null;
+
+              return (
+                <Card
+                  className={`border-border/40 border-dashed mt-4 transition-colors ${dragTeamId ? "ring-1 ring-primary/30" : ""}`}
+                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const tid = e.dataTransfer.getData("text/plain");
+                    if (tid) void moveTeamToGroup(tid, null);
+                  }}
+                >
+                  <CardContent className="p-4">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">{tt("ungroupedTeams")}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {ungrouped.map((team) => (
+                        <div
+                          key={team.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", team.id);
+                            setDragTeamId(team.id);
+                          }}
+                          onDragEnd={() => setDragTeamId(null)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border/40 bg-muted/20 cursor-grab active:cursor-grabbing hover:border-primary/40 transition-colors"
+                        >
+                          <TeamAvatar name={team.name} logoUrl={team.logo_url} country={team.country} size="xs" />
+                          <span className="text-sm font-medium">{team.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
               <DialogContent className="bg-card border-border">
@@ -1635,124 +1779,120 @@ function MatchCard({
   const isPlayableMatch = Boolean(match.team_a_id && match.team_b_id);
 
   return (
-    <Card className="border-border/40">
-      <CardContent className="p-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {match.bracket_label && (
-              <Badge className="bg-purple-500/20 text-purple-400 text-xs shrink-0">
-                {match.bracket_label}
-              </Badge>
-            )}
-            {groupName && (
-              <Badge className="bg-blue-500/20 text-blue-400 text-xs shrink-0">
-                {groupName}
-              </Badge>
-            )}
-            {hasPropeleri && (
-              <Badge className="bg-primary/20 text-primary text-xs shrink-0">
-                {tt("propeleri")}
-              </Badge>
-            )}
-            <div className="flex items-center gap-1.5 min-w-0">
-              <TeamAvatar
-                name={teamA?.name ?? teamName(match.team_a_id)}
-                logoUrl={teamA?.logo_url}
-                country={teamA?.country}
-                size="xs"
-              />
-              <span className="text-sm font-medium truncate">{teamName(match.team_a_id)}</span>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {hasLinkedGame ? (
-                <span className="text-sm font-semibold tabular-nums">
-                  {match.score_a}:{match.score_b}
-                </span>
-              ) : (
-                <>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={scoreA}
-                    onChange={(e) => setScoreA(parseInt(e.target.value, 10) || 0)}
-                    className="w-12 h-7 text-center text-sm bg-background px-1"
-                  />
-                  <span className="text-muted-foreground">:</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={scoreB}
-                    onChange={(e) => setScoreB(parseInt(e.target.value, 10) || 0)}
-                    className="w-12 h-7 text-center text-sm bg-background px-1"
-                  />
-                </>
+    <Link href={matchEditorHref} className="block transition-transform hover:scale-[1.005]">
+      <Card className="border-border/40 hover:border-border/70 transition-colors">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {match.bracket_label && (
+                <Badge className="bg-purple-500/20 text-purple-400 text-xs shrink-0">
+                  {match.bracket_label}
+                </Badge>
               )}
+              {groupName && (
+                <Badge className="bg-blue-500/20 text-blue-400 text-xs shrink-0">
+                  {groupName}
+                </Badge>
+              )}
+              {hasPropeleri && (
+                <Badge className="bg-primary/20 text-primary text-xs shrink-0">
+                  {tt("propeleri")}
+                </Badge>
+              )}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <TeamAvatar
+                  name={teamA?.name ?? teamName(match.team_a_id)}
+                  logoUrl={teamA?.logo_url}
+                  country={teamA?.country}
+                  size="xs"
+                />
+                <span className="text-sm font-medium truncate">{teamName(match.team_a_id)}</span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                {hasLinkedGame ? (
+                  <span className="text-sm font-semibold tabular-nums">
+                    {match.score_a}:{match.score_b}
+                  </span>
+                ) : (
+                  <>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={scoreA}
+                      onChange={(e) => setScoreA(parseInt(e.target.value, 10) || 0)}
+                      className="w-12 h-7 text-center text-sm bg-background px-1"
+                    />
+                    <span className="text-muted-foreground">:</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={scoreB}
+                      onChange={(e) => setScoreB(parseInt(e.target.value, 10) || 0)}
+                      className="w-12 h-7 text-center text-sm bg-background px-1"
+                    />
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <TeamAvatar
+                  name={teamB?.name ?? teamName(match.team_b_id)}
+                  logoUrl={teamB?.logo_url}
+                  country={teamB?.country}
+                  size="xs"
+                />
+                <span className="text-sm font-medium truncate">{teamName(match.team_b_id)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <TeamAvatar
-                name={teamB?.name ?? teamName(match.team_b_id)}
-                logoUrl={teamB?.logo_url}
-                country={teamB?.country}
-                size="xs"
-              />
-              <span className="text-sm font-medium truncate">{teamName(match.team_b_id)}</span>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-1 shrink-0">
-            {!hasLinkedGame &&
-              isPlayableMatch &&
-              (scoreA !== match.score_a || scoreB !== match.score_b) && (
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+              {!hasLinkedGame &&
+                isPlayableMatch &&
+                (scoreA !== match.score_a || scoreB !== match.score_b) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => onUpdateScore(match.id, scoreA, scoreB)}
+                  >
+                    {tt("score")}
+                  </Button>
+                )}
+
+              {!hasLinkedGame && isPlayableMatch && (
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => onUpdateScore(match.id, scoreA, scoreB)}
+                  className={`h-7 text-xs ${match.is_completed
+                    ? "border-yellow-500/30 text-yellow-400"
+                    : "border-green-500/30 text-green-400"
+                    }`}
+                  onClick={() => onToggleCompleted(match.id, match.is_completed)}
                 >
-                  {tt("score")}
+                  {match.is_completed ? tt("reopen") : tt("complete")}
                 </Button>
               )}
 
-            {!hasLinkedGame && isPlayableMatch && (
               <Button
-                size="sm"
-                variant="outline"
-                className={`h-7 text-xs ${match.is_completed
-                  ? "border-yellow-500/30 text-yellow-400"
-                  : "border-green-500/30 text-green-400"
-                  }`}
-                onClick={() => onToggleCompleted(match.id, match.is_completed)}
+                size="icon"
+                variant="ghost"
+                className="text-red-400 hover:text-red-300 h-7 w-7"
+                onClick={() => onDelete(match.id)}
               >
-                {match.is_completed ? tt("reopen") : tt("complete")}
+                <Trash2 className="h-3 w-3" />
               </Button>
-            )}
-
-            <Link href={matchEditorHref}>
-              <Button size="sm" variant="outline" className="h-7 text-xs">
-                {hasLinkedGame ? tt("details") : tt("editMatch")}
-              </Button>
-            </Link>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-red-400 hover:text-red-300 h-7 w-7"
-              onClick={() => onDelete(match.id)}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            </div>
           </div>
-        </div>
 
-        {match.match_date && (
-          <p className="text-xs text-muted-foreground mt-1">
-            {formatInBelgrade(match.match_date, "sr-Latn", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+          {match.match_date && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {formatInBelgrade(match.match_date, "sr-Latn", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

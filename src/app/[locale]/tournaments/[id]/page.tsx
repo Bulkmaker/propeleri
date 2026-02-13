@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
 import { Award, MapPin, Calendar } from "lucide-react";
 import { GroupStandingsTable } from "@/components/tournament/GroupStandingsTable";
@@ -160,8 +160,8 @@ export default async function TournamentDetailPage({
         </div>
       )}
 
-      {/* Playoff / placement */}
-      {playoffMatches.length > 0 && (
+      {/* Playoff / placement (HIDDEN AS REQUESTED) */}
+      {/* {playoffMatches.length > 0 && (
         <div className="mb-8">
           {format === "cup" ? (
             <BracketView
@@ -184,104 +184,111 @@ export default async function TournamentDetailPage({
             />
           )}
         </div>
-      )}
+      )} */}
 
-      {/* All matches list */}
-      {matches.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3">{tt("allMatches")}</h2>
-          <div className="space-y-2">
-            {matches.map((match) => {
-              const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
-              const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
-              const groupName = match.group_id
-                ? groups.find((g) => g.id === match.group_id)?.name
-                : null;
-              const winner =
-                match.team_a_id &&
-                match.team_b_id &&
-                match.is_completed &&
-                match.score_a !== match.score_b
-                  ? match.score_a > match.score_b
-                    ? match.team_a_id
-                    : match.team_b_id
+      {/* Matches Lists */}
+      <div className="space-y-8">
+        {/* Group Stage Matches */}
+        {groupMatches.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3">{tt("groupStage")}</h2>
+            <div className="space-y-4">
+              {groupMatches.map((match) => {
+                const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
+                const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
+                const groupName = match.group_id
+                  ? groups.find((g) => g.id === match.group_id)?.name
                   : null;
 
-              return (
-                <Card key={match.id} className="border-border/40">
-                  <CardContent className="p-3">
-                    <div className="flex flex-col gap-2">
-                      {/* Badges row */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {groupName && (
-                          <Badge className="bg-blue-500/20 text-blue-400 text-xs">
-                            {groupName}
-                          </Badge>
-                        )}
-                        {match.bracket_label && (
-                          <Badge className="bg-purple-500/20 text-purple-400 text-xs">
-                            {match.bracket_label}
-                          </Badge>
-                        )}
-                        {match.is_completed && (
-                          <Badge className="bg-green-600/20 text-green-400 text-xs">
-                            {tt("completed")}
-                          </Badge>
-                        )}
-                        {match.match_date && (
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {formatInBelgrade(match.match_date, "sr-Latn", { dateStyle: "short" })}
-                          </span>
-                        )}
-                      </div>
-                      {/* Teams + score row */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                          <TeamAvatar
-                            name={teamA?.name ?? "TBD"}
-                            logoUrl={teamA?.logo_url}
-                            country={teamA?.country}
-                            size="xs"
-                          />
-                          <span
-                            className={`text-sm truncate ${
-                              winner === match.team_a_id
-                                ? "font-bold text-green-400"
-                                : ""
-                            } ${teamA?.is_propeleri ? "text-primary" : ""}`}
-                          >
-                            {teamA?.name ?? "TBD"}
-                          </span>
-                        </div>
-                        <span className="text-sm font-bold tabular-nums shrink-0">
-                          {match.score_a} : {match.score_b}
-                        </span>
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-                          <span
-                            className={`text-sm truncate ${
-                              winner === match.team_b_id
-                                ? "font-bold text-green-400"
-                                : ""
-                            } ${teamB?.is_propeleri ? "text-primary" : ""}`}
-                          >
-                            {teamB?.name ?? "TBD"}
-                          </span>
-                          <TeamAvatar
-                            name={teamB?.name ?? "TBD"}
-                            logoUrl={teamB?.logo_url}
-                            country={teamB?.country}
-                            size="xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                return (
+                  <div key={match.id}>
+                    <GameMatchCard
+                      href={match.game_id ? `/games/${match.game_id}` : undefined}
+                      teamName={teamA?.name ?? "TBD"}
+                      teamLogoUrl={teamA?.logo_url || null}
+                      teamCountry={teamA?.country || null}
+                      opponentName={teamB?.name ?? "TBD"}
+                      opponentLogoUrl={teamB?.logo_url || null}
+                      opponentCountry={teamB?.country || null}
+                      teamScore={match.is_completed ? match.score_a : undefined}
+                      opponentScore={match.is_completed ? match.score_b : undefined}
+                      dateLabel={formatInBelgrade(match.match_date || "", locale, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      timeLabel={formatInBelgrade(match.match_date || "", locale, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
+                      resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
+                      variant="tournament"
+                      badges={
+                        <>
+                          {groupName && (
+                            <Badge variant="outline" className="border-blue-500/20 text-blue-400 text-xs">
+                              {groupName}
+                            </Badge>
+                          )}
+                        </>
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Playoff Matches */}
+        {playoffMatches.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3">{tt("playoffStage")}</h2>
+            <div className="space-y-4">
+              {playoffMatches.map((match) => {
+                const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
+                const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
+
+                return (
+                  <div key={match.id}>
+                    <GameMatchCard
+                      href={match.game_id ? `/games/${match.game_id}` : undefined}
+                      teamName={teamA?.name ?? "TBD"}
+                      teamLogoUrl={teamA?.logo_url || null}
+                      teamCountry={teamA?.country || null}
+                      opponentName={teamB?.name ?? "TBD"}
+                      opponentLogoUrl={teamB?.logo_url || null}
+                      opponentCountry={teamB?.country || null}
+                      teamScore={match.is_completed ? match.score_a : undefined}
+                      opponentScore={match.is_completed ? match.score_b : undefined}
+                      dateLabel={formatInBelgrade(match.match_date || "", locale, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      timeLabel={formatInBelgrade(match.match_date || "", locale, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
+                      resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
+                      variant="tournament"
+                      badges={
+                        <>
+                          {match.bracket_label && (
+                            <Badge variant="outline" className="border-purple-500/20 text-purple-400 text-xs">
+                              {match.bracket_label}
+                            </Badge>
+                          )}
+                        </>
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
