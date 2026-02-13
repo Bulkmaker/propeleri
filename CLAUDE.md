@@ -153,3 +153,4 @@ Dark theme defined as CSS variables in `src/app/globals.css`. No light theme. Cu
 - External images use `<img>` with `eslint-disable @next/next/no-img-element` (can't use `next/image` for arbitrary URLs)
 - Language: respond to user in Russian; code comments and identifiers in English
 - Localization: Always update `src/messages/{sr,ru,en}.json` when adding new text strings. Check all three files.
+- Changelog: After completing any meaningful change, add an entry to `src/data/changelog.ts` with descriptions in all 3 languages (sr/ru/en). Group by date, newest first.
