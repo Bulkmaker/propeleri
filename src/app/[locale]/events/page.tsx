@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import Image from "next/image";
@@ -23,6 +24,24 @@ function getLocalizedField(
 }
 
 export const revalidate = 300;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("events.title"),
+    description: t("events.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/events" : `/${locale}/events`,
+      languages: { sr: "/events", ru: "/ru/events", en: "/en/events" },
+    },
+    openGraph: { title: t("events.title"), description: t("events.description") },
+  };
+}
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
   game: "bg-primary/20 text-primary",

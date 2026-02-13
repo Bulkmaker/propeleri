@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { ChevronLeft } from "lucide-react";
 import { GameDetailView } from "@/components/matches/GameDetailView";
+import { JsonLd } from "@/components/shared/JsonLd";
+import { formatInBelgrade } from "@/lib/utils/datetime";
 import type {
   GameLineup,
   GameStats,
@@ -13,6 +16,58 @@ import type {
   TournamentMatch,
   Profile,
 } from "@/types/database";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; gameId: string }>;
+}): Promise<Metadata> {
+  const { locale, gameId } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+
+  const supabase = await createClient();
+  const { data: game } = await supabase
+    .from("games")
+    .select("*, opponent_team:teams!games_opponent_team_id_fkey(name)")
+    .eq("id", gameId)
+    .single();
+
+  if (!game) return { title: "Game Not Found" };
+
+  const opponent =
+    (game.opponent_team as { name: string } | null)?.name ??
+    game.opponent ??
+    "Unknown";
+  const dateStr = formatInBelgrade(
+    game.game_date,
+    locale === "sr" ? "sr-Latn" : locale,
+    { day: "numeric", month: "long", year: "numeric" }
+  );
+  const teamScore = game.is_home ? game.home_score : game.away_score;
+  const oppScore = game.is_home ? game.away_score : game.home_score;
+  const score =
+    game.result !== "pending" ? `${teamScore}:${oppScore}` : "";
+
+  const title = t("gameDetail.title", { opponent, date: dateStr });
+  const description = t("gameDetail.description", {
+    opponent,
+    score: score || "TBD",
+  });
+  const path = `/games/${gameId}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: locale === "sr" ? path : `/${locale}${path}`,
+      languages: { sr: path, ru: `/ru${path}`, en: `/en${path}` },
+    },
+    openGraph: {
+      title: `Propeleri vs ${opponent} ${score}`.trim(),
+      description,
+    },
+  };
+}
 
 type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
   line_number: number | null;
@@ -67,8 +122,32 @@ export default async function GameDetailPage({
   const tournaments = (tournamentsRes.data ?? []) as Tournament[];
   const tournamentMatch = (tournamentMatchRes.data ?? null) as TournamentMatch | null;
 
+  const opponentTeam = game.opponent_team_id
+    ? teams.find((t) => t.id === game.opponent_team_id)
+    : undefined;
+  const opponentName = opponentTeam?.name ?? game.opponent ?? "Unknown";
+
   return (
     <div className="container mx-auto px-4 py-8">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "SportsEvent",
+          name: `Propeleri vs ${opponentName}`,
+          startDate: game.game_date,
+          ...(game.location
+            ? { location: { "@type": "Place", name: game.location } }
+            : {}),
+          homeTeam: {
+            "@type": "SportsTeam",
+            name: game.is_home ? "HC Propeleri" : opponentName,
+          },
+          awayTeam: {
+            "@type": "SportsTeam",
+            name: game.is_home ? opponentName : "HC Propeleri",
+          },
+        }}
+      />
       <Link
         href="/games"
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"

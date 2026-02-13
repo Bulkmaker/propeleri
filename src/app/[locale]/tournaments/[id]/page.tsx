@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,38 @@ import type {
   TournamentMatch,
   TournamentFormat,
 } from "@/types/database";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>;
+}): Promise<Metadata> {
+  const { locale, id } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+
+  const supabase = await createClient();
+  const { data: tournament } = await supabase
+    .from("tournaments")
+    .select("name")
+    .eq("id", id)
+    .single();
+
+  if (!tournament) return { title: "Tournament Not Found" };
+
+  const title = t("tournament.title", { name: tournament.name });
+  const description = t("tournament.description", { name: tournament.name });
+  const path = `/tournaments/${id}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: locale === "sr" ? path : `/${locale}${path}`,
+      languages: { sr: path, ru: `/ru${path}`, en: `/en${path}` },
+    },
+    openGraph: { title, description },
+  };
+}
 
 const FORMAT_LABELS: Record<TournamentFormat, string> = {
   cup: "formatCup",

@@ -580,5 +580,67 @@
       "docs": "Docs",
       "chore": "Chore"
     }
+  },
+  "metadata": {
+    "home": {
+      "title": "HC Propeleri | Ice Hockey Club Novi Sad",
+      "description": "Amateur ice hockey club Propeleri from Novi Sad, Serbia. Match schedule, results, player stats and latest news."
+    },
+    "games": {
+      "title": "Games",
+      "description": "All games of HC Propeleri — results, schedule and match details."
+    },
+    "gameDetail": {
+      "title": "Propeleri vs {opponent} — {date}",
+      "description": "Match details: Propeleri {score} vs {opponent}. Lineup, player stats and match report."
+    },
+    "roster": {
+      "title": "Team Roster",
+      "description": "Meet the players of HC Propeleri Novi Sad — full roster with positions and jersey numbers."
+    },
+    "playerDetail": {
+      "title": "#{number} {name}",
+      "description": "{name} — HC Propeleri player. Position: {position}. Stats: {goals}G {assists}A {points}P in {games} games."
+    },
+    "training": {
+      "title": "Training",
+      "description": "Training schedule and results of HC Propeleri Novi Sad."
+    },
+    "trainingDetail": {
+      "title": "Training — {date}",
+      "description": "Training session details of HC Propeleri on {date}."
+    },
+    "gallery": {
+      "title": "Gallery",
+      "description": "Photo gallery of HC Propeleri — pictures from games, training sessions and events."
+    },
+    "albumDetail": {
+      "title": "{name}",
+      "description": "Photo album: {name} — HC Propeleri gallery."
+    },
+    "events": {
+      "title": "Events",
+      "description": "Upcoming and past events of HC Propeleri Novi Sad."
+    },
+    "eventDetail": {
+      "title": "{name}",
+      "description": "{name} — HC Propeleri Novi Sad event."
+    },
+    "stats": {
+      "title": "Statistics",
+      "description": "HC Propeleri player statistics — goals, assists, points and penalty minutes."
+    },
+    "schedule": {
+      "title": "Schedule",
+      "description": "Game and training schedule of HC Propeleri Novi Sad."
+    },
+    "tournament": {
+      "title": "{name}",
+      "description": "Tournament {name} — standings, results and match schedule."
+    },
+    "changelog": {
+      "title": "Changelog",
+      "description": "History of changes and improvements on the HC Propeleri website."
+    }
   }
 }

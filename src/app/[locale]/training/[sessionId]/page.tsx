@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +28,43 @@ import type {
   TrainingSessionStatus,
   TrainingStats,
 } from "@/types/database";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; sessionId: string }>;
+}): Promise<Metadata> {
+  const { locale, sessionId } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+
+  const supabase = await createClient();
+  const { data: session } = await supabase
+    .from("training_sessions")
+    .select("session_date, title, location")
+    .eq("id", sessionId)
+    .single();
+
+  if (!session) return { title: "Training Not Found" };
+
+  const dateStr = formatInBelgrade(
+    session.session_date,
+    locale === "sr" ? "sr-Latn" : locale,
+    { day: "numeric", month: "long", year: "numeric" }
+  );
+  const title = session.title || t("trainingDetail.title", { date: dateStr });
+  const description = t("trainingDetail.description", { date: dateStr });
+  const path = `/training/${sessionId}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: locale === "sr" ? path : `/${locale}${path}`,
+      languages: { sr: path, ru: `/ru${path}`, en: `/en${path}` },
+    },
+    openGraph: { title, description },
+  };
+}
 
 type TrainingStatWithPlayer = TrainingStats & {
   player: Profile | null;

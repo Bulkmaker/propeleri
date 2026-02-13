@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
@@ -12,6 +13,24 @@ import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("training.title"),
+    description: t("training.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/training" : `/${locale}/training`,
+      languages: { sr: "/training", ru: "/ru/training", en: "/en/training" },
+    },
+    openGraph: { title: t("training.title"), description: t("training.description") },
+  };
+}
 
 function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
   if (status === "completed" || status === "canceled") return status;

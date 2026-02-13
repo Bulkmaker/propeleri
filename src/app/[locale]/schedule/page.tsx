@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +21,24 @@ import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("schedule.title"),
+    description: t("schedule.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/schedule" : `/${locale}/schedule`,
+      languages: { sr: "/schedule", ru: "/ru/schedule", en: "/en/schedule" },
+    },
+    openGraph: { title: t("schedule.title"), description: t("schedule.description") },
+  };
+}
 
 type ScheduleItem = {
   id: string;

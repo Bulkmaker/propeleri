@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,57 @@ import { Link } from "@/i18n/navigation";
 import { ChevronLeft, CalendarDays, MapPin, ArrowRight } from "lucide-react";
 import type { TeamEvent, Tournament, TournamentFormat } from "@/types/database";
 import { formatInBelgrade } from "@/lib/utils/datetime";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; eventId: string }>;
+}): Promise<Metadata> {
+  const { locale, eventId } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+
+  const supabase = await createClient();
+  const { data: event } = await supabase
+    .from("events")
+    .select("title, title_ru, title_en, description, description_ru, description_en, cover_image_url")
+    .eq("id", eventId)
+    .single();
+
+  if (!event) return { title: "Event Not Found" };
+
+  const name =
+    locale === "ru" && event.title_ru
+      ? event.title_ru
+      : locale === "en" && event.title_en
+        ? event.title_en
+        : event.title;
+  const desc =
+    locale === "ru" && event.description_ru
+      ? event.description_ru
+      : locale === "en" && event.description_en
+        ? event.description_en
+        : event.description;
+
+  const title = t("eventDetail.title", { name });
+  const description = desc || t("eventDetail.description", { name });
+  const path = `/events/${eventId}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: locale === "sr" ? path : `/${locale}${path}`,
+      languages: { sr: path, ru: `/ru${path}`, en: `/en${path}` },
+    },
+    openGraph: {
+      title,
+      description,
+      ...(event.cover_image_url
+        ? { images: [{ url: event.cover_image_url }] }
+        : {}),
+    },
+  };
+}
 
 const FORMAT_LABELS: Record<TournamentFormat, string> = {
   cup: "formatCup",

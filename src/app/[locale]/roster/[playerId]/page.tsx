@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,53 @@ import { Link } from "@/i18n/navigation";
 import { ChevronLeft, Trophy, TrendingUp } from "lucide-react";
 import { formatPlayerName } from "@/lib/utils/player-name";
 import { PlayerEditButton } from "@/components/players/PlayerEditButton";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; playerId: string }>;
+}): Promise<Metadata> {
+  const { locale, playerId } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  const tp = await getTranslations({ locale, namespace: "positions" });
+
+  const supabase = await createClient();
+  const [{ data: player }, { data: gameTotals }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", playerId).single(),
+    supabase
+      .from("player_game_totals")
+      .select("*")
+      .eq("player_id", playerId)
+      .maybeSingle(),
+  ]);
+
+  if (!player) return { title: "Player Not Found" };
+
+  const name = `${player.first_name} ${player.last_name}`;
+  const title = t("playerDetail.title", {
+    number: player.jersey_number ?? "",
+    name,
+  });
+  const description = t("playerDetail.description", {
+    name,
+    position: player.position ? tp(player.position) : "",
+    goals: gameTotals?.total_goals ?? 0,
+    assists: gameTotals?.total_assists ?? 0,
+    points: gameTotals?.total_points ?? 0,
+    games: gameTotals?.games_played ?? 0,
+  });
+  const path = `/roster/${playerId}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: locale === "sr" ? path : `/${locale}${path}`,
+      languages: { sr: path, ru: `/ru${path}`, en: `/en${path}` },
+    },
+    openGraph: { title, description },
+  };
+}
 
 export default async function PlayerProfilePage({
   params,

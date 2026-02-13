@@ -580,5 +580,67 @@
       "docs": "Dokumentacija",
       "chore": "Tehnicko"
     }
+  },
+  "metadata": {
+    "home": {
+      "title": "HC Propeleri | Hokejaski klub Novi Sad",
+      "description": "Amaterski hokejaski klub Propeleri iz Novog Sada. Raspored utakmica, rezultati, statistika igraca i najnovije vesti."
+    },
+    "games": {
+      "title": "Utakmice",
+      "description": "Sve utakmice hokejskog kluba Propeleri — rezultati, raspored i detalji meceva."
+    },
+    "gameDetail": {
+      "title": "Propeleri vs {opponent} — {date}",
+      "description": "Detalji utakmice: Propeleri {score} protiv {opponent}. Postava, statistika igraca i izvestaj."
+    },
+    "roster": {
+      "title": "Sastav tima",
+      "description": "Upoznajte igrace hokejskog kluba Propeleri Novi Sad — kompletna lista igraca sa pozicijama i brojevima dresova."
+    },
+    "playerDetail": {
+      "title": "#{number} {name}",
+      "description": "{name} — igrac kluba HC Propeleri. Pozicija: {position}. Statistika: {goals}G {assists}A {points}P u {games} utakmica."
+    },
+    "training": {
+      "title": "Treninzi",
+      "description": "Raspored i rezultati treninga hokejskog kluba Propeleri Novi Sad."
+    },
+    "trainingDetail": {
+      "title": "Trening — {date}",
+      "description": "Detalji treninga hokejskog kluba Propeleri od {date}."
+    },
+    "gallery": {
+      "title": "Galerija",
+      "description": "Foto galerija hokejskog kluba Propeleri — slike sa utakmica, treninga i dogadjaja."
+    },
+    "albumDetail": {
+      "title": "{name}",
+      "description": "Foto album: {name} — galerija hokejskog kluba Propeleri."
+    },
+    "events": {
+      "title": "Dogadjaji",
+      "description": "Predstojecci i prosli dogadjaji hokejskog kluba Propeleri Novi Sad."
+    },
+    "eventDetail": {
+      "title": "{name}",
+      "description": "{name} — dogadjaj hokejskog kluba Propeleri Novi Sad."
+    },
+    "stats": {
+      "title": "Statistika",
+      "description": "Statistika igraca hokejskog kluba Propeleri — golovi, asistencije, poeni i kazneni minuti."
+    },
+    "schedule": {
+      "title": "Raspored",
+      "description": "Raspored utakmica i treninga hokejskog kluba Propeleri Novi Sad."
+    },
+    "tournament": {
+      "title": "{name}",
+      "description": "Turnir {name} — tabele, rezultati i raspored utakmica."
+    },
+    "changelog": {
+      "title": "Izmene na sajtu",
+      "description": "Istorija izmena i poboljsanja na sajtu hokejskog kluba Propeleri."
+    }
   }
 }

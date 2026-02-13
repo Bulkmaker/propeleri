@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { JsonLd } from "@/components/shared/JsonLd";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
@@ -30,6 +32,28 @@ const headlineFont = Exo_2({
 });
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+
+  return {
+    title: { absolute: t("home.title") },
+    description: t("home.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/" : `/${locale}`,
+      languages: { sr: "/", ru: "/ru", en: "/en" },
+    },
+    openGraph: {
+      title: t("home.title"),
+      description: t("home.description"),
+    },
+  };
+}
 
 function toIntlLocale(locale: string) {
   return locale === "sr" ? "sr-Latn" : locale;
@@ -145,6 +169,26 @@ export default async function HomePage({
 
   return (
     <div className="club-home">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "SportsOrganization",
+          name: "HC Propeleri",
+          alternateName: "Hokejaski klub Propeleri",
+          url: "https://propeleri.rs",
+          logo: "https://propeleri.rs/logo.png",
+          sport: "Ice Hockey",
+          location: {
+            "@type": "Place",
+            name: "Novi Sad",
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: "Novi Sad",
+              addressCountry: "RS",
+            },
+          },
+        }}
+      />
       <div className="club-home__noise" aria-hidden />
       <div className="club-home__glow club-home__glow--orange" aria-hidden />
       <div className="club-home__glow club-home__glow--blue" aria-hidden />

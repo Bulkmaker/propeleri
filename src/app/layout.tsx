@@ -1,26 +1,40 @@
 import type { Metadata } from "next";
-import { Exo_2 } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import "@/app/globals.css";
 
-const exo2 = Exo_2({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-exo-2",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
+  metadataBase: new URL("https://propeleri.rs"),
   title: {
     default: "HC Propeleri | Hokejaski klub Novi Sad",
     template: "%s | HC Propeleri",
   },
   description:
     "Amaterski hokejaski klub Propeleri iz Novog Sada. Raspored utakmica, statistika igraca, galerija i vesti.",
-  keywords: ["hokej", "hockey", "Novi Sad", "Propeleri", "amaterski hokej"],
+  keywords: [
+    "hokej",
+    "hockey",
+    "Novi Sad",
+    "Propeleri",
+    "amaterski hokej",
+    "ice hockey",
+    "Serbia",
+  ],
   icons: {
-    icon: "/logo.svg",
-    shortcut: "/logo.svg",
-    apple: "/logo.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "HC Propeleri",
+    locale: "sr_RS",
+    alternateLocale: ["ru_RU", "en_US"],
+    images: [{ url: "/og-default.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
   },
 };
 
@@ -29,12 +43,5 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="sr" className="dark" suppressHydrationWarning>
-      <body className={`${exo2.variable} font-sans antialiased min-h-screen flex flex-col`}>
-        {children}
-        <Analytics />
-      </body>
-    </html>
-  );
+  return children;
 }

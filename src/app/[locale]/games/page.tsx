@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Link } from "@/i18n/navigation";
@@ -13,6 +14,24 @@ import { AdminEditButton } from "@/components/shared/AdminEditButton";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("games.title"),
+    description: t("games.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/games" : `/${locale}/games`,
+      languages: { sr: "/games", ru: "/ru/games", en: "/en/games" },
+    },
+    openGraph: { title: t("games.title"), description: t("games.description") },
+  };
+}
 
 export default async function GamesPage({
   params,

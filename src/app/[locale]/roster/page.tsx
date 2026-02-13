@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Users } from "lucide-react";
@@ -6,6 +7,24 @@ import RosterClient from "@/components/roster/RosterClient";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const revalidate = 600;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("roster.title"),
+    description: t("roster.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/roster" : `/${locale}/roster`,
+      languages: { sr: "/roster", ru: "/ru/roster", en: "/en/roster" },
+    },
+    openGraph: { title: t("roster.title"), description: t("roster.description") },
+  };
+}
 
 export default async function RosterPage({
   params,

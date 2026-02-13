@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,24 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ScrollText } from "lucide-react";
 import { CHANGELOG_DATA, type ChangeCategory } from "@/data/changelog";
 import { formatInBelgrade } from "@/lib/utils/datetime";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("changelog.title"),
+    description: t("changelog.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/changelog" : `/${locale}/changelog`,
+      languages: { sr: "/changelog", ru: "/ru/changelog", en: "/en/changelog" },
+    },
+    openGraph: { title: t("changelog.title"), description: t("changelog.description") },
+  };
+}
 
 const CATEGORY_BADGE_CLASS: Record<ChangeCategory, string> = {
   feature: "bg-primary/20 text-primary border-primary/30",

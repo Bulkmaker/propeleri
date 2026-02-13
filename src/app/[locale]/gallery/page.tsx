@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import Image from "next/image";
@@ -16,6 +17,24 @@ function getLocalizedField(
 }
 
 export const revalidate = 600;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("gallery.title"),
+    description: t("gallery.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/gallery" : `/${locale}/gallery`,
+      languages: { sr: "/gallery", ru: "/ru/gallery", en: "/en/gallery" },
+    },
+    openGraph: { title: t("gallery.title"), description: t("gallery.description") },
+  };
+}
 
 export default async function GalleryPage({
   params,

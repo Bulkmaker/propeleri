@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,24 @@ import { POSITION_COLORS } from "@/lib/utils/constants";
 import type { PlayerPosition, PlayerGameTotals, PlayerTrainingTotals } from "@/types/database";
 
 export const revalidate = 300;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("stats.title"),
+    description: t("stats.description"),
+    alternates: {
+      canonical: locale === "sr" ? "/stats" : `/${locale}/stats`,
+      languages: { sr: "/stats", ru: "/ru/stats", en: "/en/stats" },
+    },
+    openGraph: { title: t("stats.title"), description: t("stats.description") },
+  };
+}
 
 export default async function StatsPage({
   params,
