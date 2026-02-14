@@ -27,7 +27,6 @@ type Props = {
   variant?: Variant;
   badges?: React.ReactNode;
   actions?: React.ReactNode;
-  footer?: React.ReactNode;
 };
 
 export function GameMatchCard({
@@ -49,7 +48,6 @@ export function GameMatchCard({
   variant = "poster",
   badges,
   actions,
-  footer,
 }: Props) {
   const isPending = teamScore == null || opponentScore == null;
 
@@ -281,12 +279,6 @@ export function GameMatchCard({
                 )}
               </div>
             </div>
-
-            {footer && (
-              <div className="mt-2">
-                {footer}
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

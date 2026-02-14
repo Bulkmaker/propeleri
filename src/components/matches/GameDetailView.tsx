@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
-import { Circle, Shield, Swords } from "lucide-react";
+import { Shield, Swords } from "lucide-react";
 import { RESULT_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
 import type {
   Game,
@@ -187,19 +187,6 @@ export function GameDetailView({
     return `${numberPrefix}${name}`;
   };
 
-  // Aggregate goal scorers for the summary below the score
-  const scorersSummary = useMemo(() => {
-    if (goalEvents.length === 0) return [];
-    const counts = new Map<string, number>();
-    for (const event of goalEvents) {
-      if (!event.scorer_player_id) continue;
-      counts.set(event.scorer_player_id, (counts.get(event.scorer_player_id) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .map(([playerId, goalCount]) => ({ playerId, goalCount }))
-      .sort((a, b) => b.goalCount - a.goalCount);
-  }, [goalEvents]);
-
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
   const opponentName = opponentTeam?.name ?? game.opponent ?? t("unknownOpponent");
   const opponentLogo = opponentTeam?.logo_url;
@@ -246,36 +233,6 @@ export function GameDetailView({
                 {game.is_home ? t("home") : t("away")}
               </Badge>
             </>
-          }
-          footer={
-            scorersSummary.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 pt-1">
-                {scorersSummary.map(({ playerId, goalCount }) => {
-                  const player = playerLookup.get(playerId);
-                  const name = player
-                    ? (player.nickname || player.last_name || player.first_name)
-                    : tc("unknownPlayer");
-                  const jersey = player?.jersey_number;
-                  return (
-                    <span
-                      key={playerId}
-                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground"
-                    >
-                      <Circle className="h-2 w-2 fill-primary text-primary" />
-                      <span className="font-semibold text-foreground">
-                        {jersey != null && <span className="text-primary">#{jersey} </span>}
-                        {name}
-                      </span>
-                      {goalCount > 1 && (
-                        <span className="text-primary font-bold">
-                          ×{goalCount}
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
-              </div>
-            ) : undefined
           }
         />
         <AdminEditButton
