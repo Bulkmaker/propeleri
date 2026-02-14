@@ -188,17 +188,25 @@ export function GameDetailView({
   };
 
   // Aggregate goal scorers for the summary below the score
+  // Primary source: detailed goal_events from game.notes
+  // Fallback: goals column from game_stats table
   const scorersSummary = useMemo(() => {
-    if (goalEvents.length === 0) return [];
-    const counts = new Map<string, number>();
-    for (const event of goalEvents) {
-      if (!event.scorer_player_id) continue;
-      counts.set(event.scorer_player_id, (counts.get(event.scorer_player_id) ?? 0) + 1);
+    if (goalEvents.length > 0) {
+      const counts = new Map<string, number>();
+      for (const event of goalEvents) {
+        if (!event.scorer_player_id) continue;
+        counts.set(event.scorer_player_id, (counts.get(event.scorer_player_id) ?? 0) + 1);
+      }
+      return [...counts.entries()]
+        .map(([playerId, goalCount]) => ({ playerId, goalCount }))
+        .sort((a, b) => b.goalCount - a.goalCount);
     }
-    return [...counts.entries()]
-      .map(([playerId, goalCount]) => ({ playerId, goalCount }))
+    // Fallback: use game_stats when no detailed goal events exist
+    return stats
+      .filter((s) => s.goals > 0)
+      .map((s) => ({ playerId: s.player_id, goalCount: s.goals }))
       .sort((a, b) => b.goalCount - a.goalCount);
-  }, [goalEvents]);
+  }, [goalEvents, stats]);
 
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
   const opponentName = opponentTeam?.name ?? game.opponent ?? t("unknownOpponent");
