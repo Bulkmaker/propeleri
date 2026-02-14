@@ -54,6 +54,8 @@ export default function AdminShell({
         if (mainContent) {
             mainContent.style.overflow = "hidden";
             mainContent.style.minHeight = "0";
+            mainContent.style.display = "flex";
+            mainContent.style.flexDirection = "column";
         }
         if (footer?.tagName === "FOOTER") footer.style.display = "none";
 
@@ -63,6 +65,8 @@ export default function AdminShell({
             if (mainContent) {
                 mainContent.style.overflow = "";
                 mainContent.style.minHeight = "";
+                mainContent.style.display = "";
+                mainContent.style.flexDirection = "";
             }
             if (footer?.tagName === "FOOTER") footer.style.display = "";
         };
@@ -106,7 +110,7 @@ export default function AdminShell({
     );
 
     return (
-        <div className="flex h-full w-full overflow-hidden">
+        <div className="flex flex-1 min-h-0 w-full overflow-hidden">
             {/* Desktop Sidebar */}
             <aside className="hidden border-r bg-muted/40 md:block fixed top-16 left-0 h-[calc(100vh-4rem)] w-[220px] lg:w-[280px] z-30 overflow-y-auto">
                 <SidebarContent />
