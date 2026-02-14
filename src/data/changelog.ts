@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
+  // ── 2026-02-14 (feature) ────────────────────────────────────
+  {
+    date: "2026-02-14",
+    category: "feature",
+    description: "Prikaz strelaca golova ispod rezultata na stranici utakmice",
+    description_ru: "Отображение авторов голов под счётом на странице матча",
+    description_en: "Show goal scorers below the score on game detail page",
+  },
   // ── 2026-02-13 (refactor) ────────────────────────────────────
   {
     date: "2026-02-13",
