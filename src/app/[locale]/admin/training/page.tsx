@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
-import { CalendarDays, Plus, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { CalendarDays, ChevronRight, Plus, Loader2, Sparkles, Trash2 } from "lucide-react";
 import type { TrainingSession, Season, TrainingSessionStatus } from "@/types/database";
 import {
   belgradeDateTimeLocalInputToUtcIso,
@@ -70,6 +70,72 @@ function formatDateISO(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function SessionRow({
+  session,
+  tt,
+  handleDeleteSession,
+  deletingId,
+}: {
+  session: TrainingSession;
+  tt: ReturnType<typeof useTranslations>;
+  handleDeleteSession: (id: string) => void;
+  deletingId: string | null;
+}) {
+  return (
+    <Link href={`/admin/training/${session.id}`} className="block">
+      <Card className="border-border/40 transition-colors hover:border-primary/30 cursor-pointer">
+        <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <CalendarDays className="h-5 w-5 text-blue-400 mt-0.5 md:mt-0" />
+            <div>
+              <div className="font-medium text-sm flex flex-wrap items-center gap-2">
+                <span>{session.title || tt("session")}</span>
+                <Badge
+                  variant="outline"
+                  className={statusBadgeClass(normalizeStatus(session.status))}
+                >
+                  {tt(`status.${normalizeStatus(session.status)}`)}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatInBelgrade(session.session_date, "sr-Latn", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                {session.location && ` — ${session.location}`}
+              </p>
+              {session.notes && (
+                <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
+                  {session.notes}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end md:self-auto" onClick={(e) => e.preventDefault()}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => { e.preventDefault(); handleDeleteSession(session.id); }}
+              disabled={deletingId === session.id}
+              className="text-destructive hover:text-destructive"
+            >
+              {deletingId === session.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
 export default function AdminTrainingPage() {
   const t = useTranslations("admin");
   const tt = useTranslations("training");
@@ -113,6 +179,20 @@ export default function AdminTrainingPage() {
   );
 
   const supabase = useMemo(() => createClient(), []);
+
+  const upcomingSessions = useMemo(() => {
+    const now = new Date();
+    return sessions
+      .filter((s) => new Date(s.session_date) >= now)
+      .sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime());
+  }, [sessions]);
+
+  const pastSessions = useMemo(() => {
+    const now = new Date();
+    return sessions
+      .filter((s) => new Date(s.session_date) < now)
+      .sort((a, b) => new Date(b.session_date).getTime() - new Date(a.session_date).getTime());
+  }, [sessions]);
 
   async function loadData() {
     const [sessionsRes, seasonsRes] = await Promise.all([
@@ -173,22 +253,6 @@ export default function AdminTrainingPage() {
       status: "planned",
       notes: "",
       youtube_url: "",
-    });
-    setDialogOpen(true);
-  }
-
-  function openEdit(session: TrainingSession) {
-    setEditingId(session.id);
-    setError("");
-    setForm({
-      season_id: session.season_id,
-      title: session.title ?? "",
-      slug: session.slug,
-      session_date: utcToBelgradeDateTimeLocalInput(session.session_date),
-      location: session.location ?? "",
-      status: normalizeStatus(session.status),
-      notes: session.notes ?? "",
-      youtube_url: session.youtube_url ?? "",
     });
     setDialogOpen(true);
   }
@@ -681,65 +745,44 @@ export default function AdminTrainingPage() {
             </Card>
           )}
 
-          {sessions.map((session) => (
-            <Card key={session.id} className="border-border/40">
-              <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <CalendarDays className="h-5 w-5 text-blue-400 mt-0.5 md:mt-0" />
-                  <div>
-                    <div className="font-medium text-sm flex flex-wrap items-center gap-2">
-                      <span>{session.title || tt("session")}</span>
-                      <Badge
-                        variant="outline"
-                        className={statusBadgeClass(normalizeStatus(session.status))}
-                      >
-                        {tt(`status.${normalizeStatus(session.status)}`)}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatInBelgrade(session.session_date, "sr-Latn", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {session.location && ` — ${session.location}`}
-                    </p>
-                    {session.notes && (
-                      <p className="text-xs text-muted-foreground mt-1 max-w-xl truncate">
-                        {session.notes}
-                      </p>
-                    )}
+          {upcomingSessions.length > 0 && (
+            <>
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="h-1 w-6 bg-primary rounded-full" />
+                  {tt("nextSession")}
+                </h2>
+                <SessionRow session={upcomingSessions[0]} tt={tt} handleDeleteSession={handleDeleteSession} deletingId={deletingId} />
+              </div>
+
+              {upcomingSessions.length > 1 && (
+                <details className="group space-y-4">
+                  <summary className="text-lg font-semibold flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                    <span className="h-1 w-6 bg-primary rounded-full" />
+                    {tt("otherUpcoming", { count: upcomingSessions.length - 1 })}
+                  </summary>
+                  <div className="space-y-4">
+                    {upcomingSessions.slice(1).map((session) => (
+                      <SessionRow key={session.id} session={session} tt={tt} handleDeleteSession={handleDeleteSession} deletingId={deletingId} />
+                    ))}
                   </div>
-                </div>
-                <div className="flex items-center gap-2 self-end md:self-auto">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(session)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Link href={`/admin/training/${session.id}`}>
-                    <Button size="sm" variant="outline" className="text-xs">
-                      {t("stats")}
-                    </Button>
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDeleteSession(session.id)}
-                    disabled={deletingId === session.id}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    {deletingId === session.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </details>
+              )}
+            </>
+          )}
+
+          {pastSessions.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
+                <span className="h-1 w-6 bg-muted-foreground/30 rounded-full" />
+                {tt("pastSessions", { count: pastSessions.length })}
+              </h2>
+              {pastSessions.map((session) => (
+                <SessionRow key={session.id} session={session} tt={tt} handleDeleteSession={handleDeleteSession} deletingId={deletingId} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </LoadingErrorEmpty>

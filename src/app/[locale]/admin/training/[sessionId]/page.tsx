@@ -35,6 +35,8 @@ import {
   utcToBelgradeDateTimeLocalInput,
 } from "@/lib/utils/datetime";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
+import { SlugField } from "@/components/admin/SlugField";
+import { buildTrainingSlug } from "@/lib/utils/match-slug";
 
 // Simple avatar with <img> fallback (bypasses Radix loading check)
 function PlayerAvatar({ src, initials, className }: { src: string | null; initials: string; className?: string }) {
@@ -387,6 +389,7 @@ export default function TrainingStatsEntryPage() {
   const [sessionForm, setSessionForm] = useState({
     season_id: "",
     title: "",
+    slug: "",
     session_date: "",
     location: "",
     status: "planned" as TrainingSessionStatus,
@@ -453,6 +456,7 @@ export default function TrainingStatsEntryPage() {
         setSessionForm({
           season_id: loadedSession.season_id,
           title: loadedSession.title ?? "",
+          slug: loadedSession.slug ?? "",
           session_date: utcToBelgradeDateTimeLocalInput(loadedSession.session_date),
           location: loadedSession.location ?? "",
           status: normalizeStatus(loadedSession.status),
@@ -780,6 +784,7 @@ export default function TrainingStatsEntryPage() {
 
     const data = {
       season_id: sessionForm.season_id,
+      slug: sessionForm.slug,
       session_date: sessionDateUtc,
       title: sessionForm.title || null,
       location: sessionForm.location || null,
@@ -970,6 +975,19 @@ export default function TrainingStatsEntryPage() {
                     <p className="text-xs text-destructive">{tt("youtubeUrlInvalid")}</p>
                   )}
                 </div>
+                <SlugField
+                  value={sessionForm.slug}
+                  onChange={(slug) => setSessionForm({ ...sessionForm, slug })}
+                  onRegenerate={() =>
+                    setSessionForm((f) => ({
+                      ...f,
+                      slug: buildTrainingSlug({ sessionDate: f.session_date, title: f.title }),
+                    }))
+                  }
+                  table="training_sessions"
+                  excludeId={sessionId}
+                  baseUrl="/training"
+                />
                 {sessionFormMessage && (
                   <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
                     {sessionFormMessage}
