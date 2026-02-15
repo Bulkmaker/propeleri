@@ -197,10 +197,12 @@ function PlayerAttendanceCard({
   tt: ReturnType<typeof useTranslations>;
 }) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onToggleAttendance(row.player_id)}
-      className={`rounded-md border px-3 py-2.5 text-left transition-colors ${
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleAttendance(row.player_id); } }}
+      className={`rounded-md border px-3 py-2.5 text-left transition-colors cursor-pointer ${
         row.attended
           ? "border-green-500/50 bg-green-500/10"
           : "border-border/40 hover:border-primary/30"
@@ -259,7 +261,7 @@ function PlayerAttendanceCard({
           </Button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -1164,6 +1166,7 @@ export default function TrainingStatsEntryPage() {
                       type="number"
                       min={0}
                       value={matchScoreA}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) =>
                         setMatchScores(Number(e.target.value) || 0, matchScoreB)
                       }
@@ -1175,6 +1178,7 @@ export default function TrainingStatsEntryPage() {
                       type="number"
                       min={0}
                       value={matchScoreB}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) =>
                         setMatchScores(matchScoreA, Number(e.target.value) || 0)
                       }

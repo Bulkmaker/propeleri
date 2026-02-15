@@ -158,6 +158,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
                                                     type="number"
                                                     min={0}
                                                     value={row.goals}
+                                                    onFocus={(e) => e.target.select()}
                                                     onChange={(e) =>
                                                         updateRow(idx, "goals", parseInt(e.target.value) || 0)
                                                     }
@@ -169,6 +170,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
                                                     type="number"
                                                     min={0}
                                                     value={row.assists}
+                                                    onFocus={(e) => e.target.select()}
                                                     onChange={(e) =>
                                                         updateRow(idx, "assists", parseInt(e.target.value) || 0)
                                                     }
@@ -180,6 +182,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
                                                     type="number"
                                                     min={0}
                                                     value={row.penalty_minutes}
+                                                    onFocus={(e) => e.target.select()}
                                                     onChange={(e) =>
                                                         updateRow(
                                                             idx,
@@ -194,6 +197,7 @@ export default function GameStatsEditor({ gameId }: GameStatsEditorProps) {
                                                 <Input
                                                     type="number"
                                                     value={row.plus_minus}
+                                                    onFocus={(e) => e.target.select()}
                                                     onChange={(e) =>
                                                         updateRow(
                                                             idx,

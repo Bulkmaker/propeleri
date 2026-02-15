@@ -474,6 +474,7 @@ export function GameForm({
                         <Input
                             type="number"
                             value={form.home_score}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 const nextHomeScore = parseInt(e.target.value, 10) || 0;
                                 setForm({
@@ -493,6 +494,7 @@ export function GameForm({
                         <Input
                             type="number"
                             value={form.away_score}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 const nextAwayScore = parseInt(e.target.value, 10) || 0;
                                 setForm({

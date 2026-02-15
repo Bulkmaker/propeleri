@@ -502,6 +502,7 @@ export default function TournamentMatchEditorPage() {
                           type="number"
                           min={0}
                           value={form.score_a}
+                          onFocus={(e) => e.target.select()}
                           onChange={(event) =>
                             setForm((prev) => ({
                               ...prev,
@@ -540,6 +541,7 @@ export default function TournamentMatchEditorPage() {
                           type="number"
                           min={0}
                           value={form.score_b}
+                          onFocus={(e) => e.target.select()}
                           onChange={(event) =>
                             setForm((prev) => ({
                               ...prev,
