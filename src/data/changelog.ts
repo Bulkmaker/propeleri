@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
+  // ── 2026-02-16 ────────────────────────────────────────────────
+  {
+    date: "2026-02-16",
+    category: "feature",
+    description: "URL-ovi bez prefiksa jezika: jezik se automatski određuje po podešavanjima pregledača (Accept-Language) i čuva u kolačiću. Stari linkovi sa /ru/ i /en/ prefiksima automatski preusmeravaju",
+    description_ru: "URL без языковых префиксов: язык автоматически определяется по настройкам браузера (Accept-Language) и сохраняется в cookie. Старые ссылки с /ru/ и /en/ автоматически перенаправляются",
+    description_en: "URLs without locale prefixes: language is auto-detected from browser settings (Accept-Language) and stored in a cookie. Old links with /ru/ and /en/ prefixes redirect automatically",
+  },
   // ── 2026-02-15 ────────────────────────────────────────────────
   {
     date: "2026-02-15",

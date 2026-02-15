@@ -23,39 +23,48 @@ Hockey team website for **HC Propeleri Novi Sad**. Next.js 16 App Router with Su
 - **next-intl** ^4.8 — i18n with locales `sr` (default), `ru`, `en`; prefix strategy `as-needed`
 - **Tailwind CSS v4** + **shadcn/ui** (`radix-ui` ^1.4) — dark theme only, team colors (navy `#1a2744`, orange `#e8732a`)
 - **lucide-react** — icons
+- **@dnd-kit** (`core` ^6.3, `sortable` ^10.0) — drag-and-drop (goal reordering, team assignment)
 - **Playwright** ^1.58 — e2e testing
 
 ### Project Structure
 ```
 src/
-├── app/[locale]/           # Pages (App Router)
-│   ├── admin/              # Admin panel (client components)
-│   │   ├── games/          # Game management + lineup editor
-│   │   ├── tournaments/    # Tournament management
-│   │   ├── training/       # Training session management
-│   │   ├── events/         # Event management
-│   │   ├── gallery/        # Photo gallery management
-│   │   ├── roster/         # Player management
-│   │   └── seasons/        # Season management
-│   ├── games/              # Public game pages
-│   ├── tournaments/        # Public tournament pages
-│   ├── training/           # Public training pages
-│   ├── roster/             # Public roster + player profiles
-│   ├── schedule/           # Combined schedule view
-│   ├── stats/              # Player statistics
-│   ├── events/             # Team events
-│   ├── gallery/            # Photo gallery
-│   ├── login/              # Auth pages
-│   ├── register/
-│   └── profile/            # User profile (protected)
+├── app/
+│   ├── [locale]/           # Pages (App Router)
+│   │   ├── admin/          # Admin panel (client components)
+│   │   │   ├── games/      # Game management + lineup editor
+│   │   │   ├── tournaments/# Tournament management + match editor
+│   │   │   ├── training/   # Training session management (tabs, DnD)
+│   │   │   ├── events/     # Event management
+│   │   │   ├── gallery/    # Photo gallery management
+│   │   │   ├── players/    # Player management (admin CRUD)
+│   │   │   ├── teams/      # Team management
+│   │   │   ├── seasons/    # Season management
+│   │   │   └── roster/     # Roster management
+│   │   ├── games/[slug]    # Public game pages (slug-based)
+│   │   ├── tournaments/[slug] # Public tournament pages
+│   │   ├── training/[slug] # Public training pages
+│   │   ├── roster/[slug]   # Public roster + player profiles
+│   │   ├── events/[slug]   # Team events
+│   │   ├── gallery/[slug]  # Photo gallery
+│   │   ├── schedule/       # Combined schedule view
+│   │   ├── stats/          # Player statistics
+│   │   ├── changelog/      # Changelog page
+│   │   ├── login/          # Auth pages
+│   │   ├── register/
+│   │   └── profile/        # User profile (protected)
+│   ├── api/                # API routes (auth callback, admin endpoints)
+│   ├── sitemap.xml/        # Dynamic XML sitemap with XSL stylesheet
+│   ├── robots.ts           # Robots.txt generation
+│   └── manifest.ts         # PWA web manifest
 ├── components/
-│   ├── admin/              # Admin-specific components (GameForm, etc.)
-│   ├── games/              # HockeyRink, GameLineupEditor (Rink/List views), UnifiedGameEditor
+│   ├── admin/              # AdminPageHeader, AdminDialog, SlugField, games/ (GameForm, GoalEventsEditor)
+│   ├── games/              # GameLineupEditor, GameStatsEditor, UnifiedGameEditor
 │   ├── matches/            # GameMatchCard, GameDetailView, TeamAvatar
 │   ├── tournament/         # Tournament brackets, groups, standings
 │   ├── training/           # Training session components
 │   ├── roster/             # PlayerTable, player cards
-│   ├── stats/              # Statistics tables
+│   ├── stats/              # PlayerStatsTable, statistics views
 │   ├── schedule/           # Schedule views
 │   ├── events/             # Event cards
 │   ├── gallery/            # Gallery grids
@@ -63,20 +72,27 @@ src/
 │   ├── layout/             # Navbar, Footer, Navigation
 │   ├── auth/               # Auth forms
 │   ├── profile/            # Profile editor
-│   ├── players/            # Player selection components
-│   ├── shared/             # Shared/reusable components
+│   ├── players/            # PlayerEditButton
+│   ├── providers/          # App providers
+│   ├── shared/             # PlayerEditForm, JsonLd, CountrySelect, YouTubeEmbed, AdminEditButton, skeletons
 │   └── ui/                 # shadcn/ui primitives
 ├── lib/
-│   ├── supabase/           # server.ts, client.ts, proxy.ts
+│   ├── auth/               # Auth helpers
+│   ├── fonts.ts            # Font configuration
+│   ├── rate-limit.ts       # Rate limiting
+│   ├── supabase/           # server.ts, client.ts, admin.ts, image-loader.ts
+│   ├── utils.ts            # cn() class merge utility
 │   └── utils/
-│       ├── constants.ts    # Position colors, role mappings
+│       ├── constants.ts    # Position colors, role mappings, result border colors
 │       ├── country.ts      # Country flags (emoji from code)
 │       ├── datetime.ts     # Date/time formatting helpers
-│       ├── game-stats.ts   # Game statistics calculations
-│       ├── match-slug.ts   # URL slug generation for matches
+│       ├── game-stats.ts   # Game statistics + shootout calculations
+│       ├── image-processing.ts # Image handling utilities
+│       ├── match-slug.ts   # Slug generation for all entities (Cyrillic transliteration)
 │       ├── player-name.ts  # Player name formatting
 │       ├── tournament.ts   # Tournament helpers (standings, brackets)
-│       └── training-match.ts # Training match data helpers
+│       ├── training-match.ts # Training match data helpers
+│       └── youtube.ts      # YouTube URL parsing
 ├── i18n/                   # next-intl config (routing, navigation, request)
 ├── messages/               # Translation files (sr.json, ru.json, en.json)
 └── types/
@@ -84,7 +100,9 @@ src/
 ```
 
 ### Routing & i18n
-All pages live under `src/app/[locale]/`. The middleware (`src/proxy.ts`) handles both locale rewriting and Supabase session refresh. With `as-needed` prefix, Serbian URLs have no prefix (`/roster`), other locales are prefixed (`/ru/roster`, `/en/roster`).
+All pages live under `src/app/[locale]/`. The middleware (`src/proxy.ts`) handles both locale rewriting and Supabase session refresh. With `localePrefix: "never"`, no locale prefix appears in URLs — language is determined by cookie (`NEXT_LOCALE`) or browser `Accept-Language` header, with `sr` as fallback. Old prefixed URLs (`/ru/roster`) are automatically redirected to unprefixed (`/roster`) while setting the locale cookie.
+
+Public detail pages use SEO-friendly slugs instead of UUIDs (e.g., `/games/2025-02-15-vs-zvezda-home`, `/roster/stefan-milosevic`). Slug utilities in `src/lib/utils/match-slug.ts` with Cyrillic transliteration. Admin pages still use IDs internally.
 
 Translations are in `src/messages/{sr,ru,en}.json`, organized by namespace. Use `useTranslations("namespace")` in components. Database content with multilingual fields uses `title`, `title_ru`, `title_en` columns.
 
@@ -108,28 +126,30 @@ Types in `src/types/database.ts`. Key tables:
 
 | Table | Purpose |
 |-------|---------|
-| `profiles` | Player/user profiles (position, role, jersey, avatar, guest flag) |
+| `profiles` | Player/user profiles (position, role, jersey, avatar, guest flag, slug) |
 | `teams` | All teams including Propeleri (`is_propeleri` flag) and opponents |
 | `seasons` | Season definitions with `is_current` flag |
-| `games` | Games linked to season, optional tournament, opponent team |
+| `games` | Games linked to season, optional tournament, opponent team, slug |
 | `game_lineups` | Player positions per game (line number, slot position) |
 | `game_stats` | Per-game player statistics (goals, assists, PIM, +/-) |
-| `training_sessions` | Training sessions with optional match data (JSON) |
+| `training_sessions` | Training sessions with optional match data (JSON), slug |
 | `training_stats` | Per-training player attendance and stats |
-| `tournaments` | Tournament definitions (cup/placement/round_robin/custom) |
+| `tournaments` | Tournament definitions (cup/placement/round_robin/custom), slug |
 | `tournament_teams` | Teams participating in tournament |
 | `tournament_groups` | Groups within tournament |
-| `tournament_matches` | Matches with bracket support (group + playoff stages) |
+| `tournament_matches` | Matches with bracket support (group + playoff stages), shootout_winner |
 | `tournament_player_registrations` | Player registrations for tournaments |
-| `events` | Team events (multilingual title/description) |
-| `gallery_albums` | Photo albums linked to events |
+| `events` | Team events (multilingual title/description), slug |
+| `gallery_albums` | Photo albums linked to events, slug |
 | `gallery_photos` | Individual photos in albums |
 
-Computed views: `player_game_totals`, `player_training_totals`, `player_season_stats`.
+Computed views: `player_game_totals`, `player_training_totals`, `player_season_stats`. Views use `game_lineups` as base (includes all players who appeared, not just those with points).
 
-Game notes stored as JSON in `games.notes` column with `GameNotesPayload` type (goal events with periods/times, goalie report).
+Game notes stored as JSON in `games.notes` column with `GameNotesPayload` type (goal events with periods/times, penalty events, goalie report). Penalty events use `PenaltyEventInput` (player_id, minutes, period).
 
 Training matches stored as JSON in `training_sessions.match_data` with `TrainingMatchData` type (team A/B scores, goalies, goal events).
+
+Tournament matches support shootout via `shootout_winner` field (`"team_a"` | `"team_b"` | `null`). When shootout is marked, the winner's score auto-increments by 1.
 
 13 migration files in `supabase/migrations/` (from initial schema through RLS, tournament sync, teams/opponents merge).
 
@@ -137,6 +157,17 @@ Supabase returns untyped data — use `as TypeName` casts when indexing typed Re
 
 ### Styling
 Dark theme defined as CSS variables in `src/app/globals.css`. No light theme. Custom utilities: `.hero-gradient`, `.orange-glow`, `.card-hover`. shadcn/ui components in `src/components/ui/`. Use `cn()` from `@/lib/utils` for class merging.
+
+### SEO
+- `src/app/sitemap.xml/route.ts` — dynamic XML sitemap with XSL stylesheet (`public/sitemap.xsl`)
+- `src/app/robots.ts` — robots.txt generation
+- `src/app/manifest.ts` — PWA web manifest
+- `src/components/shared/JsonLd.tsx` — JSON-LD structured data component
+- Open Graph images and favicons in `public/` (`og-default.png`, `icon-192.png`, `icon-512.png`)
+
+### API Routes
+- `src/app/api/auth/callback/` — Supabase auth callback handler
+- `src/app/api/admin/players/` — Admin player management endpoint
 
 ## Key Conventions
 
@@ -154,3 +185,7 @@ Dark theme defined as CSS variables in `src/app/globals.css`. No light theme. Cu
 - Language: respond to user in Russian; code comments and identifiers in English
 - Localization: Always update `src/messages/{sr,ru,en}.json` when adding new text strings. Check all three files.
 - Changelog: After completing any meaningful change, add an entry to `src/data/changelog.ts` with descriptions in all 3 languages (sr/ru/en). Group by date, newest first.
+- Public pages use slug-based routing (`[slug]`); slug generated via `buildXxxSlug()` from `@/lib/utils/match-slug`
+- Admin forms include `SlugField` component (`@/components/admin/SlugField`) for slug management with auto-generation and uniqueness validation
+- Admin pages use `AdminPageHeader` for sticky headers with backdrop blur
+- Drag-and-drop uses `@dnd-kit` (core + sortable) — see GoalEventsEditor, training attendance
