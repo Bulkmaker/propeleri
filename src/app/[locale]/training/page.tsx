@@ -212,7 +212,7 @@ function SessionCard({
 }) {
   return (
     <div className="relative">
-      <Link href={`/training/${session.id}`} className="block">
+      <Link href={`/training/${session.slug}`} className="block">
         <Card className="border-border/40 card-hover bg-card cursor-pointer rounded-xl overflow-hidden">
           <CardContent className="px-4 py-4 md:px-5">
             <div className="flex items-center gap-4">

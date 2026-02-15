@@ -18,6 +18,8 @@ import { normalizeLogin } from "@/lib/auth/login";
 import { formatPlayerName } from "@/lib/utils/player-name";
 import { processImageFile } from "@/lib/utils/image-processing";
 import { cn } from "@/lib/utils";
+import { SlugField } from "@/components/admin/SlugField";
+import { buildProfileSlug } from "@/lib/utils/match-slug";
 import type { Profile } from "@/types/database";
 
 function formFromPlayer(player: Profile): PlayerFormData {
@@ -152,6 +154,8 @@ function PlayerEditDialogInner({
     bio: "",
   });
 
+  const [playerSlug, setPlayerSlug] = useState("");
+
   const [adminFields, setAdminFields] = useState<AdminFields>({
     login: "",
     password: "",
@@ -175,6 +179,7 @@ function PlayerEditDialogInner({
         const p = data as Profile;
         setPlayer(p);
         setForm(formFromPlayer(p));
+        setPlayerSlug(p.slug);
         setAdminFields(adminFromPlayer(p));
       }
       setLoading(false);
@@ -195,6 +200,7 @@ function PlayerEditDialogInner({
       .update({
         first_name: form.first_name,
         last_name: form.last_name,
+        slug: playerSlug,
         nickname: form.nickname.trim() || null,
         jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
         position: form.position || null,
@@ -338,6 +344,17 @@ function PlayerEditDialogInner({
         ) : !player ? (
           <p className="text-sm text-destructive py-4">{tc("noData")}</p>
         ) : (
+          <>
+          <SlugField
+            value={playerSlug}
+            onChange={setPlayerSlug}
+            onRegenerate={() =>
+              setPlayerSlug(buildProfileSlug({ firstName: form.first_name, lastName: form.last_name }))
+            }
+            table="profiles"
+            excludeId={player.id}
+            baseUrl="/roster"
+          />
           <PlayerEditForm
             avatarUrl={player.avatar_url}
             avatarInitials={
@@ -366,6 +383,7 @@ function PlayerEditDialogInner({
             error={error}
             saveDisabled={!form.first_name.trim()}
           />
+          </>
         )}
       </DialogContent>
     </Dialog>

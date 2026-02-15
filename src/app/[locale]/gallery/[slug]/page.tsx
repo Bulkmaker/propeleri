@@ -12,7 +12,7 @@ import type { GalleryPhoto, GalleryAlbum } from "@/types/database";
 
 export default function AlbumDetailPage() {
   const params = useParams();
-  const albumId = params.albumId as string;
+  const albumSlug = params.slug as string;
   const tc = useTranslations("common");
 
   const [album, setAlbum] = useState<GalleryAlbum | null>(null);
@@ -27,13 +27,18 @@ export default function AlbumDetailPage() {
       const { data: albumData } = await supabase
         .from("gallery_albums")
         .select("*")
-        .eq("id", albumId)
+        .eq("slug", albumSlug)
         .single();
+
+      if (!albumData) {
+        setLoading(false);
+        return;
+      }
 
       const { data: photosData } = await supabase
         .from("gallery_photos")
         .select("*")
-        .eq("album_id", albumId)
+        .eq("album_id", albumData.id)
         .order("sort_order", { ascending: true });
 
       setAlbum(albumData);
@@ -41,7 +46,7 @@ export default function AlbumDetailPage() {
       setLoading(false);
     }
     load();
-  }, [albumId]);
+  }, [albumSlug]);
 
   if (loading) {
     return (

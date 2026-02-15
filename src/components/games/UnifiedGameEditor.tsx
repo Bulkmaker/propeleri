@@ -37,6 +37,8 @@ import {
 import { POSITION_COLORS } from "@/lib/utils/constants";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
 import { updateGameStats } from "@/lib/utils/game-stats";
+import { SlugField } from "@/components/admin/SlugField";
+import { buildGameSlug } from "@/lib/utils/match-slug";
 import {
   GoalEventsEditor,
   normalizeGoalEventsCount,
@@ -365,6 +367,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       .from("games")
       .update({
         opponent_team_id: game.opponent_team_id,
+        slug: game.slug,
         location: game.location,
         game_date: game.game_date,
         home_score: game.home_score,
@@ -715,6 +718,30 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                       <p className="text-xs text-destructive">{tg("youtubeUrlInvalid")}</p>
                     )}
                   </div>
+
+                  <SlugField
+                    value={game.slug}
+                    onChange={(slug) => setGame({ ...game, slug })}
+                    onRegenerate={() => {
+                      const opponent = teams.find(t => t.id === game.opponent_team_id);
+                      setGame((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              slug: buildGameSlug({
+                                gameDate: prev.game_date,
+                                opponentName: opponent?.name ?? "",
+                                isHome: prev.is_home,
+                                tournamentName: tournament?.name,
+                              }),
+                            }
+                          : prev
+                      );
+                    }}
+                    table="games"
+                    excludeId={gameId}
+                    baseUrl="/games"
+                  />
 
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">

@@ -34,6 +34,8 @@ import {
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import { SkeletonCardList } from "@/components/shared/skeletons";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
+import { SlugField } from "@/components/admin/SlugField";
+import { buildTrainingSlug } from "@/lib/utils/match-slug";
 
 const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
 const WEEKDAY_OPTIONS = [
@@ -86,6 +88,7 @@ export default function AdminTrainingPage() {
   const [form, setForm] = useState({
     season_id: "",
     title: "",
+    slug: "",
     session_date: "",
     location: "",
     status: "planned" as TrainingSessionStatus,
@@ -164,6 +167,7 @@ export default function AdminTrainingPage() {
     setForm({
       season_id: seasons[0]?.id ?? "",
       title: "",
+      slug: "",
       session_date: "",
       location: "",
       status: "planned",
@@ -179,6 +183,7 @@ export default function AdminTrainingPage() {
     setForm({
       season_id: session.season_id,
       title: session.title ?? "",
+      slug: session.slug,
       session_date: utcToBelgradeDateTimeLocalInput(session.session_date),
       location: session.location ?? "",
       status: normalizeStatus(session.status),
@@ -199,8 +204,10 @@ export default function AdminTrainingPage() {
       return;
     }
 
+    const { slug, ...formRest } = form;
     const data = {
-      ...form,
+      ...formRest,
+      slug,
       session_date: sessionDateUtc,
       title: form.title || null,
       location: form.location || null,
@@ -500,6 +507,19 @@ export default function AdminTrainingPage() {
                       <p className="text-xs text-destructive">{tt("youtubeUrlInvalid")}</p>
                     )}
                   </div>
+                  <SlugField
+                    value={form.slug}
+                    onChange={(slug) => setForm({ ...form, slug })}
+                    onRegenerate={() =>
+                      setForm((f) => ({
+                        ...f,
+                        slug: buildTrainingSlug({ sessionDate: f.session_date, title: f.title }),
+                      }))
+                    }
+                    table="training_sessions"
+                    excludeId={editingId ?? undefined}
+                    baseUrl="/training"
+                  />
                   {error && (
                     <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
                       {error}

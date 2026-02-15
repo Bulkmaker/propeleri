@@ -230,7 +230,7 @@ function PlayerCard({ player }: { player: Profile }) {
 
   return (
     <div className="relative h-full">
-      <Link href={`/roster/${player.id}`}>
+      <Link href={`/roster/${player.slug}`}>
         <Card className="border-border/40 card-hover bg-card group cursor-pointer h-full">
           <CardContent className="p-4 text-center">
             <Avatar className="h-20 w-20 mx-auto mb-3 ring-2 ring-border group-hover:ring-primary/50 transition-all">

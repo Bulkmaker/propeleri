@@ -72,7 +72,7 @@ export default async function GalleryPage({
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {allAlbums.map((album) => (
-            <Link key={album.id} href={`/gallery/${album.id}`}>
+            <Link key={album.id} href={`/gallery/${album.slug}`}>
               <Card className="border-border/40 card-hover bg-card cursor-pointer overflow-hidden group">
                 <div className="aspect-[4/3] bg-secondary relative overflow-hidden">
                   {album.cover_image_url ? (

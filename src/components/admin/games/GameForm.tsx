@@ -36,6 +36,8 @@ import {
 } from "@/lib/utils/datetime";
 import { updateGameStats } from "@/lib/utils/game-stats";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
+import { SlugField } from "@/components/admin/SlugField";
+import { buildGameSlug } from "@/lib/utils/match-slug";
 import {
     GoalEventsEditor,
     createEmptyGoalEvent as createEmpty,
@@ -53,6 +55,7 @@ export type GameFormData = {
     season_id: string;
     tournament_id: string;
     opponent_team_id: string;
+    slug: string;
     location: string;
     game_date: string;
     is_home: boolean;
@@ -102,6 +105,7 @@ export function GameForm({
         season_id: initialData?.season_id ?? seasons[0]?.id ?? "",
         tournament_id: initialData?.tournament_id ?? "",
         opponent_team_id: initialData?.opponent_team_id ?? "",
+        slug: initialData?.slug ?? "",
         location: initialData?.location ?? "",
         game_date: initialData
             ? utcToBelgradeDateTimeLocalInput(initialData.game_date)
@@ -274,6 +278,7 @@ export function GameForm({
                 season_id: form.season_id,
                 tournament_id: form.tournament_id || null,
                 opponent_team_id: opponentTeam.id,
+                slug: form.slug,
                 location: form.location || null,
                 game_date: gameDateUtc,
                 is_home: form.is_home,
@@ -440,6 +445,27 @@ export function GameForm({
                     <p className="text-xs text-destructive">{tg("youtubeUrlInvalid")}</p>
                 )}
             </div>
+
+            <SlugField
+                value={form.slug}
+                onChange={(slug) => setForm({ ...form, slug })}
+                onRegenerate={() => {
+                    const opponent = teams.find(t => t.id === form.opponent_team_id);
+                    const tournament = tournaments.find(t => t.id === form.tournament_id);
+                    setForm((f) => ({
+                        ...f,
+                        slug: buildGameSlug({
+                            gameDate: f.game_date,
+                            opponentName: opponent?.name ?? "",
+                            isHome: f.is_home,
+                            tournamentName: tournament?.name,
+                        }),
+                    }));
+                }}
+                table="games"
+                excludeId={initialData?.id}
+                baseUrl="/games"
+            />
 
             {initialData && !isManagedByTournament && (
                 <div className="grid grid-cols-3 gap-4">

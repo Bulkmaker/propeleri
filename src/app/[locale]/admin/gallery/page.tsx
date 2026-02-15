@@ -12,6 +12,8 @@ import type { GalleryAlbum } from "@/types/database";
 import imageCompression from "browser-image-compression";
 import { processImageFile } from "@/lib/utils/image-processing";
 import { AdminDialog } from "@/components/admin/AdminDialog";
+import { SlugField } from "@/components/admin/SlugField";
+import { buildAlbumSlug } from "@/lib/utils/match-slug";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import { SkeletonCardList } from "@/components/shared/skeletons";
 import { useAdminData } from "@/hooks/use-admin-data";
@@ -29,6 +31,7 @@ export default function AdminGalleryPage() {
     title: "",
     title_ru: "",
     title_en: "",
+    slug: "",
     description: "",
   });
 
@@ -57,7 +60,7 @@ export default function AdminGalleryPage() {
 
     setDialogOpen(false);
     setSaving(false);
-    setForm({ title: "", title_ru: "", title_en: "", description: "" });
+    setForm({ title: "", title_ru: "", title_en: "", slug: "", description: "" });
     await reload();
   }
 
@@ -147,6 +150,15 @@ export default function AdminGalleryPage() {
                 />
               </div>
             </div>
+            <SlugField
+              value={form.slug}
+              onChange={(slug) => setForm({ ...form, slug })}
+              onRegenerate={() =>
+                setForm((f) => ({ ...f, slug: buildAlbumSlug(f.title) }))
+              }
+              table="gallery_albums"
+              baseUrl="/gallery"
+            />
           </AdminDialog>
         </div>
 

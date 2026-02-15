@@ -21,6 +21,20 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
     date: "2026-02-15",
     category: "feature",
+    description: "SEO-friendly URL-ovi: sve javne stranice koriste čitljive slug-ove umesto UUID-ova (npr. /games/2025-02-15-vs-zvezda-home, /roster/stefan-milosevic)",
+    description_ru: "SEO-дружественные URL: все публичные страницы используют читаемые slug вместо UUID (напр. /games/2025-02-15-vs-zvezda-home, /roster/stefan-milosevic)",
+    description_en: "SEO-friendly URLs: all public pages use readable slugs instead of UUIDs (e.g. /games/2025-02-15-vs-zvezda-home, /roster/stefan-milosevic)",
+  },
+  {
+    date: "2026-02-15",
+    category: "feature",
+    description: "Slug polje u svim admin formama sa automatskom generacijom, ručnim uređivanjem i proverom jedinstvenosti",
+    description_ru: "Поле slug во всех админ-формах с автогенерацией, ручным редактированием и проверкой уникальности",
+    description_en: "Slug field in all admin forms with auto-generation, manual editing and uniqueness validation",
+  },
+  {
+    date: "2026-02-15",
+    category: "feature",
     description: "Editor treninga pretvoren u tabove (Info, Dolasci, Meč) sa split prikazom dolazaka na desktopu",
     description_ru: "Редактор тренировки переделан на вкладки (Инфо, Посещаемость, Матч) с split view посещаемости на десктопе",
     description_en: "Training editor converted to tabs (Info, Attendance, Match) with split view attendance on desktop",

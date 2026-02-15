@@ -32,16 +32,16 @@ import type {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; sessionId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { locale, sessionId } = await params;
+  const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
 
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("training_sessions")
     .select("session_date, title, location")
-    .eq("id", sessionId)
+    .eq("slug", slug)
     .single();
 
   if (!session) return { title: "Training Not Found" };
@@ -53,7 +53,7 @@ export async function generateMetadata({
   );
   const title = session.title || t("trainingDetail.title", { date: dateStr });
   const description = t("trainingDetail.description", { date: dateStr });
-  const path = `/training/${sessionId}`;
+  const path = `/training/${slug}`;
 
   return {
     title,
@@ -84,9 +84,9 @@ function statusBadgeClass(status: TrainingSessionStatus) {
 export default async function TrainingDetailPage({
   params,
 }: {
-  params: Promise<{ locale: string; sessionId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, sessionId } = await params;
+  const { locale, slug } = await params;
   setRequestLocale(locale);
 
   const t = await getTranslations("training");
@@ -98,11 +98,12 @@ export default async function TrainingDetailPage({
   const { data: session } = await supabase
     .from("training_sessions")
     .select("*")
-    .eq("id", sessionId)
+    .eq("slug", slug)
     .single();
 
   if (!session) notFound();
 
+  const sessionId = session.id;
   const { data: statsRaw } = await supabase
     .from("training_stats")
     .select("*, player:profiles(*)")

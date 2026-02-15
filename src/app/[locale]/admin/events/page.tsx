@@ -26,6 +26,8 @@ import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import { SkeletonCardList } from "@/components/shared/skeletons";
 import { useAdminData } from "@/hooks/use-admin-data";
 import { SelectWithNone } from "@/components/ui/SelectWithNone";
+import { SlugField } from "@/components/admin/SlugField";
+import { buildEventSlug } from "@/lib/utils/match-slug";
 
 export default function AdminEventsPage() {
   const t = useTranslations("admin");
@@ -41,6 +43,7 @@ export default function AdminEventsPage() {
     title: "",
     title_ru: "",
     title_en: "",
+    slug: "",
     description: "",
     description_ru: "",
     description_en: "",
@@ -88,13 +91,14 @@ export default function AdminEventsPage() {
       event_date: eventDateUtc,
       location: form.location || null,
       tournament_id: tournament_id || null,
-    });
+    } as Record<string, unknown>);
     setDialogOpen(false);
     setSaving(false);
     setForm({
       title: "",
       title_ru: "",
       title_en: "",
+      slug: "",
       description: "",
       description_ru: "",
       description_en: "",
@@ -236,6 +240,15 @@ export default function AdminEventsPage() {
                   className="bg-background"
                 />
               </div>
+              <SlugField
+                value={form.slug}
+                onChange={(slug) => setForm({ ...form, slug })}
+                onRegenerate={() =>
+                  setForm((f) => ({ ...f, slug: buildEventSlug(f.title) }))
+                }
+                table="events"
+                baseUrl="/events"
+              />
             </div>
           </AdminDialog>
         </div>

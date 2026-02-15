@@ -20,26 +20,30 @@ import type {
   TournamentFormat,
 } from "@/types/database";
 
+type TournamentMatchWithGame = TournamentMatch & {
+  game?: { slug: string } | null;
+};
+
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; id: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { locale, id } = await params;
+  const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
 
   const supabase = await createClient();
   const { data: tournament } = await supabase
     .from("tournaments")
-    .select("name")
-    .eq("id", id)
+    .select("name, slug")
+    .eq("slug", slug)
     .single();
 
   if (!tournament) return { title: "Tournament Not Found" };
 
   const title = t("tournament.title", { name: tournament.name });
   const description = t("tournament.description", { name: tournament.name });
-  const path = `/tournaments/${id}`;
+  const path = `/tournaments/${slug}`;
 
   return {
     title,
@@ -62,9 +66,9 @@ const FORMAT_LABELS: Record<TournamentFormat, string> = {
 export default async function TournamentDetailPage({
   params,
 }: {
-  params: Promise<{ locale: string; id: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, id } = await params;
+  const { locale, slug } = await params;
   setRequestLocale(locale);
 
   const supabase = await createClient();
@@ -72,9 +76,19 @@ export default async function TournamentDetailPage({
   const ts = await getTranslations("stats");
   const tp = await getTranslations("positions");
 
-  const [tournamentRes, junctionsRes, allTeamsRes, groupsRes, gtRes, matchesRes] =
+  const tournamentRes = await supabase.from("tournaments").select("*").eq("slug", slug).single();
+  const tournament = tournamentRes.data;
+  if (!tournament) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center text-muted-foreground">
+        Tournament not found
+      </div>
+    );
+  }
+  const id = tournament.id;
+
+  const [junctionsRes, allTeamsRes, groupsRes, gtRes, matchesRes] =
     await Promise.all([
-      supabase.from("tournaments").select("*").eq("id", id).single(),
       supabase
         .from("tournament_teams")
         .select("*")
@@ -89,19 +103,10 @@ export default async function TournamentDetailPage({
       supabase.from("tournament_group_teams").select("*"),
       supabase
         .from("tournament_matches")
-        .select("*")
+        .select("*, game:games(slug)")
         .eq("tournament_id", id)
         .order("match_date", { ascending: true }),
     ]);
-
-  const tournament = tournamentRes.data;
-  if (!tournament) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center text-muted-foreground">
-        Tournament not found
-      </div>
-    );
-  }
 
   const junctions: TournamentTeam[] = junctionsRes.data ?? [];
   const allTeamsList: Team[] = allTeamsRes.data ?? [];
@@ -110,7 +115,7 @@ export default async function TournamentDetailPage({
 
   const groups: TournamentGroup[] = groupsRes.data ?? [];
   const allGroupTeams: TournamentGroupTeam[] = gtRes.data ?? [];
-  const matches: TournamentMatch[] = matchesRes.data ?? [];
+  const matches: TournamentMatchWithGame[] = (matchesRes.data ?? []) as TournamentMatchWithGame[];
 
   // Filter group_teams to this tournament's groups
   const groupIds = new Set(groups.map((g) => g.id));
@@ -158,7 +163,7 @@ export default async function TournamentDetailPage({
       supabase
         .from("game_lineups")
         .select(
-          "game_id, player_id, player:profiles(first_name, last_name, jersey_number, position, avatar_url)"
+          "game_id, player_id, player:profiles(first_name, last_name, jersey_number, position, avatar_url, slug)"
         )
         .in("game_id", gameIds),
       supabase
@@ -276,7 +281,7 @@ export default async function TournamentDetailPage({
                     return (
                       <div key={match.id}>
                         <GameMatchCard
-                          href={match.game_id ? `/games/${match.game_id}` : undefined}
+                          href={match.game?.slug ? `/games/${match.game.slug}` : undefined}
                           teamName={teamA?.name ?? "TBD"}
                           teamLogoUrl={teamA?.logo_url || null}
                           teamCountry={teamA?.country || null}
@@ -327,7 +332,7 @@ export default async function TournamentDetailPage({
                     return (
                       <div key={match.id}>
                         <GameMatchCard
-                          href={match.game_id ? `/games/${match.game_id}` : undefined}
+                          href={match.game?.slug ? `/games/${match.game.slug}` : undefined}
                           teamName={teamA?.name ?? "TBD"}
                           teamLogoUrl={teamA?.logo_url || null}
                           teamCountry={teamA?.country || null}
@@ -401,6 +406,7 @@ interface RawPlayerProfile {
   jersey_number: number | null;
   position: string | null;
   avatar_url: string | null;
+  slug: string;
 }
 
 interface RawTournamentLineupRow {
@@ -444,6 +450,7 @@ function aggregateTournamentStats(
     } else {
       map.set(row.player_id, {
         player_id: row.player_id,
+        slug: p?.slug ?? undefined,
         first_name: p?.first_name ?? "",
         last_name: p?.last_name ?? "",
         jersey_number: p?.jersey_number ?? null,

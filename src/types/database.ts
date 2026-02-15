@@ -27,6 +27,7 @@ export interface TrainingMatchData {
 
 export interface Profile {
   id: string;
+  slug: string;
   email: string;
   username: string | null;
   first_name: string;
@@ -63,6 +64,7 @@ export interface Season {
 
 export interface Game {
   id: string;
+  slug: string;
   season_id: string;
   tournament_id: string | null;
   opponent_team_id: string | null;
@@ -109,6 +111,7 @@ export interface GameStats {
 
 export interface TrainingSession {
   id: string;
+  slug: string;
   season_id: string;
   title: string | null;
   session_date: string;
@@ -137,6 +140,7 @@ export interface TrainingStats {
 
 export interface Tournament {
   id: string;
+  slug: string;
   season_id: string;
   name: string;
   format: TournamentFormat;
@@ -226,6 +230,7 @@ export interface GroupStandingRow {
 
 export interface TeamEvent {
   id: string;
+  slug: string;
   title: string;
   title_ru: string | null;
   title_en: string | null;
@@ -245,6 +250,7 @@ export interface TeamEvent {
 
 export interface GalleryAlbum {
   id: string;
+  slug: string;
   title: string;
   title_ru: string | null;
   title_en: string | null;
@@ -268,6 +274,7 @@ export interface GalleryPhoto {
 // Computed views
 export interface PlayerGameTotals {
   player_id: string;
+  slug: string;
   first_name: string;
   last_name: string;
   jersey_number: number | null;
@@ -282,6 +289,7 @@ export interface PlayerGameTotals {
 
 export interface PlayerTrainingTotals {
   player_id: string;
+  slug: string;
   first_name: string;
   last_name: string;
   sessions_attended: number;

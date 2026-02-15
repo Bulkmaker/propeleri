@@ -20,16 +20,16 @@ import type {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; gameId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { locale, gameId } = await params;
+  const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
 
   const supabase = await createClient();
   const { data: game } = await supabase
     .from("games")
     .select("*, opponent_team:teams!games_opponent_team_id_fkey(name)")
-    .eq("id", gameId)
+    .eq("slug", slug)
     .single();
 
   if (!game) return { title: "Game Not Found" };
@@ -53,7 +53,7 @@ export async function generateMetadata({
     opponent,
     score: score || "TBD",
   });
-  const path = `/games/${gameId}`;
+  const path = `/games/${slug}`;
 
   return {
     title,
@@ -84,9 +84,9 @@ type GameStatEntry = Omit<GameStats, "player"> & {
 export default async function GameDetailPage({
   params,
 }: {
-  params: Promise<{ locale: string; gameId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, gameId } = await params;
+  const { locale, slug } = await params;
   setRequestLocale(locale);
 
   const tc = await getTranslations("common");
@@ -96,11 +96,12 @@ export default async function GameDetailPage({
   const { data: game } = await supabase
     .from("games")
     .select("*")
-    .eq("id", gameId)
+    .eq("slug", slug)
     .single();
 
   if (!game) notFound();
 
+  const gameId = game.id;
   const [lineupRes, statsRes, teamsRes, tournamentsRes, tournamentMatchRes] = await Promise.all([
     supabase
       .from("game_lineups")

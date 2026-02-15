@@ -104,3 +104,89 @@ export function parseTournamentMatchUrlParam(value: string): string {
   return idPart;
 }
 
+// =============================================
+// Entity slug builders
+// =============================================
+
+export function buildGameSlug(params: {
+  gameDate: string;
+  opponentName: string;
+  isHome: boolean;
+  tournamentName?: string | null;
+}): string {
+  const datePart = formatMatchDateSlug(params.gameDate);
+  const opponentPart = slugify(params.opponentName) || "unknown";
+  const tournamentPart = params.tournamentName
+    ? slugify(params.tournamentName)
+    : null;
+  const suffix = tournamentPart || (params.isHome ? "home" : "away");
+  return `${datePart}-vs-${opponentPart}-${suffix}`;
+}
+
+export function buildProfileSlug(params: {
+  firstName: string;
+  lastName: string;
+}): string {
+  const name = params.lastName?.trim()
+    ? `${params.firstName.trim()} ${params.lastName.trim()}`
+    : params.firstName.trim();
+  return slugify(name) || "player";
+}
+
+export function buildTournamentSlug(params: {
+  name: string;
+  startDate: string;
+}): string {
+  const namePart = slugify(params.name) || "tournament";
+  const year = params.startDate.slice(0, 4);
+  return `${namePart}-${year}`;
+}
+
+export function buildTrainingSlug(params: {
+  sessionDate: string;
+  title?: string | null;
+}): string {
+  const datePart = formatMatchDateSlug(params.sessionDate);
+  if (params.title?.trim()) {
+    return `${datePart}-${slugify(params.title)}`;
+  }
+  return datePart;
+}
+
+export function buildEventSlug(title: string): string {
+  return slugify(title) || "event";
+}
+
+export function buildAlbumSlug(title: string): string {
+  return slugify(title) || "album";
+}
+
+// =============================================
+// Unique slug helper (client-side)
+// =============================================
+
+/**
+ * Check if a slug is unique in the given table.
+ * Pass a Supabase client instance.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function ensureUniqueSlug(
+  supabase: Record<string, any>,
+  table: string,
+  baseSlug: string,
+  excludeId?: string
+): Promise<string> {
+  let slug = baseSlug;
+  let suffix = 2;
+
+  for (;;) {
+    let query = supabase.from(table).select("id").eq("slug", slug);
+    if (excludeId) query = query.neq("id", excludeId);
+    const { data } = await query.limit(1);
+    if (!data || data.length === 0) return slug;
+    slug = `${baseSlug}-${suffix}`;
+    suffix++;
+    if (suffix > 100) return `${baseSlug}-${Date.now()}`;
+  }
+}
+

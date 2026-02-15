@@ -227,7 +227,7 @@ export default async function GamesPage({
           {/* Tournament groups */}
           {tournamentGroups.map(({ tournament, games }) => (
             <div key={tournament.id} className="space-y-3">
-              <Link href={`/tournaments/${tournament.id}`}>
+              <Link href={`/tournaments/${tournament.slug}`}>
                 <div className="flex items-center gap-3 px-3 py-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/10 transition-colors">
                   <Award className="h-5 w-5 text-yellow-400 shrink-0" />
                   <div className="min-w-0">
@@ -260,7 +260,7 @@ export default async function GamesPage({
                   return (
                     <div key={game.id} className="relative max-w-4xl mx-auto">
                       <GameMatchCard
-                        href={`/games/${game.id}`}
+                        href={`/games/${game.slug}`}
                         teamName={tt("propeleri")}
                         opponentName={opponentName}
                         opponentLogoUrl={opponent?.logo_url || null}
@@ -333,7 +333,7 @@ export default async function GamesPage({
                 return (
                   <div key={game.id} className="relative max-w-4xl mx-auto">
                     <GameMatchCard
-                      href={`/games/${game.id}`}
+                      href={`/games/${game.slug}`}
                       teamName={tt("propeleri")}
                       opponentName={opponentName}
                       opponentLogoUrl={opponent?.logo_url || null}

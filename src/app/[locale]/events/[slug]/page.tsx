@@ -14,16 +14,16 @@ import { formatInBelgrade } from "@/lib/utils/datetime";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; eventId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { locale, eventId } = await params;
+  const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
 
   const supabase = await createClient();
   const { data: event } = await supabase
     .from("events")
     .select("title, title_ru, title_en, description, description_ru, description_en, cover_image_url")
-    .eq("id", eventId)
+    .eq("slug", slug)
     .single();
 
   if (!event) return { title: "Event Not Found" };
@@ -43,7 +43,7 @@ export async function generateMetadata({
 
   const title = t("eventDetail.title", { name });
   const description = desc || t("eventDetail.description", { name });
-  const path = `/events/${eventId}`;
+  const path = `/events/${slug}`;
 
   return {
     title,
@@ -86,9 +86,9 @@ function getLocalizedField(
 export default async function EventDetailPage({
   params,
 }: {
-  params: Promise<{ locale: string; eventId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, eventId } = await params;
+  const { locale, slug } = await params;
   setRequestLocale(locale);
 
   const tc = await getTranslations("common");
@@ -99,7 +99,7 @@ export default async function EventDetailPage({
   const { data: eventRaw } = await supabase
     .from("events")
     .select("*")
-    .eq("id", eventId)
+    .eq("slug", slug)
     .single();
   const event = eventRaw as TeamEvent | null;
 
@@ -216,7 +216,7 @@ export default async function EventDetailPage({
             )}
 
             <Button asChild className="w-full sm:w-auto">
-              <Link href={`/tournaments/${tournament.id}`}>
+              <Link href={`/tournaments/${tournament.slug}`}>
                 {te("openTournament")}
                 <ArrowRight className="h-4 w-4" />
               </Link>

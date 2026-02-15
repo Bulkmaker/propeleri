@@ -24,23 +24,22 @@ import { PlayerEditButton } from "@/components/players/PlayerEditButton";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; playerId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { locale, playerId } = await params;
+  const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
   const tp = await getTranslations({ locale, namespace: "positions" });
 
   const supabase = await createClient();
-  const [{ data: player }, { data: gameTotals }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", playerId).single(),
-    supabase
-      .from("player_game_totals")
-      .select("*")
-      .eq("player_id", playerId)
-      .maybeSingle(),
-  ]);
+  const { data: player } = await supabase.from("profiles").select("*").eq("slug", slug).single();
 
   if (!player) return { title: "Player Not Found" };
+
+  const { data: gameTotals } = await supabase
+    .from("player_game_totals")
+    .select("*")
+    .eq("player_id", player.id)
+    .maybeSingle();
 
   const name = `${player.first_name} ${player.last_name}`;
   const title = t("playerDetail.title", {
@@ -55,7 +54,7 @@ export async function generateMetadata({
     points: gameTotals?.total_points ?? 0,
     games: gameTotals?.games_played ?? 0,
   });
-  const path = `/roster/${playerId}`;
+  const path = `/roster/${slug}`;
 
   return {
     title,
@@ -71,9 +70,9 @@ export async function generateMetadata({
 export default async function PlayerProfilePage({
   params,
 }: {
-  params: Promise<{ locale: string; playerId: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, playerId } = await params;
+  const { locale, slug } = await params;
   setRequestLocale(locale);
 
   const t = await getTranslations("player");
@@ -84,17 +83,20 @@ export default async function PlayerProfilePage({
 
   const supabase = await createClient();
 
+  const { data: player } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (!player) notFound();
+
+  const playerId = player.id;
   const [
-    { data: player },
     { data: seasonStats },
     { data: gameTotals },
     { data: trainingTotals },
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", playerId)
-      .single(),
     supabase
       .from("player_season_stats")
       .select("*")
@@ -110,8 +112,6 @@ export default async function PlayerProfilePage({
       .eq("player_id", playerId)
       .single(),
   ]);
-
-  if (!player) notFound();
 
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
 

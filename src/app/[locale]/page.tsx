@@ -104,25 +104,25 @@ export default async function HomePage({
       .select("id", { count: "exact", head: true }),
     supabase
       .from("games")
-      .select("id, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
+      .select("id, slug, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
       .eq("result", "pending")
       .gte("game_date", now.toISOString())
       .order("game_date", { ascending: true })
       .limit(1),
     supabase
       .from("games")
-      .select("id, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
+      .select("id, slug, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
       .neq("result", "pending")
       .order("game_date", { ascending: false })
       .limit(5),
     supabase
       .from("player_game_totals")
-      .select("player_id, first_name, last_name, total_goals, total_assists, total_points")
+      .select("player_id, slug, first_name, last_name, total_goals, total_assists, total_points")
       .order("total_points", { ascending: false })
       .limit(6),
     supabase
       .from("events")
-      .select("id, title, title_ru, title_en, event_date, location")
+      .select("id, slug, title, title_ru, title_en, event_date, location")
       .eq("is_published", true)
       .gte("event_date", now.toISOString())
       .order("event_date", { ascending: true })
@@ -130,14 +130,14 @@ export default async function HomePage({
     supabase.from("teams").select("id, name, logo_url, country, is_propeleri"),
     supabase
       .from("tournaments")
-      .select("id, name, start_date, location")
+      .select("id, slug, name, start_date, location")
       .gte("end_date", now.toISOString())
       .lte("start_date", twoWeeksFromNow.toISOString())
       .order("start_date", { ascending: true })
       .limit(4),
     supabase
       .from("training_sessions")
-      .select("id, title, session_date, location, status")
+      .select("id, slug, title, session_date, location, status")
       .eq("status", "planned")
       .gte("session_date", now.toISOString())
       .order("session_date", { ascending: true })
@@ -174,7 +174,7 @@ export default async function HomePage({
   const nextTraining = (nextTrainingData?.[0] ?? null) as TrainingSession | null;
 
   const mixedEvents = [
-    ...rawEvents.map(e => ({ type: 'event' as const, data: { ...e, href: `/events/${e.id}` }, date: e.event_date })),
+    ...rawEvents.map(e => ({ type: 'event' as const, data: { ...e, href: `/events/${e.slug}` }, date: e.event_date })),
     ...rawTournaments.map(t => ({
       type: 'tournament' as const,
       data: {
@@ -185,7 +185,7 @@ export default async function HomePage({
         event_date: t.start_date,
         location: t.location,
         is_published: true,
-        href: `/tournaments/${t.id}`
+        href: `/tournaments/${t.slug}`
       } as unknown as TeamEvent,
       date: t.start_date
     })),
@@ -199,7 +199,7 @@ export default async function HomePage({
         event_date: nextTraining.session_date,
         location: nextTraining.location,
         is_published: true,
-        href: `/training/${nextTraining.id}`
+        href: `/training/${nextTraining.slug}`
       } as unknown as TeamEvent,
       date: nextTraining.session_date
     }] : [])
@@ -520,7 +520,7 @@ function MatchdayPoster({
   });
 
   return (
-    <Link href={`/games/${game.id}`} className="club-matchday__poster">
+    <Link href={`/games/${game.slug}`} className="club-matchday__poster">
       <div className="club-matchday__teams">
         <div className="club-team-mark">
           <Image src="/logo.svg" alt="HC Propeleri" width={48} height={48} />
@@ -581,7 +581,7 @@ function PulseResult({
   const opponentScore = game.is_home ? game.away_score : game.home_score;
 
   return (
-    <Link href={`/games/${game.id}`} className="club-pulse-item">
+    <Link href={`/games/${game.slug}`} className="club-pulse-item">
       <Badge variant="secondary" className={`text-[11px] ${RESULT_COLORS[game.result as GameResult]}`}>
         {game.result === "win" ? "W" : game.result === "loss" ? "L" : "D"}
       </Badge>
@@ -613,7 +613,7 @@ function TopScorerSpotlight({
   const accent = rank === 1 ? "club-scorer--gold" : rank === 2 ? "club-scorer--silver" : "club-scorer--bronze";
 
   return (
-    <Link href={`/roster/${player.player_id}`} className={`club-scorer-card ${accent}`}>
+    <Link href={`/roster/${player.slug}`} className={`club-scorer-card ${accent}`}>
       <p className="club-scorer-card__rank">#{rank}</p>
       <p className="club-scorer-card__name">
         {player.first_name} {player.last_name}
@@ -635,7 +635,7 @@ function TopScorerLine({
   rank: number;
 }) {
   return (
-    <Link href={`/roster/${player.player_id}`} className="club-scorer-line">
+    <Link href={`/roster/${player.slug}`} className="club-scorer-line">
       <span>{rank}</span>
       <p>
         {player.first_name} {player.last_name}
@@ -678,7 +678,7 @@ function ResultLine({
 
   return (
     <GameMatchCard
-      href={`/games/${game.id}`}
+      href={`/games/${game.slug}`}
       teamName="Propeleri"
       opponentName={opponentName}
       opponentLogoUrl={opponentLogoUrl}

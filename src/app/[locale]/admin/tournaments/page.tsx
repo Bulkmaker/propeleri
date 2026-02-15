@@ -19,9 +19,11 @@ import { Link } from "@/i18n/navigation";
 import { Award, Plus, Pencil, Trash2, Settings } from "lucide-react";
 import type { Tournament, Season, TournamentFormat } from "@/types/database";
 import { AdminDialog } from "@/components/admin/AdminDialog";
+import { SlugField } from "@/components/admin/SlugField";
 import { LoadingErrorEmpty } from "@/components/shared/LoadingErrorEmpty";
 import { SkeletonCardList } from "@/components/shared/skeletons";
 import { useAdminData } from "@/hooks/use-admin-data";
+import { buildTournamentSlug } from "@/lib/utils/match-slug";
 
 const FORMAT_LABELS: Record<TournamentFormat, string> = {
   cup: "formatCup",
@@ -43,6 +45,7 @@ export default function AdminTournamentsPage() {
   const [form, setForm] = useState({
     season_id: "",
     name: "",
+    slug: "",
     format: "custom" as TournamentFormat,
     location: "",
     start_date: "",
@@ -80,6 +83,7 @@ export default function AdminTournamentsPage() {
     setForm({
       season_id: seasons[0]?.id ?? "",
       name: "",
+      slug: "",
       format: "custom",
       location: "",
       start_date: "",
@@ -94,6 +98,7 @@ export default function AdminTournamentsPage() {
     setForm({
       season_id: tournament.season_id,
       name: tournament.name,
+      slug: tournament.slug,
       format: tournament.format,
       location: tournament.location ?? "",
       start_date: tournament.start_date,
@@ -108,6 +113,7 @@ export default function AdminTournamentsPage() {
     const payload = {
       season_id: form.season_id,
       name: form.name,
+      slug: form.slug,
       format: form.format,
       location: form.location || null,
       start_date: form.start_date,
@@ -286,6 +292,19 @@ export default function AdminTournamentsPage() {
                 className="bg-background"
               />
             </div>
+            <SlugField
+              value={form.slug}
+              onChange={(slug) => setForm({ ...form, slug })}
+              onRegenerate={() =>
+                setForm((f) => ({
+                  ...f,
+                  slug: buildTournamentSlug({ name: f.name, startDate: f.start_date }),
+                }))
+              }
+              table="tournaments"
+              excludeId={editingId ?? undefined}
+              baseUrl="/tournaments"
+            />
           </AdminDialog>
         </div>
 

@@ -152,7 +152,7 @@ export default async function SchedulePage({
         subtitle: game.is_home ? tg("home") : tg("away"),
         result: game.result,
         location: game.location ?? undefined,
-        href: `/games/${game.id}`,
+        href: `/games/${game.slug}`,
         shootoutSide: shootoutSideMap.get(game.id),
       };
     }),
@@ -167,7 +167,7 @@ export default async function SchedulePage({
         trainingScoreA: matchData?.team_a_score,
         trainingScoreB: matchData?.team_b_score,
         location: session.location ?? undefined,
-        href: `/training/${session.id}`,
+        href: `/training/${session.slug}`,
       };
     }),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

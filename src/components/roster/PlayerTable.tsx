@@ -50,7 +50,7 @@ export function PlayerTable({ players }: PlayerTableProps) {
                                 <TableRow
                                     key={player.id}
                                     className="hover:bg-muted/50 cursor-pointer group"
-                                    onClick={() => router.push(`/roster/${player.id}`)}
+                                    onClick={() => router.push(`/roster/${player.slug}`)}
                                 >
                                     <TableCell className="font-mono text-center font-bold text-lg text-muted-foreground">
                                         {player.jersey_number ?? "-"}

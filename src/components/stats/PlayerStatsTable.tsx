@@ -13,6 +13,7 @@ import type { PlayerPosition } from "@/types/database";
 
 export interface PlayerStatRow {
   player_id: string;
+  slug?: string;
   first_name: string;
   last_name: string;
   jersey_number: number | null;
@@ -75,7 +76,7 @@ export function PlayerStatsTable({
                 </TableCell>
                 <TableCell>
                   <Link
-                    href={`/roster/${player.player_id}`}
+                    href={`/roster/${player.slug ?? player.player_id}`}
                     className="flex items-center gap-2 hover:text-primary transition-colors group"
                   >
                     <Avatar className={`h-8 w-8 ring-2 ${ringColor} shrink-0`}>

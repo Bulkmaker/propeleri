@@ -86,6 +86,7 @@ export default async function EventsPage({
   if (latestTournament) {
     const tournamentEvent: TeamEvent = {
       id: latestTournament.id,
+      slug: latestTournament.slug,
       title: latestTournament.name,
       title_ru: null,
       title_en: null,
@@ -126,7 +127,7 @@ export default async function EventsPage({
         <div className="space-y-4">
           {allEvents.map((event) => {
             const isTournament = event.event_type === "tournament";
-            const href = isTournament ? `/tournaments/${event.id}` : `/events/${event.id}`;
+            const href = isTournament ? `/tournaments/${event.slug}` : `/events/${event.slug}`;
 
             return (
               <Link key={event.id} href={href} className="block group">
