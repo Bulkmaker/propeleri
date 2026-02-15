@@ -310,6 +310,7 @@ export interface GoalEventInput {
   assist_2_player_id: string;
   period: GoalPeriod;
   goal_time: string;
+  is_penalty_shot?: boolean;
 }
 
 export interface PenaltyEventInput {

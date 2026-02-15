@@ -6,7 +6,9 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -15,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Link } from "@/i18n/navigation";
-import { ChevronLeft, Loader2, Save, CheckCircle, XCircle, Wand2 } from "lucide-react";
+import { ChevronLeft, Loader2, Save, Check, X, Wand2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type {
   Profile,
@@ -34,6 +36,28 @@ import {
 } from "@/lib/utils/datetime";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
 
+// Simple avatar with <img> fallback (bypasses Radix loading check)
+function PlayerAvatar({ src, initials, className }: { src: string | null; initials: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={`relative shrink-0 overflow-hidden rounded-full bg-muted ${className ?? "h-9 w-9"}`}>
+      {src && !failed ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
+
 const NONE_OPTION = "__none__";
 const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
 
@@ -48,6 +72,7 @@ interface TrainingRow {
   last_name: string;
   nickname: string | null;
   jersey_number: number | null;
+  avatar_url: string | null;
   default_training_team: TrainingTeam | null;
   attended: boolean;
   is_guest: boolean;
@@ -159,6 +184,184 @@ function buildAutosaveSnapshot(
   });
 }
 
+// Attendance card for the player grid
+function PlayerAttendanceCard({
+  row,
+  onToggleAttendance,
+  onSetTeam,
+  tt,
+}: {
+  row: TrainingRow;
+  onToggleAttendance: (playerId: string) => void;
+  onSetTeam: (playerId: string, team: TrainingTeam | null) => void;
+  tt: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggleAttendance(row.player_id)}
+      className={`rounded-md border px-3 py-2.5 text-left transition-colors ${
+        row.attended
+          ? "border-green-500/50 bg-green-500/10"
+          : "border-border/40 hover:border-primary/30"
+      }`}
+    >
+      <div className="flex items-center gap-2.5 mb-1.5">
+        <PlayerAvatar src={row.avatar_url} initials={`${row.first_name?.[0] ?? ""}${row.last_name?.[0] ?? ""}`} />
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-medium truncate block leading-tight">
+            {formatPlayerName(row)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            #{row.jersey_number ?? "—"}
+          </span>
+        </div>
+        {row.attended && <Check className="h-4 w-4 text-green-400 shrink-0" />}
+      </div>
+      <div className="flex items-center justify-between ml-11.5">
+        <div className="flex items-center gap-1">
+          {row.is_guest && (
+            <span className="text-[9px] rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-amber-400">
+              {tt("guest")}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant={row.training_team === "team_a" ? "default" : "ghost"}
+            className={`h-6 w-6 p-0 text-[10px] font-bold ${
+              row.training_team === "team_a"
+                ? "bg-white text-black hover:bg-white/90"
+                : "text-muted-foreground"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSetTeam(row.player_id, row.training_team === "team_a" ? null : "team_a");
+            }}
+          >
+            A
+          </Button>
+          <Button
+            size="sm"
+            variant={row.training_team === "team_b" ? "default" : "ghost"}
+            className={`h-6 w-6 p-0 text-[10px] font-bold ${
+              row.training_team === "team_b"
+                ? "bg-gray-700 text-white hover:bg-gray-600"
+                : "text-muted-foreground"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSetTeam(row.player_id, row.training_team === "team_b" ? null : "team_b");
+            }}
+          >
+            B
+          </Button>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// Compact row for attended players sidebar
+function AttendedPlayerRow({
+  row,
+  onToggleAttendance,
+  onSetTeam,
+  tt,
+}: {
+  row: TrainingRow;
+  onToggleAttendance: (playerId: string) => void;
+  onSetTeam: (playerId: string, team: TrainingTeam | null) => void;
+  tt: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", row.player_id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className="flex items-center gap-2 py-1.5 px-3 border-b border-border/20 last:border-b-0 group cursor-grab active:cursor-grabbing"
+    >
+      <PlayerAvatar src={row.avatar_url} initials={`${row.first_name?.[0] ?? ""}${row.last_name?.[0] ?? ""}`} className="h-6 w-6" />
+      <span className="text-xs font-medium truncate flex-1 min-w-0">
+        {formatPlayerName(row)}
+      </span>
+      {row.is_guest && (
+        <span className="text-[8px] rounded-full border border-amber-500/30 bg-amber-500/10 px-1 text-amber-400 shrink-0">
+          {tt("guest")}
+        </span>
+      )}
+      <div className="flex items-center gap-0.5 shrink-0">
+        <Button
+          size="sm"
+          variant={row.training_team === "team_a" ? "default" : "ghost"}
+          className={`h-5 w-5 p-0 text-[9px] font-bold ${
+            row.training_team === "team_a"
+              ? "bg-white text-black hover:bg-white/90"
+              : "text-muted-foreground"
+          }`}
+          onClick={() => onSetTeam(row.player_id, row.training_team === "team_a" ? null : "team_a")}
+        >
+          A
+        </Button>
+        <Button
+          size="sm"
+          variant={row.training_team === "team_b" ? "default" : "ghost"}
+          className={`h-5 w-5 p-0 text-[9px] font-bold ${
+            row.training_team === "team_b"
+              ? "bg-gray-700 text-white hover:bg-gray-600"
+              : "text-muted-foreground"
+          }`}
+          onClick={() => onSetTeam(row.player_id, row.training_team === "team_b" ? null : "team_b")}
+        >
+          B
+        </Button>
+      </div>
+      <button
+        type="button"
+        onClick={() => onToggleAttendance(row.player_id)}
+        className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// Drop zone wrapper for team groups in sidebar
+function TeamDropZone({
+  team,
+  onSetTeam,
+  children,
+}: {
+  team: TrainingTeam | null;
+  onSetTeam: (playerId: string, team: TrainingTeam | null) => void;
+  children: React.ReactNode;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const playerId = e.dataTransfer.getData("text/plain");
+        if (playerId) onSetTeam(playerId, team);
+      }}
+      className={`transition-colors ${dragOver ? "bg-primary/5 ring-1 ring-primary/30 rounded" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function TrainingStatsEntryPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
@@ -166,6 +369,7 @@ export default function TrainingStatsEntryPage() {
   const ts = useTranslations("stats");
   const tt = useTranslations("training");
   const ta = useTranslations("admin");
+  const tg = useTranslations("game");
 
   const [rows, setRows] = useState<TrainingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,6 +432,7 @@ export default function TrainingStatsEntryPage() {
           last_name: p.last_name,
           nickname: p.nickname,
           jersey_number: p.jersey_number,
+          avatar_url: p.avatar_url,
           default_training_team: p.default_training_team,
           attended: e?.attended ?? false,
           is_guest: p.is_guest ?? false,
@@ -356,24 +561,17 @@ export default function TrainingStatsEntryPage() {
     [rows]
   );
 
-  const teamRowsA = useMemo(
+  const attendedRows = useMemo(
     () =>
       rows
-        .filter((row) => row.training_team === "team_a")
+        .filter((row) => row.attended)
         .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
     [rows]
   );
-  const teamRowsB = useMemo(
+  const notAttendedRows = useMemo(
     () =>
       rows
-        .filter((row) => row.training_team === "team_b")
-        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
-    [rows]
-  );
-  const unassignedRows = useMemo(
-    () =>
-      rows
-        .filter((row) => !row.training_team)
+        .filter((row) => !row.attended)
         .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
     [rows]
   );
@@ -636,94 +834,6 @@ export default function TrainingStatsEntryPage() {
     return () => window.clearTimeout(timer);
   }, [autosaveSnapshot, loading, persistChanges]);
 
-  function renderPlayerRow(row: TrainingRow) {
-    const structuredMode = matchScoreA + matchScoreB > 0;
-
-    return (
-      <div
-        key={row.player_id}
-        className="rounded-md border border-border/50 bg-secondary/20 p-2.5 flex items-center gap-2"
-      >
-        <span className="w-8 text-xs text-primary font-bold text-center">
-          {row.jersey_number ?? "-"}
-        </span>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => toggleAttendance(row.player_id)}
-          className={`h-7 w-7 p-0 shrink-0 ${
-            row.attended ? "text-green-400 hover:text-green-300" : "text-red-400 hover:text-red-300"
-          }`}
-          aria-label={tt("attendance")}
-        >
-          {row.attended ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-        </Button>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium truncate">
-            {formatPlayerName(row)}
-          </p>
-          <div className="flex items-center gap-2">
-            {row.is_guest && (
-              <span className="text-[10px] rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-400">
-                {tt("guest")}
-              </span>
-            )}
-            {!row.attended && (
-              <span className="text-[10px] text-muted-foreground">{tt("absent")}</span>
-            )}
-          </div>
-        </div>
-
-        <Input
-          type="number"
-          min={0}
-          value={row.goals}
-          onChange={(e) => updateRow(row.player_id, "goals", parseInt(e.target.value) || 0)}
-          className="w-12 h-7 text-center bg-background"
-          disabled={!row.attended || structuredMode}
-        />
-
-        <Input
-          type="number"
-          min={0}
-          value={row.assists}
-          onChange={(e) => updateRow(row.player_id, "assists", parseInt(e.target.value) || 0)}
-          className="w-12 h-7 text-center bg-background"
-          disabled={!row.attended || structuredMode}
-        />
-
-        <div className="flex items-center gap-1">
-          <Button
-            size="sm"
-            variant={row.training_team === "team_a" ? "default" : "ghost"}
-            className={`h-7 w-7 p-0 text-xs font-bold ${
-              row.training_team === "team_a"
-                ? "bg-white text-black hover:bg-white/90"
-                : "text-muted-foreground"
-            }`}
-            onClick={() => setTeam(row.player_id, row.training_team === "team_a" ? null : "team_a")}
-          >
-            A
-          </Button>
-          <Button
-            size="sm"
-            variant={row.training_team === "team_b" ? "default" : "ghost"}
-            className={`h-7 w-7 p-0 text-xs font-bold ${
-              row.training_team === "team_b"
-                ? "bg-gray-700 text-white hover:bg-gray-600"
-                : "text-muted-foreground"
-            }`}
-            onClick={() => setTeam(row.player_id, row.training_team === "team_b" ? null : "team_b")}
-          >
-            B
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -731,6 +841,11 @@ export default function TrainingStatsEntryPage() {
       </div>
     );
   }
+
+  // Group attended players by team for the sidebar
+  const attendedByTeamA = attendedRows.filter((r) => r.training_team === "team_a");
+  const attendedByTeamB = attendedRows.filter((r) => r.training_team === "team_b");
+  const attendedNoTeam = attendedRows.filter((r) => !r.training_team);
 
   return (
     <div>
@@ -742,374 +857,454 @@ export default function TrainingStatsEntryPage() {
           <ChevronLeft className="h-4 w-4 mr-1" />
           {tc("back")}
         </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h1 className="text-xl sm:text-2xl font-bold">
-            {session?.title || tt("session")} · {tt("attendance")} & {ts("title")}
-          </h1>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground text-right hidden sm:block min-w-32.5">
-              {autosaveStatus === "saving"
-                ? tt("autosaveSaving")
-                : autosaveStatus === "saved"
-                  ? tt("autosaveSaved")
-                  : autosaveStatus === "error"
-                    ? tt("autosaveError")
-                    : ""}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={autoAssignTeams}
-              className="border-primary/30 text-primary"
-            >
-              <Wand2 className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">{tt("autoAssign")}</span>
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-primary"
-            >
-              {saving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 sm:mr-2" />
-              )}
-              <span className="hidden sm:inline">{tc("save")}</span>
-            </Button>
-          </div>
-        </div>
+        <h1 className="text-xl sm:text-2xl font-bold">
+          {session?.title || tt("session")}
+        </h1>
       </div>
 
-      <div className="px-4 lg:px-6 pt-4 space-y-4">
-        <Card className="border-border/40">
-          <CardHeader>
-            <CardTitle>{tt("sessionInfo")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{ta("season")}</Label>
-                <Select
-                  value={sessionForm.season_id}
-                  onValueChange={(v) => setSessionForm({ ...sessionForm, season_id: v })}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {seasons.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{ta("titleOptional")}</Label>
-                <Input
-                  value={sessionForm.title}
-                  onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })}
-                  placeholder={tt("titlePlaceholder")}
-                  className="bg-background"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label>{ta("dateAndTime")}</Label>
-                <Input
-                  type="datetime-local"
-                  value={sessionForm.session_date}
-                  onChange={(e) => setSessionForm({ ...sessionForm, session_date: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{ta("location")}</Label>
-                <Input
-                  value={sessionForm.location}
-                  onChange={(e) => setSessionForm({ ...sessionForm, location: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{tt("sessionStatus")}</Label>
-                <Select
-                  value={sessionForm.status}
-                  onValueChange={(v) => setSessionForm({ ...sessionForm, status: normalizeStatus(v) })}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SESSION_STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {tt(`status.${status}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{tt("report")}</Label>
-              <textarea
-                value={sessionForm.notes}
-                onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
-                placeholder={tt("reportPlaceholder")}
-                className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tt("youtubeUrl")}</Label>
-              <Input
-                value={sessionForm.youtube_url}
-                onChange={(e) => setSessionForm({ ...sessionForm, youtube_url: e.target.value })}
-                placeholder={tt("youtubeUrlPlaceholder")}
-                className="bg-background"
-                type="url"
-              />
-              {sessionForm.youtube_url && !isValidYouTubeUrl(sessionForm.youtube_url) && (
-                <p className="text-xs text-destructive">{tt("youtubeUrlInvalid")}</p>
-              )}
-            </div>
-            {sessionFormMessage && (
-              <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
-                {sessionFormMessage}
-              </p>
-            )}
-            <Button
-              onClick={handleSaveSessionInfo}
-              disabled={sessionFormSaving || !sessionForm.session_date}
-              className="bg-primary"
-            >
-              {sessionFormSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <Save className="mr-2 h-4 w-4" />
-              {tc("save")}
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="px-4 lg:px-6 pt-4">
+        <Tabs defaultValue="attendance" className="w-full">
+          <TabsList className="mb-4 flex h-auto flex-wrap gap-1">
+            <TabsTrigger value="info">{tt("sessionInfo")}</TabsTrigger>
+            <TabsTrigger value="attendance">
+              {tt("attendance")}
+              <Badge variant="secondary" className="ml-1.5 text-xs">{attendedRows.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="match">{tt("trainingMatch")}</TabsTrigger>
+          </TabsList>
 
-        <Card className="border-border/40">
-          <CardHeader>
-            <CardTitle>{tt("trainingMatch")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{tt("teamA")}</p>
-                <Input
-                  type="number"
-                  min={0}
-                  value={matchScoreA}
-                  onChange={(e) =>
-                    setMatchScores(Number(e.target.value) || 0, matchScoreB)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{tt("teamB")}</p>
-                <Input
-                  type="number"
-                  min={0}
-                  value={matchScoreB}
-                  onChange={(e) =>
-                    setMatchScores(matchScoreA, Number(e.target.value) || 0)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{tt("goalieTeamA")}</p>
-                <Select
-                  value={teamAGoalieId || NONE_OPTION}
-                  onValueChange={(value) => setTeamAGoalieId(value === NONE_OPTION ? "" : value)}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE_OPTION}>-</SelectItem>
-                    {attendedTeamA.map((player) => (
-                      <SelectItem key={player.player_id} value={player.player_id}>
-                        {formatPlayerNameWithNumber(player)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{tt("goalieTeamB")}</p>
-                <Select
-                  value={teamBGoalieId || NONE_OPTION}
-                  onValueChange={(value) => setTeamBGoalieId(value === NONE_OPTION ? "" : value)}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE_OPTION}>-</SelectItem>
-                    {attendedTeamB.map((player) => (
-                      <SelectItem key={player.player_id} value={player.player_id}>
-                        {formatPlayerNameWithNumber(player)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {goalEvents.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">{tt("goalsTimeline")}</p>
-                <p className="text-xs text-muted-foreground">{tt("goalsOptional")}</p>
+          {/* Tab 1: Session Info */}
+          <TabsContent value="info" className="space-y-4">
+            <Card className="border-border/40">
+              <CardHeader>
+                <CardTitle>{tt("sessionInfo")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{ta("season")}</Label>
+                    <Select
+                      value={sessionForm.season_id}
+                      onValueChange={(v) => setSessionForm({ ...sessionForm, season_id: v })}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {seasons.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{ta("titleOptional")}</Label>
+                    <Input
+                      value={sessionForm.title}
+                      onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })}
+                      placeholder={tt("titlePlaceholder")}
+                      className="bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>{ta("dateAndTime")}</Label>
+                    <Input
+                      type="datetime-local"
+                      value={sessionForm.session_date}
+                      onChange={(e) => setSessionForm({ ...sessionForm, session_date: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{ta("location")}</Label>
+                    <Input
+                      value={sessionForm.location}
+                      onChange={(e) => setSessionForm({ ...sessionForm, location: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{tt("sessionStatus")}</Label>
+                    <Select
+                      value={sessionForm.status}
+                      onValueChange={(v) => setSessionForm({ ...sessionForm, status: normalizeStatus(v) })}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SESSION_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {tt(`status.${status}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  {goalEvents.map((event, idx) => {
-                    const players = getPlayersByTeam(event.team);
-                    return (
-                      <div key={`${event.team}-${idx}`} className="grid gap-2 md:grid-cols-4">
-                        <Select
-                          value={event.team}
-                          onValueChange={(value) => updateGoalEvent(idx, "team", value)}
-                        >
-                          <SelectTrigger className="bg-background">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="team_a">{tt("teamA")}</SelectItem>
-                            <SelectItem value="team_b">{tt("teamB")}</SelectItem>
-                          </SelectContent>
-                        </Select>
+                  <Label>{tt("report")}</Label>
+                  <textarea
+                    value={sessionForm.notes}
+                    onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
+                    placeholder={tt("reportPlaceholder")}
+                    className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{tt("youtubeUrl")}</Label>
+                  <Input
+                    value={sessionForm.youtube_url}
+                    onChange={(e) => setSessionForm({ ...sessionForm, youtube_url: e.target.value })}
+                    placeholder={tt("youtubeUrlPlaceholder")}
+                    className="bg-background"
+                    type="url"
+                  />
+                  {sessionForm.youtube_url && !isValidYouTubeUrl(sessionForm.youtube_url) && (
+                    <p className="text-xs text-destructive">{tt("youtubeUrlInvalid")}</p>
+                  )}
+                </div>
+                {sessionFormMessage && (
+                  <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
+                    {sessionFormMessage}
+                  </p>
+                )}
+                <Button
+                  onClick={handleSaveSessionInfo}
+                  disabled={sessionFormSaving || !sessionForm.session_date}
+                  className="bg-primary"
+                >
+                  {sessionFormSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Save className="mr-2 h-4 w-4" />
+                  {tc("save")}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                        <Select
-                          value={event.scorer_player_id || NONE_OPTION}
-                          onValueChange={(value) =>
-                            updateGoalEvent(
-                              idx,
-                              "scorer_player_id",
-                              value === NONE_OPTION ? "" : value
-                            )
-                          }
-                        >
-                          <SelectTrigger className="bg-background">
-                            <SelectValue placeholder={tt("goalScorer")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NONE_OPTION}>-</SelectItem>
-                            {players.map((player) => (
-                              <SelectItem key={player.player_id} value={player.player_id}>
-                                {formatPlayerNameWithNumber(player)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+          {/* Tab 2: Attendance */}
+          <TabsContent value="attendance" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold">{tt("attendance")}</h2>
+                <Badge className="bg-primary/20 text-primary">
+                  {attendedRows.length} / {rows.length}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground text-right hidden sm:block min-w-28">
+                  {autosaveStatus === "saving"
+                    ? tt("autosaveSaving")
+                    : autosaveStatus === "saved"
+                      ? tt("autosaveSaved")
+                      : autosaveStatus === "error"
+                        ? tt("autosaveError")
+                        : ""}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={autoAssignTeams}
+                  className="border-primary/30 text-primary"
+                >
+                  <Wand2 className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{tt("autoAssign")}</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-primary"
+                >
+                  {saving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 sm:mr-2" />
+                  )}
+                  <span className="hidden sm:inline">{tc("save")}</span>
+                </Button>
+              </div>
+            </div>
 
-                        <Select
-                          value={event.assist_player_id || NONE_OPTION}
-                          onValueChange={(value) =>
-                            updateGoalEvent(
-                              idx,
-                              "assist_player_id",
-                              value === NONE_OPTION ? "" : value
-                            )
-                          }
-                        >
-                          <SelectTrigger className="bg-background">
-                            <SelectValue placeholder={tt("assist")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NONE_OPTION}>-</SelectItem>
-                            {players
-                              .filter((player) => player.player_id !== event.scorer_player_id)
-                              .map((player) => (
-                                <SelectItem key={player.player_id} value={player.player_id}>
-                                  {formatPlayerNameWithNumber(player)}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+            {/* Desktop: split view */}
+            <div className="hidden md:grid md:grid-cols-[1fr_280px] gap-4">
+              <div>
+                {notAttendedRows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">{tg("allPlayersSelected")}</p>
+                ) : (
+                  <div className="grid gap-2 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {notAttendedRows.map((row) => (
+                      <PlayerAttendanceCard
+                        key={row.player_id}
+                        row={row}
+                        onToggleAttendance={toggleAttendance}
+                        onSetTeam={setTeam}
+                        tt={tt}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-                        <div className="flex items-center text-sm text-muted-foreground px-2">
-                          {tt("goal")} #{idx + 1}
+              <Card className="border-border/40 self-start sticky top-20">
+                <CardHeader className="py-3 px-4 border-b border-border/30">
+                  <CardTitle className="text-sm flex items-center justify-between">
+                    {tg("selectedPlayers")}
+                    <Badge variant="secondary" className="text-xs">{attendedRows.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 max-h-150 overflow-y-auto">
+                  {attendedRows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">{tg("noPlayersSelected")}</p>
+                  ) : (
+                    <>
+                      <TeamDropZone team="team_a" onSetTeam={setTeam}>
+                        <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold bg-secondary/30 flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-white border border-border" />
+                          {tt("teamA")} ({attendedByTeamA.length})
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{tt("setScoreFirst")}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">
-              {tt("teams")} · {tt("attendance")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-white border border-border" />
-                  {tt("teamA")}
-                  <span className="text-xs text-muted-foreground">({teamRowsA.length})</span>
-                </p>
-                {teamRowsA.length > 0 ? (
-                  <div className="space-y-2">
-                    {teamRowsA.map((row) => renderPlayerRow(row))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">{tc("noData")}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-gray-600" />
-                  {tt("teamB")}
-                  <span className="text-xs text-muted-foreground">({teamRowsB.length})</span>
-                </p>
-                {teamRowsB.length > 0 ? (
-                  <div className="space-y-2">
-                    {teamRowsB.map((row) => renderPlayerRow(row))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">{tc("noData")}</p>
-                )}
-              </div>
+                        {attendedByTeamA.map((row) => (
+                          <AttendedPlayerRow
+                            key={row.player_id}
+                            row={row}
+                            onToggleAttendance={toggleAttendance}
+                            onSetTeam={setTeam}
+                            tt={tt}
+                          />
+                        ))}
+                        {attendedByTeamA.length === 0 && (
+                          <p className="text-[10px] text-muted-foreground/50 text-center py-2">&mdash;</p>
+                        )}
+                      </TeamDropZone>
+                      <TeamDropZone team="team_b" onSetTeam={setTeam}>
+                        <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold bg-secondary/30 flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-gray-600" />
+                          {tt("teamB")} ({attendedByTeamB.length})
+                        </div>
+                        {attendedByTeamB.map((row) => (
+                          <AttendedPlayerRow
+                            key={row.player_id}
+                            row={row}
+                            onToggleAttendance={toggleAttendance}
+                            onSetTeam={setTeam}
+                            tt={tt}
+                          />
+                        ))}
+                        {attendedByTeamB.length === 0 && (
+                          <p className="text-[10px] text-muted-foreground/50 text-center py-2">&mdash;</p>
+                        )}
+                      </TeamDropZone>
+                      <TeamDropZone team={null} onSetTeam={setTeam}>
+                        <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold bg-secondary/30">
+                          {tt("noTeam")} ({attendedNoTeam.length})
+                        </div>
+                        {attendedNoTeam.map((row) => (
+                          <AttendedPlayerRow
+                            key={row.player_id}
+                            row={row}
+                            onToggleAttendance={toggleAttendance}
+                            onSetTeam={setTeam}
+                            tt={tt}
+                            />
+                          ))}
+                          {attendedNoTeam.length === 0 && (
+                            <p className="text-[10px] text-muted-foreground/50 text-center py-2">&mdash;</p>
+                          )}
+                      </TeamDropZone>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
-            {unassignedRows.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-border/50">
-                <p className="text-xs text-muted-foreground">
-                  {tt("noTeam")} ({unassignedRows.length})
-                </p>
-                <div className="space-y-2">
-                  {unassignedRows.map((row) => renderPlayerRow(row))}
-                </div>
-              </div>
-            )}
+            {/* Mobile: all players in one grid */}
+            <div className="md:hidden grid gap-2 sm:grid-cols-2">
+              {rows
+                .slice()
+                .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999))
+                .map((row) => (
+                  <PlayerAttendanceCard
+                    key={row.player_id}
+                    row={row}
+                    onToggleAttendance={toggleAttendance}
+                    onSetTeam={setTeam}
+                    tt={tt}
+                  />
+                ))}
+            </div>
 
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2 mt-4">
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
                 {error}
               </p>
             )}
-
             {message && (
-              <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2 mt-4">
+              <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
                 {message}
               </p>
             )}
+            <p className="text-xs text-muted-foreground">{tt("autosaveHint")}</p>
+          </TabsContent>
 
-            <p className="text-xs text-muted-foreground mt-4">{tt("autosaveHint")}</p>
-          </CardContent>
-        </Card>
+          {/* Tab 3: Match */}
+          <TabsContent value="match" className="space-y-4">
+            <Card className="border-border/40">
+              <CardHeader>
+                <CardTitle>{tt("trainingMatch")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">{tt("teamA")}</p>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={matchScoreA}
+                      onChange={(e) =>
+                        setMatchScores(Number(e.target.value) || 0, matchScoreB)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">{tt("teamB")}</p>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={matchScoreB}
+                      onChange={(e) =>
+                        setMatchScores(matchScoreA, Number(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">{tt("goalieTeamA")}</p>
+                    <Select
+                      value={teamAGoalieId || NONE_OPTION}
+                      onValueChange={(value) => setTeamAGoalieId(value === NONE_OPTION ? "" : value)}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_OPTION}>-</SelectItem>
+                        {attendedTeamA.map((player) => (
+                          <SelectItem key={player.player_id} value={player.player_id}>
+                            {formatPlayerNameWithNumber(player)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">{tt("goalieTeamB")}</p>
+                    <Select
+                      value={teamBGoalieId || NONE_OPTION}
+                      onValueChange={(value) => setTeamBGoalieId(value === NONE_OPTION ? "" : value)}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_OPTION}>-</SelectItem>
+                        {attendedTeamB.map((player) => (
+                          <SelectItem key={player.player_id} value={player.player_id}>
+                            {formatPlayerNameWithNumber(player)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {goalEvents.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">{tt("goalsTimeline")}</p>
+                    <p className="text-xs text-muted-foreground">{tt("goalsOptional")}</p>
+                    <div className="space-y-2">
+                      {goalEvents.map((event, idx) => {
+                        const players = getPlayersByTeam(event.team);
+                        return (
+                          <div key={`${event.team}-${idx}`} className="grid gap-2 md:grid-cols-4">
+                            <Select
+                              value={event.team}
+                              onValueChange={(value) => updateGoalEvent(idx, "team", value)}
+                            >
+                              <SelectTrigger className="bg-background">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="team_a">{tt("teamA")}</SelectItem>
+                                <SelectItem value="team_b">{tt("teamB")}</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <Select
+                              value={event.scorer_player_id || NONE_OPTION}
+                              onValueChange={(value) =>
+                                updateGoalEvent(
+                                  idx,
+                                  "scorer_player_id",
+                                  value === NONE_OPTION ? "" : value
+                                )
+                              }
+                            >
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder={tt("goalScorer")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={NONE_OPTION}>-</SelectItem>
+                                {players.map((player) => (
+                                  <SelectItem key={player.player_id} value={player.player_id}>
+                                    {formatPlayerNameWithNumber(player)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            <Select
+                              value={event.assist_player_id || NONE_OPTION}
+                              onValueChange={(value) =>
+                                updateGoalEvent(
+                                  idx,
+                                  "assist_player_id",
+                                  value === NONE_OPTION ? "" : value
+                                )
+                              }
+                            >
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder={tt("assist")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={NONE_OPTION}>-</SelectItem>
+                                {players
+                                  .filter((player) => player.player_id !== event.scorer_player_id)
+                                  .map((player) => (
+                                    <SelectItem key={player.player_id} value={player.player_id}>
+                                      {formatPlayerNameWithNumber(player)}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+
+                            <div className="flex items-center text-sm text-muted-foreground px-2">
+                              {tt("goal")} #{idx + 1}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{tt("setScoreFirst")}</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

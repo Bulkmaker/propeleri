@@ -21,6 +21,27 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
     date: "2026-02-15",
     category: "feature",
+    description: "Editor treninga pretvoren u tabove (Info, Dolasci, Meč) sa split prikazom dolazaka na desktopu",
+    description_ru: "Редактор тренировки переделан на вкладки (Инфо, Посещаемость, Матч) с split view посещаемости на десктопе",
+    description_en: "Training editor converted to tabs (Info, Attendance, Match) with split view attendance on desktop",
+  },
+  {
+    date: "2026-02-15",
+    category: "feature",
+    description: "Kartica Sastav u editoru utakmice: izabrani igrači prikazani u listi sa strane na desktopu",
+    description_ru: "Вкладка Состав в редакторе матча: выбранные игроки отображаются списком сбоку на десктопе",
+    description_en: "Roster tab in match editor: selected players shown in sidebar list on desktop",
+  },
+  {
+    date: "2026-02-15",
+    category: "fix",
+    description: "Statistika sada prikazuje sve igrače iz postava, ne samo one sa poenima (opšta i turnirska)",
+    description_ru: "Статистика теперь показывает всех игроков из составов, а не только набравших очки (общая и турнирная)",
+    description_en: "Stats now show all players from game lineups, not just those with points (global and tournament)",
+  },
+  {
+    date: "2026-02-15",
+    category: "feature",
     description: "Unos kazni (PIM) u događaje utakmice, kraći naziv kartice",
     description_ru: "Ввод штрафных минут (PIM) в событиях матча, короче название вкладки",
     description_en: "Penalty minutes (PIM) input in match events, shorter tab name",

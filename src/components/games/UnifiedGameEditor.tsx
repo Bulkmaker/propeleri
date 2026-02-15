@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -32,7 +32,9 @@ import {
   Check,
   Loader2,
   Save,
+  X,
 } from "lucide-react";
+import { POSITION_COLORS } from "@/lib/utils/constants";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
 import { updateGameStats } from "@/lib/utils/game-stats";
 import {
@@ -46,6 +48,7 @@ import type {
   GoalEventInput,
   GoalieReportInput,
   PenaltyEventInput,
+  PlayerPosition,
   Profile,
   Team,
   Tournament,
@@ -68,6 +71,28 @@ type MatchFormState = {
   shootout_winner: "team_a" | "team_b" | null;
 };
 
+
+// Simple avatar with <img> fallback (bypasses Radix loading check)
+function PlayerAvatar({ src, initials, className }: { src: string | null; initials: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={`relative shrink-0 overflow-hidden rounded-full bg-muted ${className ?? "h-9 w-9"}`}>
+      {src && !failed ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface UnifiedGameEditorProps {
   gameId: string;
@@ -472,8 +497,8 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     setError("");
     setSuccess("");
 
-    const teamGoals = game.is_home ? game.home_score : game.away_score;
-    const cleanedEvents = normalizeGoalEventsCount(goalEvents, teamGoals)
+    const regulationGoals = getRegulationGoals();
+    const cleanedEvents = normalizeGoalEventsCount(goalEvents, regulationGoals)
       .filter((e) => e.scorer_player_id)
       .map((e) => ({
         ...e,
@@ -522,6 +547,18 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   }
 
   const isTournamentMatch = Boolean(match);
+
+  // Regulation goals for our team (subtract 1 if our team won shootout — that +1 is not a real goal)
+  function getRegulationGoals(): number {
+    if (!game) return 0;
+    const rawScore = game.is_home ? game.home_score : game.away_score;
+    if (!form.shootout_winner) return rawScore;
+    // is_home=true means Propeleri=team_a. If shootout_winner matches our side, subtract 1.
+    const ourSideWon = game.is_home
+      ? form.shootout_winner === "team_a"
+      : form.shootout_winner === "team_b";
+    return ourSideWon ? Math.max(0, rawScore - 1) : rawScore;
+  }
 
   // Подготовка данных для GameMatchCard
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
@@ -1090,52 +1127,133 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         </TabsContent>
 
         <TabsContent value="roster" className="space-y-4">
-          <Card className="border-border/40">
-            <CardContent className="p-4 space-y-4">
-              {!isTournamentMatch && (
-                <p className="text-sm text-muted-foreground border-l-4 border-yellow-500 pl-3 py-2">
-                  {tg("tournamentRosterOnly")}
-                </p>
-              )}
+          {!isTournamentMatch && (
+            <p className="text-sm text-muted-foreground border-l-4 border-yellow-500 pl-3 py-2">
+              {tg("tournamentRosterOnly")}
+            </p>
+          )}
 
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold">{tt("tournamentRoster")}</h2>
-                <Badge className="bg-primary/20 text-primary">{registeredPlayerIds.length} {tc("selected")}</Badge>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold">{tt("tournamentRoster")}</h2>
+            <Badge className="bg-primary/20 text-primary">{registeredPlayerIds.length} {tc("selected")}</Badge>
+          </div>
+
+          {players.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{tt("noAvailablePlayers")}</p>
+          ) : (
+            <>
+              {/* Desktop: split view — unselected buttons left, selected list right */}
+              <div className="hidden md:grid md:grid-cols-[1fr_280px] gap-4">
+                <div>
+                  {sortedPlayers.filter((p) => !registeredSet.has(p.id)).length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4">{tg("allPlayersSelected")}</p>
+                  ) : (
+                    <div className="grid gap-2 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {sortedPlayers
+                        .filter((p) => !registeredSet.has(p.id))
+                        .map((player) => (
+                          <button
+                            key={player.id}
+                            type="button"
+                            onClick={() => void toggleRegisteredPlayer(player.id)}
+                            disabled={!isTournamentMatch || savingAction === "roster"}
+                            className={`rounded-md border border-border/40 px-3 py-2 text-left transition-colors hover:border-primary/30 ${!isTournamentMatch ? "opacity-50 cursor-not-allowed" : ""}`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <PlayerAvatar src={player.avatar_url} initials={`${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`} />
+                              <div className="min-w-0">
+                                <span className="text-sm font-medium truncate block leading-tight">
+                                  {formatPlayerName(player)}
+                                </span>
+                                <p className="text-xs text-muted-foreground">
+                                  #{player.jersey_number ?? "—"} · {player.position}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                <Card className="border-border/40 self-start sticky top-20">
+                  <CardHeader className="py-3 px-4 border-b border-border/30">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      {tg("selectedPlayers")}
+                      <Badge variant="secondary" className="text-xs">{registeredPlayerIds.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 max-h-150 overflow-y-auto">
+                    {sortedPlayers
+                      .filter((p) => registeredSet.has(p.id))
+                      .length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">{tg("noPlayersSelected")}</p>
+                      ) : (
+                        sortedPlayers
+                          .filter((p) => registeredSet.has(p.id))
+                          .map((player) => (
+                            <button
+                              key={player.id}
+                              type="button"
+                              onClick={() => void toggleRegisteredPlayer(player.id)}
+                              disabled={!isTournamentMatch || savingAction === "roster"}
+                              className="w-full flex items-center gap-2 py-2 px-3 text-left hover:bg-destructive/10 transition-colors border-b border-border/20 last:border-b-0 group"
+                            >
+                              <PlayerAvatar src={player.avatar_url} initials={`${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`} className="h-6 w-6" />
+                              <span className="text-xs font-medium truncate flex-1">
+                                {formatPlayerName(player)}
+                              </span>
+                              {player.position && (
+                                <Badge
+                                  variant="secondary"
+                                  className={`text-[9px] px-1.5 py-0 shrink-0 ${POSITION_COLORS[player.position as PlayerPosition]}`}
+                                >
+                                  {player.position}
+                                </Badge>
+                              )}
+                              <X className="h-3.5 w-3.5 text-muted-foreground group-hover:text-destructive shrink-0" />
+                            </button>
+                          ))
+                      )}
+                  </CardContent>
+                </Card>
               </div>
 
-              {players.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{tt("noAvailablePlayers")}</p>
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {sortPlayersByNumberAndName(players).map((player) => {
-                    const isSelected = registeredSet.has(player.id);
-                    return (
-                      <button
-                        key={player.id}
-                        type="button"
-                        onClick={() => void toggleRegisteredPlayer(player.id)}
-                        disabled={!isTournamentMatch || savingAction === "roster"}
-                        className={`rounded-md border px-3 py-2 text-left transition-colors ${isSelected
-                          ? "border-primary/50 bg-primary/10"
-                          : "border-border/40 hover:border-primary/30"
-                          } ${!isTournamentMatch ? "opacity-50 cursor-not-allowed" : ""}`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium truncate">
-                            {formatPlayerName(player)}
-                          </span>
-                          {isSelected && <Check className="h-4 w-4 text-primary" />}
+              {/* Mobile: all players in one grid, selected highlighted */}
+              <div className="md:hidden grid gap-2 sm:grid-cols-2">
+                {sortedPlayers.map((player) => {
+                  const isSelected = registeredSet.has(player.id);
+                  return (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => void toggleRegisteredPlayer(player.id)}
+                      disabled={!isTournamentMatch || savingAction === "roster"}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${isSelected
+                        ? "border-primary/50 bg-primary/10"
+                        : "border-border/40 hover:border-primary/30"
+                        } ${!isTournamentMatch ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <PlayerAvatar src={player.avatar_url} initials={`${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium truncate">
+                              {formatPlayerName(player)}
+                            </span>
+                            {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            #{player.jersey_number ?? "—"} · {player.position}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          #{player.jersey_number ?? "—"} · {player.position}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="lineup" className="space-y-4">
@@ -1169,7 +1287,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
               <GoalEventsEditor
                 goalEvents={goalEvents}
                 onGoalEventsChange={setGoalEvents}
-                teamGoals={game ? (game.is_home ? game.home_score : game.away_score) : 0}
+                teamGoals={getRegulationGoals()}
                 availablePlayers={goalEventPlayers}
                 penaltyEvents={penaltyEvents}
                 onPenaltyEventsChange={setPenaltyEvents}

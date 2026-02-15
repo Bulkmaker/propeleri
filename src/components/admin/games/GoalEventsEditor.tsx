@@ -1,8 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, X } from "lucide-react";
+import { GripVertical, Plus, X } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -89,6 +105,7 @@ export function parseGameNotesPayload(
             : "1",
         goal_time:
           typeof event?.goal_time === "string" ? normalizeGoalClock(event.goal_time) : "",
+        ...(event?.is_penalty_shot === true ? { is_penalty_shot: true } : {}),
       }),
     );
 
@@ -168,33 +185,18 @@ export function GoalEventsEditor({
     [tg],
   );
 
-  // Track which assist fields are expanded per goal row (mobile progressive reveal)
-  const [expandedAssists, setExpandedAssists] = useState<
-    Map<number, { assist1: boolean; assist2: boolean }>
-  >(new Map());
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
-  // Auto-expand assists that already have values
-  useEffect(() => {
-    setExpandedAssists((prev) => {
-      const next = new Map(prev);
-      for (let i = 0; i < teamGoals; i++) {
-        const event = goalEvents[i];
-        if (!event) continue;
-        const current = next.get(i) ?? { assist1: false, assist2: false };
-        if (event.assist_1_player_id && !current.assist1) {
-          next.set(i, { ...current, assist1: true });
-        }
-        if (event.assist_2_player_id) {
-          next.set(i, { assist1: true, assist2: true });
-        }
-      }
-      return next;
-    });
-  }, [goalEvents, teamGoals]);
+  const goalIds = useMemo(
+    () => Array.from({ length: teamGoals }, (_, i) => `goal-${i}`),
+    [teamGoals],
+  );
 
   const updateGoalEvent = useCallback(
     (index: number, field: keyof GoalEventInput, value: string) => {
-      // Ensure the array is at least as long as the index we're updating
       const normalized = normalizeGoalEventsCount(goalEvents, Math.max(goalEvents.length, index + 1));
       const next = normalized.map((event, rowIndex) => {
         if (rowIndex !== index) return event;
@@ -216,30 +218,28 @@ export function GoalEventsEditor({
     [goalEvents, onGoalEventsChange],
   );
 
-  function toggleAssist(index: number, which: "assist1" | "assist2", show: boolean) {
-    setExpandedAssists((prev) => {
-      const next = new Map(prev);
-      const current = next.get(index) ?? { assist1: false, assist2: false };
-      next.set(index, { ...current, [which]: show });
-      return next;
+  function togglePenaltyShot(index: number) {
+    const normalized = normalizeGoalEventsCount(goalEvents, Math.max(goalEvents.length, index + 1));
+    const next = normalized.map((event, i) => {
+      if (i !== index) return event;
+      const toggled = !event.is_penalty_shot;
+      return {
+        ...event,
+        is_penalty_shot: toggled || undefined,
+        assist_1_player_id: toggled ? "" : event.assist_1_player_id,
+        assist_2_player_id: toggled ? "" : event.assist_2_player_id,
+      };
     });
+    onGoalEventsChange(next);
+  }
 
-    // Clear assist value when hiding
-    if (!show) {
-      if (which === "assist1") {
-        updateGoalEvent(index, "assist_1_player_id", "");
-        // Also hide and clear assist 2 when assist 1 is hidden
-        setExpandedAssists((prev) => {
-          const n = new Map(prev);
-          const c = n.get(index) ?? { assist1: false, assist2: false };
-          n.set(index, { ...c, assist1: false, assist2: false });
-          return n;
-        });
-        updateGoalEvent(index, "assist_2_player_id", "");
-      } else {
-        updateGoalEvent(index, "assist_2_player_id", "");
-      }
-    }
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = Number(String(active.id).replace("goal-", ""));
+    const newIndex = Number(String(over.id).replace("goal-", ""));
+    const normalized = normalizeGoalEventsCount(goalEvents, teamGoals);
+    onGoalEventsChange(arrayMove(normalized, oldIndex, newIndex));
   }
 
   if (teamGoals === 0) {
@@ -266,152 +266,27 @@ export function GoalEventsEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
-        {Array.from({ length: teamGoals }).map((_, index) => {
-          const event = goalEvents[index] ?? createEmptyGoalEvent();
-          const assists = expandedAssists.get(index) ?? { assist1: false, assist2: false };
-          const showAssist1 = assists.assist1;
-          const showAssist2 = assists.assist2;
-
-          return (
-            <div
-              key={`goal-event-${index}`}
-              className="rounded-md border border-border/40 p-3"
-            >
-              <Label className="text-xs text-muted-foreground mb-2 block">
-                {tg("goalLabel")} #{index + 1}
-              </Label>
-
-              {/* Desktop: row of 3 selects. Mobile: progressive */}
-              <div className="flex flex-col md:flex-row md:items-center gap-2">
-                {/* Scorer select */}
-                <div className="flex-1 min-w-0">
-                  <Select
-                    value={event.scorer_player_id || "__none__"}
-                    onValueChange={(value) =>
-                      updateGoalEvent(index, "scorer_player_id", value === "__none__" ? "" : value)
-                    }
-                  >
-                    <SelectTrigger className="bg-background h-9">
-                      <SelectValue placeholder={tg("scorerLabel")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">{tg("selectPlayer")}</SelectItem>
-                      {availablePlayers.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {formatPlayerOption(player)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Assist 1: always visible on desktop, progressive on mobile */}
-                <div className={`flex-1 min-w-0 ${showAssist1 ? "" : "hidden md:block"}`}>
-                  <Select
-                    value={event.assist_1_player_id || "__none__"}
-                    onValueChange={(value) =>
-                      updateGoalEvent(index, "assist_1_player_id", value === "__none__" ? "" : value)
-                    }
-                  >
-                    <SelectTrigger className="bg-background h-9">
-                      <SelectValue placeholder={tg("assist1Label")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
-                      {availablePlayers
-                        .filter((p) => p.id !== event.scorer_player_id)
-                        .map((player) => (
-                          <SelectItem key={player.id} value={player.id}>
-                            {formatPlayerOption(player)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Assist 2: always visible on desktop, progressive on mobile */}
-                <div className={`flex-1 min-w-0 ${showAssist2 ? "" : "hidden md:block"}`}>
-                  <Select
-                    value={event.assist_2_player_id || "__none__"}
-                    onValueChange={(value) =>
-                      updateGoalEvent(index, "assist_2_player_id", value === "__none__" ? "" : value)
-                    }
-                  >
-                    <SelectTrigger className="bg-background h-9">
-                      <SelectValue placeholder={tg("assist2Label")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
-                      {availablePlayers
-                        .filter(
-                          (p) =>
-                            p.id !== event.scorer_player_id &&
-                            p.id !== event.assist_1_player_id,
-                        )
-                        .map((player) => (
-                          <SelectItem key={player.id} value={player.id}>
-                            {formatPlayerOption(player)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Mobile + / × buttons */}
-                <div className="flex items-center gap-1 md:hidden">
-                  {!showAssist1 && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-2 text-xs"
-                      onClick={() => toggleAssist(index, "assist1", true)}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      {tg("addAssist")}
-                    </Button>
-                  )}
-                  {showAssist1 && !showAssist2 && (
-                    <>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-2 text-xs"
-                        onClick={() => toggleAssist(index, "assist2", true)}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        A2
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground"
-                        onClick={() => toggleAssist(index, "assist1", false)}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </>
-                  )}
-                  {showAssist2 && (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground"
-                      onClick={() => toggleAssist(index, "assist2", false)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={goalIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1.5">
+            {Array.from({ length: teamGoals }).map((_, index) => {
+              const event = goalEvents[index] ?? createEmptyGoalEvent();
+              return (
+                <SortableGoalRow
+                  key={goalIds[index]}
+                  id={goalIds[index]}
+                  index={index}
+                  event={event}
+                  availablePlayers={availablePlayers}
+                  updateGoalEvent={updateGoalEvent}
+                  togglePenaltyShot={togglePenaltyShot}
+                  tg={tg}
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       <PenaltySection
         penaltyEvents={penaltyEvents}
@@ -428,6 +303,205 @@ export function GoalEventsEditor({
         tc={tc}
         performanceOptions={GOALIE_PERFORMANCE_OPTIONS}
       />
+    </div>
+  );
+}
+
+// ─── sortable goal row ───────────────────────────────────────────────────────
+
+function SortableGoalRow({
+  id,
+  index,
+  event,
+  availablePlayers,
+  updateGoalEvent,
+  togglePenaltyShot,
+  tg,
+}: {
+  id: string;
+  index: number;
+  event: GoalEventInput;
+  availablePlayers: Profile[];
+  updateGoalEvent: (index: number, field: keyof GoalEventInput, value: string) => void;
+  togglePenaltyShot: (index: number) => void;
+  tg: ReturnType<typeof useTranslations>;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const isPenaltyShot = Boolean(event.is_penalty_shot);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-md border px-2 py-1.5 ${
+        isPenaltyShot ? "border-amber-500/40 bg-amber-500/5" : "border-border/40"
+      } ${isDragging ? "opacity-50 z-50 relative" : ""}`}
+    >
+      {/* Row 1: drag + # + scorer (+ assists on desktop) + penalty shot btn */}
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground/40 hover:text-muted-foreground"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <span className="text-[11px] text-muted-foreground font-medium shrink-0">
+          #{index + 1}
+        </span>
+
+        {/* Scorer */}
+        <div className="flex-1 min-w-0">
+          <Select
+            value={event.scorer_player_id || "__none__"}
+            onValueChange={(value) =>
+              updateGoalEvent(index, "scorer_player_id", value === "__none__" ? "" : value)
+            }
+          >
+            <SelectTrigger className="bg-background h-8 text-sm">
+              <SelectValue placeholder={tg("scorerLabel")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">{tg("selectPlayer")}</SelectItem>
+              {availablePlayers.map((player) => (
+                <SelectItem key={player.id} value={player.id}>
+                  {formatPlayerOption(player)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Desktop-only assists inline */}
+        {!isPenaltyShot && (
+          <>
+            <div className="flex-1 min-w-0 hidden md:block">
+              <Select
+                value={event.assist_1_player_id || "__none__"}
+                onValueChange={(value) =>
+                  updateGoalEvent(index, "assist_1_player_id", value === "__none__" ? "" : value)
+                }
+              >
+                <SelectTrigger className="bg-background h-8 text-sm">
+                  <SelectValue placeholder={tg("assist1Label")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
+                  {availablePlayers
+                    .filter((p) => p.id !== event.scorer_player_id)
+                    .map((player) => (
+                      <SelectItem key={player.id} value={player.id}>
+                        {formatPlayerOption(player)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 min-w-0 hidden md:block">
+              <Select
+                value={event.assist_2_player_id || "__none__"}
+                onValueChange={(value) =>
+                  updateGoalEvent(index, "assist_2_player_id", value === "__none__" ? "" : value)
+                }
+              >
+                <SelectTrigger className="bg-background h-8 text-sm">
+                  <SelectValue placeholder={tg("assist2Label")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
+                  {availablePlayers
+                    .filter(
+                      (p) =>
+                        p.id !== event.scorer_player_id &&
+                        p.id !== event.assist_1_player_id,
+                    )
+                    .map((player) => (
+                      <SelectItem key={player.id} value={player.id}>
+                        {formatPlayerOption(player)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {/* Penalty shot button — at the end */}
+        <Button
+          type="button"
+          size="sm"
+          variant={isPenaltyShot ? "default" : "ghost"}
+          className={`h-6 px-1.5 text-[10px] leading-none shrink-0 ${
+            isPenaltyShot
+              ? "bg-amber-600 hover:bg-amber-700 text-white"
+              : "text-muted-foreground/50 hover:text-muted-foreground"
+          }`}
+          onClick={() => togglePenaltyShot(index)}
+          title={tg("penaltyShot")}
+        >
+          {tg("penaltyShot")}
+        </Button>
+      </div>
+
+      {/* Row 2: Mobile-only assists (always shown) */}
+      {!isPenaltyShot && (
+        <div className="flex items-center gap-1.5 mt-1 md:hidden">
+          <div className="flex-1 min-w-0">
+            <Select
+              value={event.assist_1_player_id || "__none__"}
+              onValueChange={(value) =>
+                updateGoalEvent(index, "assist_1_player_id", value === "__none__" ? "" : value)
+              }
+            >
+              <SelectTrigger className="bg-background h-8 text-sm">
+                <SelectValue placeholder={tg("assist1Label")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
+                {availablePlayers
+                  .filter((p) => p.id !== event.scorer_player_id)
+                  .map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {formatPlayerOption(player)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 min-w-0">
+            <Select
+              value={event.assist_2_player_id || "__none__"}
+              onValueChange={(value) =>
+                updateGoalEvent(index, "assist_2_player_id", value === "__none__" ? "" : value)
+              }
+            >
+              <SelectTrigger className="bg-background h-8 text-sm">
+                <SelectValue placeholder={tg("assist2Label")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
+                {availablePlayers
+                  .filter(
+                    (p) =>
+                      p.id !== event.scorer_player_id &&
+                      p.id !== event.assist_1_player_id,
+                  )
+                  .map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {formatPlayerOption(player)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

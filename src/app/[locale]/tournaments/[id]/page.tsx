@@ -154,15 +154,22 @@ export default async function TournamentDetailPage({
 
   let playerStats: PlayerStatRow[] = [];
   if (gameIds.length > 0) {
-    const { data: rawStats } = await supabase
-      .from("game_stats")
-      .select(
-        "game_id, player_id, goals, assists, penalty_minutes, player:profiles(first_name, last_name, jersey_number, position, avatar_url)"
-      )
-      .in("game_id", gameIds);
+    const [lineupsRes, statsRes] = await Promise.all([
+      supabase
+        .from("game_lineups")
+        .select(
+          "game_id, player_id, player:profiles(first_name, last_name, jersey_number, position, avatar_url)"
+        )
+        .in("game_id", gameIds),
+      supabase
+        .from("game_stats")
+        .select("game_id, player_id, goals, assists, penalty_minutes")
+        .in("game_id", gameIds),
+    ]);
 
     playerStats = aggregateTournamentStats(
-      (rawStats ?? []) as RawTournamentStatRow[]
+      (lineupsRes.data ?? []) as RawTournamentLineupRow[],
+      (statsRes.data ?? []) as RawTournamentStatRow[]
     );
   }
 
@@ -396,29 +403,44 @@ interface RawPlayerProfile {
   avatar_url: string | null;
 }
 
+interface RawTournamentLineupRow {
+  game_id: string;
+  player_id: string;
+  player: RawPlayerProfile | RawPlayerProfile[] | null;
+}
+
 interface RawTournamentStatRow {
   game_id: string;
   player_id: string;
   goals: number;
   assists: number;
   penalty_minutes: number;
-  player: RawPlayerProfile | RawPlayerProfile[] | null;
 }
 
 function aggregateTournamentStats(
-  rows: RawTournamentStatRow[]
+  lineups: RawTournamentLineupRow[],
+  stats: RawTournamentStatRow[]
 ): PlayerStatRow[] {
+  // Build stats lookup: game_id+player_id -> stats
+  const statsKey = (gameId: string, playerId: string) => `${gameId}:${playerId}`;
+  const statsMap = new Map<string, RawTournamentStatRow>();
+  for (const s of stats) {
+    statsMap.set(statsKey(s.game_id, s.player_id), s);
+  }
+
+  // Aggregate from lineups (base) with stats joined
   const map = new Map<string, PlayerStatRow>();
 
-  for (const row of rows) {
+  for (const row of lineups) {
     const p = Array.isArray(row.player) ? row.player[0] ?? null : row.player;
+    const st = statsMap.get(statsKey(row.game_id, row.player_id));
     const existing = map.get(row.player_id);
 
     if (existing) {
       existing.appearances += 1;
-      existing.goals += row.goals;
-      existing.assists += row.assists;
-      existing.penalty_minutes += row.penalty_minutes;
+      existing.goals += st?.goals ?? 0;
+      existing.assists += st?.assists ?? 0;
+      existing.penalty_minutes += st?.penalty_minutes ?? 0;
     } else {
       map.set(row.player_id, {
         player_id: row.player_id,
@@ -428,10 +450,10 @@ function aggregateTournamentStats(
         position: p?.position ?? null,
         avatar_url: p?.avatar_url ?? null,
         appearances: 1,
-        goals: row.goals,
-        assists: row.assists,
+        goals: st?.goals ?? 0,
+        assists: st?.assists ?? 0,
         points: 0,
-        penalty_minutes: row.penalty_minutes,
+        penalty_minutes: st?.penalty_minutes ?? 0,
       });
     }
   }
