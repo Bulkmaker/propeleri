@@ -20,7 +20,7 @@ import {
 import { Exo_2 } from "next/font/google";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import type { Game, PlayerGameTotals, Team, TeamEvent } from "@/types/database";
+import type { Game, PlayerGameTotals, Team, TeamEvent, TrainingSession } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import type { GameResult } from "@/types/database";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
@@ -70,9 +70,14 @@ export default async function HomePage({
   const t = await getTranslations("home");
   const tc = await getTranslations("common");
   const tg = await getTranslations("game");
+  const ttr = await getTranslations("training");
   const localeTag = toIntlLocale(locale);
 
   const supabase = await createClient();
+
+  const now = new Date();
+  const twoWeeksFromNow = new Date();
+  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
   const [
     { count: playerCount },
@@ -84,6 +89,7 @@ export default async function HomePage({
     { data: upcomingEventsData },
     { data: teamsData },
     { data: tournamentsData },
+    { data: nextTrainingData },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -98,7 +104,7 @@ export default async function HomePage({
       .from("games")
       .select("id, opponent_team_id, game_date, home_score, away_score, is_home, result, location")
       .eq("result", "pending")
-      .gte("game_date", new Date().toISOString())
+      .gte("game_date", now.toISOString())
       .order("game_date", { ascending: true })
       .limit(1),
     supabase
@@ -116,16 +122,24 @@ export default async function HomePage({
       .from("events")
       .select("id, title, title_ru, title_en, event_date, location")
       .eq("is_published", true)
-      .gte("event_date", new Date().toISOString())
+      .gte("event_date", now.toISOString())
       .order("event_date", { ascending: true })
       .limit(4),
     supabase.from("teams").select("id, name, logo_url, country, is_propeleri"),
     supabase
       .from("tournaments")
       .select("id, name, start_date, location")
-      .gte("end_date", new Date().toISOString())
+      .gte("end_date", now.toISOString())
+      .lte("start_date", twoWeeksFromNow.toISOString())
       .order("start_date", { ascending: true })
       .limit(4),
+    supabase
+      .from("training_sessions")
+      .select("id, title, session_date, location, status")
+      .eq("status", "planned")
+      .gte("session_date", now.toISOString())
+      .order("session_date", { ascending: true })
+      .limit(1),
   ]);
 
   const nextGame = (nextGameData?.[0] ?? null) as Game | null;
@@ -134,9 +148,10 @@ export default async function HomePage({
   const teams = (teamsData ?? []) as Team[];
   const teamMap = new Map(teams.map((t) => [t.id, t]));
 
-  // Mix events and tournaments
+  // Mix events, tournaments, and next training
   const rawEvents = (upcomingEventsData ?? []) as TeamEvent[];
-  const rawTournaments = (tournamentsData ?? []) as any[]; // Type assertion needed or proper type
+  const rawTournaments = (tournamentsData ?? []) as any[];
+  const nextTraining = (nextTrainingData?.[0] ?? null) as TrainingSession | null;
 
   const mixedEvents = [
     ...rawEvents.map(e => ({ type: 'event' as const, data: { ...e, href: `/events/${e.id}` }, date: e.event_date })),
@@ -153,7 +168,21 @@ export default async function HomePage({
         href: `/tournaments/${t.id}`
       } as unknown as TeamEvent,
       date: t.start_date
-    }))
+    })),
+    ...(nextTraining ? [{
+      type: 'training' as const,
+      data: {
+        id: nextTraining.id,
+        title: nextTraining.title || ttr("session"),
+        title_ru: nextTraining.title || ttr("session"),
+        title_en: nextTraining.title || ttr("session"),
+        event_date: nextTraining.session_date,
+        location: nextTraining.location,
+        is_published: true,
+        href: `/training/${nextTraining.id}`
+      } as unknown as TeamEvent,
+      date: nextTraining.session_date
+    }] : [])
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 4)
     .map(item => item.data);
