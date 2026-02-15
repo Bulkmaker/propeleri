@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import { Shield, Swords } from "lucide-react";
-import { RESULT_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
+import { RESULT_COLORS, RESULT_BORDER_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
 import type {
   Game,
   GameResult,
@@ -179,13 +179,32 @@ export function GameDetailView({
     return map;
   }, [lineup, stats]);
 
-  const getPlayerName = (playerId: string) => {
-    const player = playerLookup.get(playerId);
-    if (!player) return tc("unknownPlayer");
-    const numberPrefix = player.jersey_number != null ? `#${player.jersey_number} ` : "";
-    const name = player.nickname || player.last_name || player.first_name;
-    return `${numberPrefix}${name}`;
-  };
+  const getPlayerName = useCallback(
+    (playerId: string) => {
+      const player = playerLookup.get(playerId);
+      if (!player) return tc("unknownPlayer");
+      const numberPrefix = player.jersey_number != null ? `#${player.jersey_number} ` : "";
+      const name = player.nickname || player.last_name || player.first_name;
+      return `${numberPrefix}${name}`;
+    },
+    [playerLookup, tc],
+  );
+
+  const scorersSummary = useMemo(() => {
+    if (goalEvents.length === 0) return null;
+    const hasAnyScorer = goalEvents.some((e) => e.scorer_player_id);
+    if (!hasAnyScorer) return null;
+
+    return goalEvents
+      .filter((e) => e.scorer_player_id)
+      .map((event) => {
+        const scorer = getPlayerName(event.scorer_player_id);
+        const assists = [event.assist_1_player_id, event.assist_2_player_id]
+          .filter(Boolean)
+          .map((id) => getPlayerName(id));
+        return { scorer, assists };
+      });
+  }, [goalEvents, getPlayerName]);
 
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
   const opponentName = opponentTeam?.name ?? game.opponent ?? t("unknownOpponent");
@@ -220,6 +239,7 @@ export function GameDetailView({
           location={game.location}
           resultLabel={t(`result.${game.result}`)}
           resultClassName={RESULT_COLORS[game.result as GameResult]}
+          borderColorClass={RESULT_BORDER_COLORS[game.result as GameResult]}
           matchTimeLabel={t("matchTime")}
           variant="poster"
           badges={
@@ -233,6 +253,26 @@ export function GameDetailView({
                 {game.is_home ? t("home") : t("away")}
               </Badge>
             </>
+          }
+          footer={
+            scorersSummary && scorersSummary.length > 0 ? (
+              <div className="flex flex-col gap-1 items-start">
+                {scorersSummary.map((goal, i) => (
+                  <p
+                    key={`scorer-${i}`}
+                    className="text-xs md:text-sm text-muted-foreground"
+                  >
+                    <span className="mr-1">&#127954;</span>
+                    <span className="font-semibold text-foreground">{goal.scorer}</span>
+                    {goal.assists.length > 0 && (
+                      <span className="ml-1 opacity-70">
+                        ({goal.assists.join(", ")})
+                      </span>
+                    )}
+                  </p>
+                ))}
+              </div>
+            ) : undefined
           }
         />
         <AdminEditButton
@@ -283,8 +323,8 @@ export function GameDetailView({
         </Card>
       )}
 
-      {/* Goal Actions */}
-      {(goalEvents.length > 0 || goalieReport) && (
+      {/* Goalie Report */}
+      {goalieReport && goalieReport.goalie_player_id && (
         <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -292,43 +332,15 @@ export function GameDetailView({
               {t("goalActions")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {goalEvents.length > 0 && (
-              <div className="space-y-2">
-                {goalEvents.map((event, index) => (
-                  <div
-                    key={`${event.scorer_player_id}-${index}`}
-                    className="rounded-md border border-border/40 p-3"
-                  >
-                    <p className="text-sm font-semibold">
-                      {t("goalWithNumber", { number: index + 1, scorer: getPlayerName(event.scorer_player_id) })}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t(`period.${event.period}`)}
-                      {event.goal_time ? `, ${event.goal_time}` : ""}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t("assists")}:{" "}
-                      {[event.assist_1_player_id, event.assist_2_player_id]
-                        .filter(Boolean)
-                        .map((playerId) => getPlayerName(playerId))
-                        .join(", ") || tc("noData")}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {goalieReport && (
-              <div className="rounded-md border border-border/40 p-3">
-                <p className="text-sm font-semibold">
-                  {t("goalie", { name: getPlayerName(goalieReport.goalie_player_id) })}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("performanceRating", { rating: t(`goaliePerformance.${goalieReport.performance}`) })}
-                </p>
-              </div>
-            )}
+          <CardContent>
+            <div className="rounded-md border border-border/40 p-3">
+              <p className="text-sm font-semibold">
+                {t("goalie", { name: getPlayerName(goalieReport.goalie_player_id) })}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("performanceRating", { rating: t(`goaliePerformance.${goalieReport.performance}`) })}
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { TrainingScoreView } from "@/components/training/TrainingScoreView";
 import { CalendarDays, Dumbbell } from "lucide-react";
-import { RESULT_COLORS } from "@/lib/utils/constants";
+import { RESULT_COLORS, RESULT_BORDER_COLORS } from "@/lib/utils/constants";
 import type {
   Game,
   GameResult,
@@ -237,6 +237,7 @@ function ScheduleCard({ item }: { item: ScheduleItem }) {
         location={item.location}
         resultLabel={tg(`result.${item.result}`)}
         resultClassName={RESULT_COLORS[item.result as GameResult]}
+        borderColorClass={RESULT_BORDER_COLORS[item.result as GameResult]}
         matchTimeLabel={tg("matchTime")}
         variant="poster"
       />

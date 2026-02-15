@@ -23,10 +23,12 @@ type Props = {
   location?: string | null;
   resultLabel: string;
   resultClassName: string;
+  borderColorClass?: string;
   matchTimeLabel?: string;
   variant?: Variant;
   badges?: React.ReactNode;
   actions?: React.ReactNode;
+  footer?: React.ReactNode;
 };
 
 export function GameMatchCard({
@@ -44,10 +46,12 @@ export function GameMatchCard({
   location,
   resultLabel,
   resultClassName,
+  borderColorClass,
   matchTimeLabel,
   variant = "poster",
   badges,
   actions,
+  footer,
 }: Props) {
   const isPending = teamScore == null || opponentScore == null;
 
@@ -165,27 +169,19 @@ export function GameMatchCard({
 
   const posterContent = (
     <div className={cn("block mx-auto px-1 md:px-2", containerClass)}>
-      <Card className="border-primary/20 card-hover bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.08),transparent_52%),linear-gradient(135deg,rgba(12,28,59,0.95),rgba(14,26,53,0.96))] cursor-pointer overflow-hidden py-0">
+      <Card className={cn("border-primary/20 card-hover bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.08),transparent_52%),linear-gradient(135deg,rgba(12,28,59,0.95),rgba(14,26,53,0.96))] cursor-pointer overflow-hidden py-0", borderColorClass && `border-l-4 ${borderColorClass}`)}>
         <CardContent className={cn("relative", isTournament ? "px-3 py-3 md:px-8 md:py-6" : "px-4 py-4 md:px-12 md:py-9")}>
           <div className="pointer-events-none absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-red-500/20 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-blue-500/25 blur-2xl" />
 
           <div className="relative space-y-4 md:space-y-2">
-            <div className={cn("flex items-start justify-between gap-3", isPending && "hidden sm:flex")}>
-              <div className="min-h-5" />
-              <div className="flex items-center gap-2">
-                {location && !isPending && (
-                  <span className="text-xs text-muted-foreground hidden md:flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {location}
-                  </span>
-                )}
-                {badges}
-                <Badge className={cn("text-xs", resultClassName)}>
-                  {resultLabel}
-                </Badge>
+            {badges && (
+              <div className={cn("flex items-start justify-end gap-3", isPending && "hidden sm:flex")}>
+                <div className="flex items-center gap-2">
+                  {badges}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-[1fr_auto_1fr] items-center gap-y-4 gap-x-2 md:gap-4">
               {/* Home Team */}
@@ -279,6 +275,12 @@ export function GameMatchCard({
                 )}
               </div>
             </div>
+
+            {footer && (
+              <div className="relative pt-3 mt-2 border-t border-white/10">
+                {footer}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

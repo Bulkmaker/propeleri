@@ -6,12 +6,61 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Swords, Award, Video } from "lucide-react";
-import type { Game, GameResult, Team, Tournament } from "@/types/database";
-import { RESULT_COLORS } from "@/lib/utils/constants";
+import type { Game, GameResult, GoalEventInput, Profile, Team, Tournament } from "@/types/database";
+import { RESULT_COLORS, RESULT_BORDER_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { AdminEditButton } from "@/components/shared/AdminEditButton";
 
 import { PageHeader } from "@/components/ui/page-header";
+
+// Minimal server-side parser for goal events from game.notes
+function parseGoalEvents(notes: string | null): GoalEventInput[] {
+  if (!notes) return [];
+  try {
+    const parsed = JSON.parse(notes) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.goal_events)) return [];
+    return (parsed.goal_events as Record<string, unknown>[])
+      .map((e) => ({
+        scorer_player_id: typeof e?.scorer_player_id === "string" ? e.scorer_player_id : "",
+        assist_1_player_id: typeof e?.assist_1_player_id === "string" ? e.assist_1_player_id : "",
+        assist_2_player_id: typeof e?.assist_2_player_id === "string" ? e.assist_2_player_id : "",
+        period: "1" as const,
+        goal_time: "",
+      }))
+      .filter((e) => Boolean(e.scorer_player_id));
+  } catch {
+    return [];
+  }
+}
+
+function buildGoalFooter(
+  events: GoalEventInput[],
+  playerMap: Map<string, Pick<Profile, "id" | "first_name" | "last_name" | "nickname" | "jersey_number">>,
+) {
+  if (events.length === 0) return null;
+
+  const getName = (id: string) => {
+    const p = playerMap.get(id);
+    if (!p) return null;
+    const num = p.jersey_number != null ? `#${p.jersey_number} ` : "";
+    return `${num}${p.nickname || p.last_name || p.first_name}`;
+  };
+
+  const lines = events
+    .map((e) => {
+      const scorer = getName(e.scorer_player_id);
+      if (!scorer) return null;
+      const assists = [e.assist_1_player_id, e.assist_2_player_id]
+        .filter(Boolean)
+        .map((id) => getName(id))
+        .filter(Boolean);
+      return { scorer, assists };
+    })
+    .filter(Boolean) as { scorer: string; assists: string[] }[];
+
+  if (lines.length === 0) return null;
+  return lines;
+}
 
 export const revalidate = 60;
 
@@ -74,6 +123,37 @@ export default async function GamesPage({
   }
 
   const teamMap = new Map(teams.map((t) => [t.id, t]));
+
+  // Parse goal events and load scorer profiles
+  const gameGoalEvents = new Map<string, GoalEventInput[]>();
+  const allPlayerIds = new Set<string>();
+  for (const game of allGames) {
+    const events = parseGoalEvents(game.notes);
+    if (events.length > 0) {
+      gameGoalEvents.set(game.id, events);
+      for (const e of events) {
+        if (e.scorer_player_id) allPlayerIds.add(e.scorer_player_id);
+        if (e.assist_1_player_id) allPlayerIds.add(e.assist_1_player_id);
+        if (e.assist_2_player_id) allPlayerIds.add(e.assist_2_player_id);
+      }
+    }
+  }
+
+  const playerMap = new Map<string, Pick<Profile, "id" | "first_name" | "last_name" | "nickname" | "jersey_number">>();
+  if (allPlayerIds.size > 0 && !error) {
+    try {
+      const supabase = await createClient();
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, nickname, jersey_number")
+        .in("id", Array.from(allPlayerIds));
+      for (const p of (profilesData ?? []) as Pick<Profile, "id" | "first_name" | "last_name" | "nickname" | "jersey_number">[]) {
+        playerMap.set(p.id, p);
+      }
+    } catch {
+      // Non-critical, goals just won't show names
+    }
+  }
 
   // Group games by tournament
   const tournamentLookup = new Map(allTournaments.map((t) => [t.id, t]));
@@ -157,6 +237,7 @@ export default async function GamesPage({
                     hour: "2-digit",
                     minute: "2-digit",
                   });
+                  const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap);
                   return (
                     <div key={game.id} className="relative max-w-4xl mx-auto">
                       <GameMatchCard
@@ -172,6 +253,7 @@ export default async function GamesPage({
                         location={game.location}
                         resultLabel={tg(`result.${game.result}`)}
                         resultClassName={RESULT_COLORS[game.result as GameResult]}
+                        borderColorClass={RESULT_BORDER_COLORS[game.result as GameResult]}
                         matchTimeLabel={tg("matchTime")}
                         variant="poster"
                         badges={game.youtube_url ? (
@@ -179,6 +261,19 @@ export default async function GamesPage({
                             <Video className="h-3 w-3" />
                             Video
                           </Badge>
+                        ) : undefined}
+                        footer={goals ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            {goals.map((g, i) => (
+                              <p key={`g-${i}`} className="text-xs md:text-sm text-muted-foreground">
+                                <span className="mr-1">&#127954;</span>
+                                <span className="font-semibold text-foreground">{g.scorer}</span>
+                                {g.assists.length > 0 && (
+                                  <span className="ml-1 opacity-70">({g.assists.join(", ")})</span>
+                                )}
+                              </p>
+                            ))}
+                          </div>
                         ) : undefined}
                       />
                       <AdminEditButton
@@ -213,6 +308,7 @@ export default async function GamesPage({
                   hour: "2-digit",
                   minute: "2-digit",
                 });
+                const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap);
                 return (
                   <div key={game.id} className="relative max-w-4xl mx-auto">
                     <GameMatchCard
@@ -228,6 +324,7 @@ export default async function GamesPage({
                       location={game.location}
                       resultLabel={tg(`result.${game.result}`)}
                       resultClassName={RESULT_COLORS[game.result as GameResult]}
+                      borderColorClass={RESULT_BORDER_COLORS[game.result as GameResult]}
                       matchTimeLabel={tg("matchTime")}
                       variant="poster"
                       badges={game.youtube_url ? (
@@ -235,6 +332,19 @@ export default async function GamesPage({
                           <Video className="h-3 w-3" />
                           Video
                         </Badge>
+                      ) : undefined}
+                      footer={goals ? (
+                        <div className="flex flex-col gap-1 items-start">
+                          {goals.map((g, i) => (
+                            <p key={`g-${i}`} className="text-xs md:text-sm text-muted-foreground">
+                              <span className="mr-1">&#127954;</span>
+                              <span className="font-semibold text-foreground">{g.scorer}</span>
+                              {g.assists.length > 0 && (
+                                <span className="ml-1 opacity-70">({g.assists.join(", ")})</span>
+                              )}
+                            </p>
+                          ))}
+                        </div>
                       ) : undefined}
                     />
                     <AdminEditButton

@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
-import { TeamAvatar } from "@/components/matches/TeamAvatar";
-import { Award, MapPin, Calendar } from "lucide-react";
+import { Award, MapPin, Calendar, Trophy } from "lucide-react";
 import { GroupStandingsTable } from "@/components/tournament/GroupStandingsTable";
-import { PlacementView } from "@/components/tournament/PlacementView";
-import { BracketView } from "@/components/tournament/BracketView";
 import { computeGroupStandings } from "@/lib/utils/tournament";
 import { formatInBelgrade } from "@/lib/utils/datetime";
+import { PlayerStatsTable } from "@/components/stats/PlayerStatsTable";
+import type { PlayerStatRow } from "@/components/stats/PlayerStatsTable";
 import type {
   Team,
   TournamentTeam,
@@ -68,6 +69,8 @@ export default async function TournamentDetailPage({
 
   const supabase = await createClient();
   const tt = await getTranslations("tournament");
+  const ts = await getTranslations("stats");
+  const tp = await getTranslations("positions");
 
   const [tournamentRes, junctionsRes, allTeamsRes, groupsRes, gtRes, matchesRes] =
     await Promise.all([
@@ -120,7 +123,40 @@ export default async function TournamentDetailPage({
   const groupMatches = matches.filter((m) => m.stage === "group");
   const playoffMatches = matches.filter((m) => m.stage === "playoff");
 
+  // Determine border color for Propeleri matches based on result
+  function getPropeleriBorderColor(match: TournamentMatch, teamA?: Team, teamB?: Team): string {
+    if (!match.is_completed) return "";
+    const isPropeleriA = teamA?.is_propeleri;
+    const isPropeleriB = teamB?.is_propeleri;
+    if (!isPropeleriA && !isPropeleriB) return "";
+    const propeleriScore = isPropeleriA ? match.score_a : match.score_b;
+    const opponentScore = isPropeleriA ? match.score_b : match.score_a;
+    if (propeleriScore == null || opponentScore == null) return "";
+    if (propeleriScore > opponentScore) return "border-green-500";
+    if (propeleriScore < opponentScore) return "border-red-500";
+    return "border-yellow-500";
+  }
+
   const format = tournament.format as TournamentFormat;
+
+  // Fetch player stats for tournament games
+  const gameIds = matches
+    .map((m) => m.game_id)
+    .filter((gid): gid is string => gid !== null);
+
+  let playerStats: PlayerStatRow[] = [];
+  if (gameIds.length > 0) {
+    const { data: rawStats } = await supabase
+      .from("game_stats")
+      .select(
+        "game_id, player_id, goals, assists, penalty_minutes, player:profiles(first_name, last_name, jersey_number, position, avatar_url)"
+      )
+      .in("game_id", gameIds);
+
+    playerStats = aggregateTournamentStats(
+      (rawStats ?? []) as RawTournamentStatRow[]
+    );
+  }
 
   const standingsLabels = {
     played: tt("played"),
@@ -131,6 +167,15 @@ export default async function TournamentDetailPage({
     goalsAgainst: tt("goalsAgainst"),
     goalDiff: tt("goalDiff"),
     pts: tt("pts"),
+  };
+
+  const statsLabels = {
+    appearances: ts("gamesPlayed"),
+    goals: ts("goals"),
+    assists: ts("assists"),
+    points: ts("points"),
+    penaltyMinutes: ts("penaltyMinutes"),
+    player: tt("playerColumn"),
   };
 
   return (
@@ -163,165 +208,224 @@ export default async function TournamentDetailPage({
         )}
       </div>
 
-      {/* Group standings */}
-      {groups.length > 0 && (
-        <div className="space-y-4 mb-8">
-          {groups.map((group) => {
-            const memberIds = groupTeams
-              .filter((gt) => gt.group_id === group.id)
-              .map((gt) => gt.team_id);
-            const groupTeamsList = teams.filter((t) =>
-              memberIds.includes(t.id)
-            );
-            const groupMatchList = groupMatches.filter(
-              (m) => m.group_id === group.id
-            );
-            const standings = computeGroupStandings(
-              groupTeamsList,
-              groupMatchList
-            );
+      <Tabs defaultValue="matches" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="matches">{tt("matches")}</TabsTrigger>
+          <TabsTrigger value="stats">{tt("teamStats")}</TabsTrigger>
+        </TabsList>
 
-            return (
-              <GroupStandingsTable
-                key={group.id}
-                groupName={group.name}
-                standings={standings}
-                labels={standingsLabels}
-              />
-            );
-          })}
-        </div>
-      )}
+        <TabsContent value="matches">
+          {/* Group standings */}
+          {groups.length > 0 && (
+            <div className="space-y-4 mb-8">
+              {groups.map((group) => {
+                const memberIds = groupTeams
+                  .filter((gt) => gt.group_id === group.id)
+                  .map((gt) => gt.team_id);
+                const groupTeamsList = teams.filter((t) =>
+                  memberIds.includes(t.id)
+                );
+                const groupMatchList = groupMatches.filter(
+                  (m) => m.group_id === group.id
+                );
+                const standings = computeGroupStandings(
+                  groupTeamsList,
+                  groupMatchList
+                );
 
-      {/* Playoff / placement (HIDDEN AS REQUESTED) */}
-      {/* {playoffMatches.length > 0 && (
-        <div className="mb-8">
-          {format === "cup" ? (
-            <BracketView
-              matches={playoffMatches}
-              teamsMap={teamsMap}
-              labels={{
-                completed: tt("completed"),
-                bracket: tt("bracket"),
-                thirdPlace: tt("thirdPlace"),
-              }}
-            />
-          ) : (
-            <PlacementView
-              matches={playoffMatches}
-              teamsMap={teamsMap}
-              labels={{
-                completed: tt("completed"),
-                playoffStage: tt("playoffStage"),
-              }}
-            />
+                return (
+                  <GroupStandingsTable
+                    key={group.id}
+                    groupName={group.name}
+                    standings={standings}
+                    labels={standingsLabels}
+                  />
+                );
+              })}
+            </div>
           )}
-        </div>
-      )} */}
 
-      {/* Matches Lists */}
-      <div className="space-y-8">
-        {/* Group Stage Matches */}
-        {groupMatches.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-3">{tt("groupStage")}</h2>
-            <div className="space-y-4">
-              {groupMatches.map((match) => {
-                const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
-                const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
-                const groupName = match.group_id
-                  ? groups.find((g) => g.id === match.group_id)?.name
-                  : null;
+          {/* Matches Lists */}
+          <div className="space-y-8">
+            {/* Group Stage Matches */}
+            {groupMatches.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-3">{tt("groupStage")}</h2>
+                <div className="space-y-4">
+                  {groupMatches.map((match) => {
+                    const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
+                    const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
+                    const groupName = match.group_id
+                      ? groups.find((g) => g.id === match.group_id)?.name
+                      : null;
+                    return (
+                      <div key={match.id}>
+                        <GameMatchCard
+                          href={match.game_id ? `/games/${match.game_id}` : undefined}
+                          teamName={teamA?.name ?? "TBD"}
+                          teamLogoUrl={teamA?.logo_url || null}
+                          teamCountry={teamA?.country || null}
+                          opponentName={teamB?.name ?? "TBD"}
+                          opponentLogoUrl={teamB?.logo_url || null}
+                          opponentCountry={teamB?.country || null}
+                          teamScore={match.is_completed ? match.score_a : undefined}
+                          opponentScore={match.is_completed ? match.score_b : undefined}
+                          dateLabel={formatInBelgrade(match.match_date || "", locale, {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                          timeLabel={formatInBelgrade(match.match_date || "", locale, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
+                          resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
+                          borderColorClass={getPropeleriBorderColor(match, teamA, teamB)}
+                          variant="tournament"
+                          badges={
+                            <>
+                              {groupName && (
+                                <Badge variant="outline" className="border-blue-500/20 text-blue-400 text-xs">
+                                  {groupName}
+                                </Badge>
+                              )}
+                            </>
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                return (
-                  <div key={match.id}>
-                    <GameMatchCard
-                      href={match.game_id ? `/games/${match.game_id}` : undefined}
-                      teamName={teamA?.name ?? "TBD"}
-                      teamLogoUrl={teamA?.logo_url || null}
-                      teamCountry={teamA?.country || null}
-                      opponentName={teamB?.name ?? "TBD"}
-                      opponentLogoUrl={teamB?.logo_url || null}
-                      opponentCountry={teamB?.country || null}
-                      teamScore={match.is_completed ? match.score_a : undefined}
-                      opponentScore={match.is_completed ? match.score_b : undefined}
-                      dateLabel={formatInBelgrade(match.match_date || "", locale, {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                      timeLabel={formatInBelgrade(match.match_date || "", locale, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
-                      resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
-                      variant="tournament"
-                      badges={
-                        <>
-                          {groupName && (
-                            <Badge variant="outline" className="border-blue-500/20 text-blue-400 text-xs">
-                              {groupName}
-                            </Badge>
-                          )}
-                        </>
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            {/* Playoff Matches */}
+            {playoffMatches.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-3">{tt("playoffStage")}</h2>
+                <div className="space-y-4">
+                  {playoffMatches.map((match) => {
+                    const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
+                    const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
+                    return (
+                      <div key={match.id}>
+                        <GameMatchCard
+                          href={match.game_id ? `/games/${match.game_id}` : undefined}
+                          teamName={teamA?.name ?? "TBD"}
+                          teamLogoUrl={teamA?.logo_url || null}
+                          teamCountry={teamA?.country || null}
+                          opponentName={teamB?.name ?? "TBD"}
+                          opponentLogoUrl={teamB?.logo_url || null}
+                          opponentCountry={teamB?.country || null}
+                          teamScore={match.is_completed ? match.score_a : undefined}
+                          opponentScore={match.is_completed ? match.score_b : undefined}
+                          dateLabel={formatInBelgrade(match.match_date || "", locale, {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                          timeLabel={formatInBelgrade(match.match_date || "", locale, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
+                          resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
+                          borderColorClass={getPropeleriBorderColor(match, teamA, teamB)}
+                          variant="tournament"
+                          badges={
+                            <>
+                              {match.bracket_label && (
+                                <Badge variant="outline" className="border-purple-500/20 text-purple-400 text-xs">
+                                  {match.bracket_label}
+                                </Badge>
+                              )}
+                            </>
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </TabsContent>
 
-        {/* Playoff Matches */}
-        {playoffMatches.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-3">{tt("playoffStage")}</h2>
-            <div className="space-y-4">
-              {playoffMatches.map((match) => {
-                const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
-                const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
-
-                return (
-                  <div key={match.id}>
-                    <GameMatchCard
-                      href={match.game_id ? `/games/${match.game_id}` : undefined}
-                      teamName={teamA?.name ?? "TBD"}
-                      teamLogoUrl={teamA?.logo_url || null}
-                      teamCountry={teamA?.country || null}
-                      opponentName={teamB?.name ?? "TBD"}
-                      opponentLogoUrl={teamB?.logo_url || null}
-                      opponentCountry={teamB?.country || null}
-                      teamScore={match.is_completed ? match.score_a : undefined}
-                      opponentScore={match.is_completed ? match.score_b : undefined}
-                      dateLabel={formatInBelgrade(match.match_date || "", locale, {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                      timeLabel={formatInBelgrade(match.match_date || "", locale, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
-                      resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
-                      variant="tournament"
-                      badges={
-                        <>
-                          {match.bracket_label && (
-                            <Badge variant="outline" className="border-purple-500/20 text-purple-400 text-xs">
-                              {match.bracket_label}
-                            </Badge>
-                          )}
-                        </>
-                      }
-                    />
-                  </div>
-                );
-              })}
+        <TabsContent value="stats">
+          {playerStats.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground">
+              <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>{tt("noStatsYet")}</p>
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            <Card className="border-border/40">
+              <CardHeader>
+                <CardTitle>{tt("teamStats")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PlayerStatsTable
+                  players={playerStats}
+                  labels={statsLabels}
+                  positionLabel={tp}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
+}
+
+interface RawPlayerProfile {
+  first_name: string;
+  last_name: string;
+  jersey_number: number | null;
+  position: string | null;
+  avatar_url: string | null;
+}
+
+interface RawTournamentStatRow {
+  game_id: string;
+  player_id: string;
+  goals: number;
+  assists: number;
+  penalty_minutes: number;
+  player: RawPlayerProfile | RawPlayerProfile[] | null;
+}
+
+function aggregateTournamentStats(
+  rows: RawTournamentStatRow[]
+): PlayerStatRow[] {
+  const map = new Map<string, PlayerStatRow>();
+
+  for (const row of rows) {
+    const p = Array.isArray(row.player) ? row.player[0] ?? null : row.player;
+    const existing = map.get(row.player_id);
+
+    if (existing) {
+      existing.appearances += 1;
+      existing.goals += row.goals;
+      existing.assists += row.assists;
+      existing.penalty_minutes += row.penalty_minutes;
+    } else {
+      map.set(row.player_id, {
+        player_id: row.player_id,
+        first_name: p?.first_name ?? "",
+        last_name: p?.last_name ?? "",
+        jersey_number: p?.jersey_number ?? null,
+        position: p?.position ?? null,
+        avatar_url: p?.avatar_url ?? null,
+        appearances: 1,
+        goals: row.goals,
+        assists: row.assists,
+        points: 0,
+        penalty_minutes: row.penalty_minutes,
+      });
+    }
+  }
+
+  const result = Array.from(map.values());
+  for (const r of result) r.points = r.goals + r.assists;
+  result.sort((a, b) => b.points - a.points || b.goals - a.goals);
+  return result;
 }

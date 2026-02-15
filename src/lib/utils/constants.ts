@@ -19,6 +19,12 @@ export const POSITION_COLORS: Record<PlayerPosition, string> = {
   goalie: "bg-team-silver text-white",
 };
 
+export const POSITION_RING_COLORS: Record<PlayerPosition, string> = {
+  forward: "ring-team-orange",
+  defense: "ring-blue-600",
+  goalie: "ring-team-silver",
+};
+
 export const POSITION_COLORS_HEX: Record<PlayerPosition, string> = {
   forward: "#e8732a",
   defense: "#2563eb",
@@ -42,4 +48,11 @@ export const RESULT_COLORS: Record<GameResult, string> = {
   loss: "bg-red-700 text-white",
   draw: "bg-yellow-600 text-black",
   pending: "bg-muted text-muted-foreground",
+};
+
+export const RESULT_BORDER_COLORS: Record<GameResult, string> = {
+  win: "border-green-500",
+  loss: "border-red-500",
+  draw: "border-yellow-500",
+  pending: "",
 };
