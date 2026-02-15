@@ -210,7 +210,12 @@
     "youtubeUrl": "YouTube Video URL",
     "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
     "youtubeUrlInvalid": "Enter a valid YouTube URL",
-    "gameVideo": "Game Video"
+    "gameVideo": "Game Video",
+    "addAssist": "Add assist",
+    "scorerLabel": "Scorer",
+    "goalLabel": "Goal",
+    "goalsSaved": "Goals saved!",
+    "playerColumn": "Player"
   },
   "training": {
     "title": "Training Sessions",
@@ -292,6 +297,7 @@
     "points": "P",
     "penaltyMinutes": "PIM",
     "plusMinus": "+/-",
+    "sessionsAttended": "Sessions",
     "topGoalScorers": "Top Goal Scorers",
     "topAssists": "Most Assists",
     "topPoints": "Most Points"
@@ -551,7 +557,9 @@
     "matchSaved": "Match saved",
     "rosterSaved": "Tournament roster updated",
     "statsSaved": "Stats saved",
-    "playoffTeamsNote": "For playoff, teams can be left empty and filled later."
+    "playoffTeamsNote": "For playoff, teams can be left empty and filled later.",
+    "teamStats": "Team Stats",
+    "noStatsYet": "No player statistics available yet"
   },
   "schedule": {
     "title": "Schedule",

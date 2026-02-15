@@ -34,11 +34,18 @@ import {
   Save,
 } from "lucide-react";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
+import { updateGameStats } from "@/lib/utils/game-stats";
+import {
+  GoalEventsEditor,
+  normalizeGoalEventsCount,
+  parseGameNotesPayload,
+} from "@/components/admin/games/GoalEventsEditor";
 import type {
   Game,
-  LineupDesignation,
+  GameNotesPayload,
+  GoalEventInput,
+  GoalieReportInput,
   Profile,
-  SlotPosition,
   Team,
   Tournament,
   TournamentGroup,
@@ -59,35 +66,6 @@ type MatchFormState = {
   is_completed: boolean;
 };
 
-type StatsRowState = {
-  player_id: string;
-  player_name: string;
-  jersey_number: number | null;
-  goals: number;
-  assists: number;
-  penalty_minutes: number;
-  plus_minus: number;
-};
-
-type PlayerSummary = Pick<Profile, "first_name" | "last_name" | "jersey_number">;
-type PlayerRelation = PlayerSummary | PlayerSummary[] | null;
-
-type LineupRowRecord = {
-  player_id: string;
-  designation: LineupDesignation;
-  line_number: number | null;
-  slot_position: SlotPosition | null;
-  player: PlayerRelation;
-};
-
-type StatsRowRecord = {
-  player_id: string;
-  goals: number;
-  assists: number;
-  penalty_minutes: number;
-  plus_minus: number;
-  player: PlayerRelation;
-};
 
 interface UnifiedGameEditorProps {
   gameId: string;
@@ -96,12 +74,6 @@ interface UnifiedGameEditorProps {
 
 function toDateTimeLocalInput(value: string | null): string {
   return utcToBelgradeDateTimeLocalInput(value);
-}
-
-function extractPlayer(player: PlayerRelation): PlayerSummary | null {
-  if (!player) return null;
-  if (Array.isArray(player)) return player[0] ?? null;
-  return player;
 }
 
 function sortPlayersByNumberAndName(list: Profile[]) {
@@ -117,13 +89,12 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
   const locale = useLocale();
   const tt = useTranslations("tournament");
   const tc = useTranslations("common");
-  const ts = useTranslations("stats");
   const tg = useTranslations("game");
 
   const supabase = useMemo(() => createClient(), []);
 
   const [loading, setLoading] = useState(true);
-  const [savingAction, setSavingAction] = useState<null | "match" | "roster" | "stats">(null);
+  const [savingAction, setSavingAction] = useState<null | "match" | "roster" | "goals">(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -148,10 +119,21 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     is_completed: false,
   });
 
-  const [statsRows, setStatsRows] = useState<StatsRowState[]>([]);
+  const [goalEvents, setGoalEvents] = useState<GoalEventInput[]>([]);
+  const [goalieReport, setGoalieReport] = useState<GoalieReportInput>({
+    goalie_player_id: "",
+    performance: "average",
+  });
+  const [lineupIds, setLineupIds] = useState<string[]>([]);
 
   const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
   const registeredSet = useMemo(() => new Set(registeredPlayerIds), [registeredPlayerIds]);
+  const sortedPlayers = useMemo(() => sortPlayersByNumberAndName(players), [players]);
+  const goalEventPlayers = useMemo(() => {
+    if (lineupIds.length === 0) return sortedPlayers;
+    const idSet = new Set(lineupIds);
+    return sortedPlayers.filter((p) => idSet.has(p.id));
+  }, [lineupIds, sortedPlayers]);
 
   const findGroupForMatch = useCallback(
     (teamAId: string, teamBId: string): string | null => {
@@ -187,6 +169,16 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     }
 
     setGame(gameData);
+
+    // Parse goal events from notes
+    const parsedNotes = parseGameNotesPayload(gameData.notes as string | null);
+    if (parsedNotes) {
+      setGoalEvents(parsedNotes.goal_events);
+      setGoalieReport(parsedNotes.goalie_report ?? { goalie_player_id: "", performance: "average" });
+    } else {
+      setGoalEvents([]);
+      setGoalieReport({ goalie_player_id: "", performance: "average" });
+    }
 
     // Загружаем tournament_match по game_id
     const { data: matchData } = await supabase
@@ -289,62 +281,22 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       is_completed: matchData.is_completed,
     });
 
-    // Загружаем статистику
-    const [lineupRes, statsRes] = await Promise.all([
-      supabase
-        .from("game_lineups")
-        .select("player_id, designation, line_number, slot_position, player:profiles(first_name, last_name, jersey_number)")
-        .eq("game_id", gameId)
-        .order("line_number", { ascending: true })
-        .order("slot_position", { ascending: true }),
-      supabase
-        .from("game_stats")
-        .select("player_id, goals, assists, penalty_minutes, plus_minus, player:profiles(first_name, last_name, jersey_number)")
-        .eq("game_id", gameId),
-    ]);
+    // Загружаем lineup для определения goalEventPlayers
+    const { data: lineupData } = await supabase
+      .from("game_lineups")
+      .select("player_id, slot_position")
+      .eq("game_id", gameId)
+      .order("line_number", { ascending: true })
+      .order("slot_position", { ascending: true });
 
-    const lineupData = (lineupRes.data ?? []) as LineupRowRecord[];
-    const statsData = (statsRes.data ?? []) as StatsRowRecord[];
-
-    const lineupPlayerIds = lineupData
+    const lineupPlayerIds = (lineupData ?? [])
       .filter((entry) => Boolean(entry.slot_position))
       .map((entry) => entry.player_id)
       .filter((playerId) => Boolean(playerId));
 
-    const rosterById = new Map(loadedPlayers.map((player) => [player.id, player]));
-    const statsById = new Map(statsData.map((row) => [row.player_id, row]));
-
-    const fallbackPlayerIds = statsData.map((row) => row.player_id);
-
-    const sourcePlayerIds =
-      lineupPlayerIds.length > 0
-        ? Array.from(new Set(lineupPlayerIds))
-        : Array.from(new Set(fallbackPlayerIds));
-
-    const nextStatsRows: StatsRowState[] = sourcePlayerIds.map((playerId) => {
-      const stat = statsById.get(playerId);
-      const statPlayer = stat ? extractPlayer(stat.player) : null;
-      const rosterPlayer = rosterById.get(playerId);
-
-      const firstName = statPlayer?.first_name ?? rosterPlayer?.first_name ?? tc("player");
-      const lastName = statPlayer?.last_name ?? rosterPlayer?.last_name ?? "";
-      const jersey =
-        statPlayer?.jersey_number ?? rosterPlayer?.jersey_number ?? null;
-
-      return {
-        player_id: playerId,
-        player_name: `${firstName} ${lastName}`.trim(),
-        jersey_number: jersey,
-        goals: stat?.goals ?? 0,
-        assists: stat?.assists ?? 0,
-        penalty_minutes: stat?.penalty_minutes ?? 0,
-        plus_minus: stat?.plus_minus ?? 0,
-      };
-    });
-
-    setStatsRows(nextStatsRows);
+    setLineupIds(lineupPlayerIds);
     setLoading(false);
-  }, [gameId, supabase, tc, tg]);
+  }, [gameId, supabase, tg]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -502,71 +454,48 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     setSuccess(tt("rosterSaved"));
   }
 
-  function updateStatRow(playerId: string, field: keyof Omit<StatsRowState, "player_id" | "player_name" | "jersey_number">, value: number) {
-    setStatsRows((prev) =>
-      prev.map((row) =>
-        row.player_id === playerId
-          ? {
-            ...row,
-            [field]: field === "plus_minus" ? value : Math.max(0, value),
-          }
-          : row
-      )
-    );
-  }
-
-  async function saveStats() {
+  async function saveGoals() {
     if (!game) {
-      setError(tt("errorNoGame"));
+      setError(tg("gameNotFound"));
       return;
     }
 
-    setSavingAction("stats");
+    setSavingAction("goals");
     setError("");
     setSuccess("");
 
-    const duplicateCheck = new Set<string>();
-    for (const row of statsRows) {
-      if (duplicateCheck.has(row.player_id)) {
-        setError(tt("errorDuplicatePlayer"));
-        setSavingAction(null);
-        return;
-      }
-      duplicateCheck.add(row.player_id);
-    }
+    const teamGoals = game.is_home ? game.home_score : game.away_score;
+    const cleanedEvents = normalizeGoalEventsCount(goalEvents, teamGoals)
+      .filter((e) => e.scorer_player_id)
+      .map((e) => ({
+        ...e,
+        period: e.period || "1",
+        goal_time: e.goal_time || "",
+      }));
 
-    const { error: deleteError } = await supabase
-      .from("game_stats")
-      .delete()
-      .eq("game_id", gameId);
+    const payload: GameNotesPayload = {
+      version: 1,
+      goal_events: cleanedEvents,
+      goalie_report: goalieReport.goalie_player_id ? goalieReport : null,
+    };
 
-    if (deleteError) {
-      setError(deleteError.message);
+    const notesJson = JSON.stringify(payload);
+    const { error: updateError } = await supabase
+      .from("games")
+      .update({ notes: notesJson })
+      .eq("id", gameId);
+
+    if (updateError) {
+      setError(updateError.message);
       setSavingAction(null);
       return;
     }
 
-    const payload = statsRows.map((row) => ({
-      game_id: gameId,
-      player_id: row.player_id,
-      goals: Math.max(0, row.goals),
-      assists: Math.max(0, row.assists),
-      penalty_minutes: Math.max(0, row.penalty_minutes),
-      plus_minus: row.plus_minus,
-    }));
-
-    if (payload.length > 0) {
-      const { error: insertError } = await supabase.from("game_stats").insert(payload);
-      if (insertError) {
-        setError(insertError.message);
-        setSavingAction(null);
-        return;
-      }
-    }
+    await updateGameStats(supabase, gameId, notesJson);
 
     setSavingAction(null);
-    setSuccess(tt("statsSaved"));
-    onRefresh?.();
+    setSuccess(tg("goalsSaved"));
+    await loadAll();
   }
 
   if (loading) {
@@ -639,7 +568,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
             </>
           )}
           <TabsTrigger value="lineup">{tt("lineup")}</TabsTrigger>
-          <TabsTrigger value="stats">{tt("statistics")}</TabsTrigger>
+          <TabsTrigger value="goals">{tg("goalsAndAssists")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="match" className="space-y-4">
@@ -1191,17 +1120,17 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
           />
         </TabsContent>
 
-        <TabsContent value="stats" className="space-y-4">
+        <TabsContent value="goals" className="space-y-4">
           <Card className="border-border/40">
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold">{tt("playerStats")}</h2>
+                <h2 className="text-base font-semibold">{tg("goalsAndAssists")}</h2>
                 <Button
                   type="button"
-                  onClick={() => void saveStats()}
-                  disabled={savingAction === "stats"}
+                  onClick={() => void saveGoals()}
+                  disabled={savingAction === "goals"}
                 >
-                  {savingAction === "stats" ? (
+                  {savingAction === "goals" ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="mr-2 h-4 w-4" />
@@ -1210,96 +1139,15 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                 </Button>
               </div>
 
-              {statsRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {tt("noPlayersForStats")}
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-sm">
-                    <thead>
-                      <tr className="border-b border-border/50">
-                        <th className="text-left px-2 py-2">{tt("playerColumn")}</th>
-                        <th className="text-center px-2 py-2">{ts("goals")}</th>
-                        <th className="text-center px-2 py-2">{ts("assists")}</th>
-                        <th className="text-center px-2 py-2">{ts("penaltyMinutes")}</th>
-                        <th className="text-center px-2 py-2">{ts("plusMinus")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {statsRows.map((row) => (
-                        <tr key={row.player_id} className="border-b border-border/30">
-                          <td className="px-2 py-2 whitespace-nowrap">
-                            <span className="font-medium">
-                              {row.jersey_number != null ? `#${row.jersey_number} ` : ""}
-                              {row.player_name}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              value={row.goals}
-                              onChange={(event) =>
-                                updateStatRow(
-                                  row.player_id,
-                                  "goals",
-                                  parseInt(event.target.value, 10) || 0
-                                )
-                              }
-                              className="w-16 mx-auto text-center"
-                            />
-                          </td>
-                          <td className="px-2 py-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              value={row.assists}
-                              onChange={(event) =>
-                                updateStatRow(
-                                  row.player_id,
-                                  "assists",
-                                  parseInt(event.target.value, 10) || 0
-                                )
-                              }
-                              className="w-16 mx-auto text-center"
-                            />
-                          </td>
-                          <td className="px-2 py-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              value={row.penalty_minutes}
-                              onChange={(event) =>
-                                updateStatRow(
-                                  row.player_id,
-                                  "penalty_minutes",
-                                  parseInt(event.target.value, 10) || 0
-                                )
-                              }
-                              className="w-16 mx-auto text-center"
-                            />
-                          </td>
-                          <td className="px-2 py-2">
-                            <Input
-                              type="number"
-                              value={row.plus_minus}
-                              onChange={(event) =>
-                                updateStatRow(
-                                  row.player_id,
-                                  "plus_minus",
-                                  parseInt(event.target.value, 10) || 0
-                                )
-                              }
-                              className="w-16 mx-auto text-center"
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <GoalEventsEditor
+                goalEvents={goalEvents}
+                onGoalEventsChange={setGoalEvents}
+                teamGoals={game ? (game.is_home ? game.home_score : game.away_score) : 0}
+                availablePlayers={goalEventPlayers}
+                goalieReport={goalieReport}
+                onGoalieReportChange={setGoalieReport}
+                goalieOptions={goalEventPlayers.filter(p => p.position === "goalie")}
+              />
             </CardContent>
           </Card>
         </TabsContent>

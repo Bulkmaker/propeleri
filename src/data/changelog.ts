@@ -17,6 +17,36 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
+  // ── 2026-02-15 ────────────────────────────────────────────────
+  {
+    date: "2026-02-15",
+    category: "feature",
+    description: "Statistika igraca na stranici turnira + univerzalna tabela statistike sa avatarima",
+    description_ru: "Статистика игроков на странице турнира + универсальная таблица статистики с аватарами",
+    description_en: "Player stats on tournament page + reusable stats table component with avatars",
+  },
+  // ── 2026-02-14 ────────────────────────────────────────────────
+  {
+    date: "2026-02-14",
+    category: "feature",
+    description: "Redizajn unosa golova: jednostavniji formular (strelac + opcioni asistenti), progresivni prikaz na mobilnom",
+    description_ru: "Редизайн ввода голов: упрощённая форма (автор + ассисты), прогрессивный показ на мобильном",
+    description_en: "Goal input redesign: simplified form (scorer + optional assists), progressive reveal on mobile",
+  },
+  {
+    date: "2026-02-14",
+    category: "feature",
+    description: "Tab za golove u editoru utakmice + prikaz strelaca na posteru rezultata",
+    description_ru: "Вкладка голов в редакторе матча + отображение авторов голов на постере результата",
+    description_en: "Goals tab in game editor + goal scorers displayed on result poster",
+  },
+  {
+    date: "2026-02-14",
+    category: "fix",
+    description: "Ispravljen prikaz logotipa protivnika za turnirske utakmice",
+    description_ru: "Исправлено отображение логотипа соперника для турнирных игр",
+    description_en: "Fixed opponent logo display for tournament games",
+  },
   // ── 2026-02-13 (refactor) ────────────────────────────────────
   {
     date: "2026-02-13",

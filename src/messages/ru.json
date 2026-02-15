@@ -210,7 +210,12 @@
     "youtubeUrl": "Ссылка на видео YouTube",
     "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
     "youtubeUrlInvalid": "Введите корректную ссылку на YouTube",
-    "gameVideo": "Видео матча"
+    "gameVideo": "Видео матча",
+    "addAssist": "Добавить ассист",
+    "scorerLabel": "Автор гола",
+    "goalLabel": "Гол",
+    "goalsSaved": "Голы сохранены!",
+    "playerColumn": "Игрок"
   },
   "training": {
     "title": "Тренировки",
@@ -292,6 +297,7 @@
     "points": "О",
     "penaltyMinutes": "ШМ",
     "plusMinus": "+/-",
+    "sessionsAttended": "Тренировки",
     "topGoalScorers": "Лучшие бомбардиры",
     "topAssists": "Лучшие ассистенты",
     "topPoints": "Лучшие по очкам"
@@ -551,7 +557,9 @@
     "matchSaved": "Матч сохранён",
     "rosterSaved": "Состав турнира обновлён",
     "statsSaved": "Статистика сохранена",
-    "playoffTeamsNote": "Для плей-офф команды можно оставить пустыми и заполнить позже."
+    "playoffTeamsNote": "Для плей-офф команды можно оставить пустыми и заполнить позже.",
+    "teamStats": "Статистика команды",
+    "noStatsYet": "Статистика игроков ещё недоступна"
   },
   "schedule": {
     "title": "Расписание",

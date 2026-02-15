@@ -210,7 +210,12 @@
     "youtubeUrl": "YouTube video link",
     "youtubeUrlPlaceholder": "https://youtube.com/watch?v=...",
     "youtubeUrlInvalid": "Unesite ispravan YouTube link",
-    "gameVideo": "Video utakmice"
+    "gameVideo": "Video utakmice",
+    "addAssist": "Dodaj asistenciju",
+    "scorerLabel": "Strelac",
+    "goalLabel": "Gol",
+    "goalsSaved": "Golovi sacuvani!",
+    "playerColumn": "Igrac"
   },
   "training": {
     "title": "Treninzi",
@@ -292,6 +297,7 @@
     "points": "B",
     "penaltyMinutes": "KM",
     "plusMinus": "+/-",
+    "sessionsAttended": "Treninzi",
     "topGoalScorers": "Najbolji strelci",
     "topAssists": "Najvise asistencija",
     "topPoints": "Najvise bodova"
@@ -551,7 +557,9 @@
     "matchSaved": "Mec sacuvan",
     "rosterSaved": "Sastav turnira azuriran",
     "statsSaved": "Statistika sacuvana",
-    "playoffTeamsNote": "Za plej-of timove mozete ostaviti praznim i popuniti kasnije."
+    "playoffTeamsNote": "Za plej-of timove mozete ostaviti praznim i popuniti kasnije.",
+    "teamStats": "Statistika tima",
+    "noStatsYet": "Nema statistike igraca"
   },
   "schedule": {
     "title": "Raspored",

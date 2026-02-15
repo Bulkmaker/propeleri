@@ -2,20 +2,11 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "@/i18n/navigation";
 import { Trophy, Target, TrendingUp, Dumbbell } from "lucide-react";
-import { POSITION_COLORS } from "@/lib/utils/constants";
-import type { PlayerPosition, PlayerGameTotals, PlayerTrainingTotals } from "@/types/database";
+import { PlayerStatsTable } from "@/components/stats/PlayerStatsTable";
+import type { PlayerStatRow } from "@/components/stats/PlayerStatsTable";
+import type { PlayerGameTotals, PlayerTrainingTotals } from "@/types/database";
 
 export const revalidate = 300;
 
@@ -51,13 +42,18 @@ export default async function StatsPage({
 
   const supabase = await createClient();
 
-  const [gameStatsRes, trainingStatsRes] = await Promise.all([
+  const [gameStatsRes, trainingStatsRes, profilesRes] = await Promise.all([
     supabase.from("player_game_totals").select("*").order("total_points", { ascending: false }),
     supabase
       .from("player_training_totals")
       .select("*")
       .order("sessions_attended", { ascending: false }),
+    supabase.from("profiles").select("id, avatar_url"),
   ]);
+
+  const avatarMap = new Map(
+    profilesRes.data?.map((p: { id: string; avatar_url: string | null }) => [p.id, p.avatar_url]) ?? []
+  );
 
   const gamePlayers = (gameStatsRes.data ?? []) as PlayerGameTotals[];
   const trainingPlayers = ((trainingStatsRes.data ?? []) as PlayerTrainingTotals[])
@@ -76,6 +72,42 @@ export default async function StatsPage({
   const topTrainingAssists = [...trainingPlayers].sort(
     (a, b) => b.training_assists - a.training_assists
   );
+
+  const gameRows: PlayerStatRow[] = gamePlayers.map((p) => ({
+    player_id: p.player_id,
+    first_name: p.first_name,
+    last_name: p.last_name,
+    jersey_number: p.jersey_number,
+    position: p.position,
+    avatar_url: avatarMap.get(p.player_id) ?? null,
+    appearances: p.games_played,
+    goals: p.total_goals,
+    assists: p.total_assists,
+    points: p.total_points,
+    penalty_minutes: p.total_pim,
+  }));
+
+  const trainingRows: PlayerStatRow[] = trainingPlayers.map((p) => ({
+    player_id: p.player_id,
+    first_name: p.first_name,
+    last_name: p.last_name,
+    jersey_number: null,
+    position: null,
+    avatar_url: avatarMap.get(p.player_id) ?? null,
+    appearances: p.sessions_attended,
+    goals: p.training_goals,
+    assists: p.training_assists,
+    points: p.training_goals + p.training_assists,
+    penalty_minutes: 0,
+  }));
+
+  const statsLabels = {
+    goals: t("goals"),
+    assists: t("assists"),
+    points: t("points"),
+    penaltyMinutes: t("penaltyMinutes"),
+    player: t("leaderboard"),
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -135,64 +167,11 @@ export default async function StatsPage({
                   <CardTitle>{t("leaderboard")}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Player</TableHead>
-                        <TableHead className="text-center">{t("gamesPlayed")}</TableHead>
-                        <TableHead className="text-center">{t("goals")}</TableHead>
-                        <TableHead className="text-center">{t("assists")}</TableHead>
-                        <TableHead className="text-center">{t("points")}</TableHead>
-                        <TableHead className="text-center">{t("penaltyMinutes")}</TableHead>
-                        <TableHead className="text-center">{t("plusMinus")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {gamePlayers.map((player, idx) => (
-                        <TableRow key={player.player_id}>
-                          <TableCell className="font-medium text-muted-foreground">
-                            {idx + 1}
-                          </TableCell>
-                          <TableCell>
-                            <Link
-                              href={`/roster/${player.player_id}`}
-                              className="flex items-center gap-2 hover:text-primary transition-colors"
-                            >
-                              <span className="text-primary font-bold text-sm">
-                                {player.jersey_number ?? "-"}
-                              </span>
-                              <span className="font-medium">
-                                {player.first_name} {player.last_name}
-                              </span>
-                              {player.position && (
-                                <Badge
-                                  variant="secondary"
-                                  className={`text-xs ml-1 ${POSITION_COLORS[player.position as PlayerPosition]}`}
-                                >
-                                  {tp(player.position)}
-                                </Badge>
-                              )}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-center">{player.games_played}</TableCell>
-                          <TableCell className="text-center font-semibold">
-                            {player.total_goals}
-                          </TableCell>
-                          <TableCell className="text-center">{player.total_assists}</TableCell>
-                          <TableCell className="text-center font-bold text-primary">
-                            {player.total_points}
-                          </TableCell>
-                          <TableCell className="text-center">{player.total_pim}</TableCell>
-                          <TableCell className="text-center">
-                            {player.total_plus_minus > 0
-                              ? `+${player.total_plus_minus}`
-                              : player.total_plus_minus}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <PlayerStatsTable
+                    players={gameRows}
+                    labels={{ ...statsLabels, appearances: t("gamesPlayed") }}
+                    positionLabel={tp}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -242,46 +221,12 @@ export default async function StatsPage({
                   <CardTitle>{t("leaderboard")}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Player</TableHead>
-                        <TableHead className="text-center">{t("gamesPlayed")}</TableHead>
-                        <TableHead className="text-center">{t("goals")}</TableHead>
-                        <TableHead className="text-center">{t("assists")}</TableHead>
-                        <TableHead className="text-center">{t("points")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {trainingPlayers.map((player, idx) => {
-                        const points = player.training_goals + player.training_assists;
-                        return (
-                          <TableRow key={player.player_id}>
-                            <TableCell className="font-medium text-muted-foreground">
-                              {idx + 1}
-                            </TableCell>
-                            <TableCell>
-                              <Link
-                                href={`/roster/${player.player_id}`}
-                                className="font-medium hover:text-primary transition-colors"
-                              >
-                                {player.first_name} {player.last_name}
-                              </Link>
-                            </TableCell>
-                            <TableCell className="text-center">{player.sessions_attended}</TableCell>
-                            <TableCell className="text-center font-semibold">
-                              {player.training_goals}
-                            </TableCell>
-                            <TableCell className="text-center">{player.training_assists}</TableCell>
-                            <TableCell className="text-center font-bold text-primary">
-                              {points}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  <PlayerStatsTable
+                    players={trainingRows}
+                    labels={{ ...statsLabels, appearances: t("sessionsAttended") }}
+                    positionLabel={tp}
+                    showPenalties={false}
+                  />
                 </CardContent>
               </Card>
             </div>

@@ -35,6 +35,15 @@ import {
 } from "@/lib/utils/datetime";
 import { updateGameStats } from "@/lib/utils/game-stats";
 import { isValidYouTubeUrl } from "@/lib/utils/youtube";
+import {
+    GoalEventsEditor,
+    createEmptyGoalEvent as createEmpty,
+    normalizeGoalEventsCount as normalizeCount,
+    normalizeGoalClock,
+    parseGameNotesPayload,
+    formatPlayerOption,
+    GOAL_PERIOD_VALUES,
+} from "./GoalEventsEditor";
 
 
 // --- Types ---
@@ -65,98 +74,10 @@ interface GameFormProps {
     isManagedByTournament?: boolean;
 }
 
-// --- Constants ---
+// --- Helpers (delegated to GoalEventsEditor, re-aliased for local use) ---
 
-const GOAL_PERIOD_VALUES: GoalPeriod[] = ["1", "2", "3", "OT", "SO"];
-
-// --- Helpers ---
-
-function createEmptyGoalEvent(): GoalEventInput {
-    return {
-        scorer_player_id: "",
-        assist_1_player_id: "",
-        assist_2_player_id: "",
-        period: "1",
-        goal_time: "",
-    };
-}
-
-function normalizeGoalClock(value: string): string {
-    const cleaned = value.trim();
-    if (!cleaned) return "";
-
-    const normalized = cleaned.replace(/\./g, ":");
-    if (!/^\d{1,2}:\d{2}$/.test(normalized)) return "";
-
-    const [minutesRaw, secondsRaw] = normalized.split(":");
-    const minutes = Number(minutesRaw);
-    const seconds = Number(secondsRaw);
-    if (Number.isNaN(minutes) || Number.isNaN(seconds) || seconds >= 60) return "";
-    return `${minutes}:${secondsRaw}`;
-}
-
-function normalizeGoalEventsCount(
-    events: GoalEventInput[],
-    goalsCount: number
-): GoalEventInput[] {
-    const target = Math.max(0, goalsCount);
-    const next = events.slice(0, target);
-    while (next.length < target) {
-        next.push(createEmptyGoalEvent());
-    }
-    return next;
-}
-
-function parseGameNotesPayload(notes: string | null): GameNotesPayload | null {
-    if (!notes) return null;
-
-    try {
-        const parsed = JSON.parse(notes) as Partial<GameNotesPayload>;
-        if (!parsed || typeof parsed !== "object") return null;
-
-        const normalizedEvents = Array.isArray(parsed.goal_events)
-            ? parsed.goal_events.map((event) => ({
-                scorer_player_id:
-                    typeof event?.scorer_player_id === "string" ? event.scorer_player_id : "",
-                assist_1_player_id:
-                    typeof event?.assist_1_player_id === "string" ? event.assist_1_player_id : "",
-                assist_2_player_id:
-                    typeof event?.assist_2_player_id === "string" ? event.assist_2_player_id : "",
-                period:
-                    typeof event?.period === "string" &&
-                        GOAL_PERIOD_VALUES.includes(event.period as GoalPeriod)
-                        ? (event.period as GoalPeriod)
-                        : "1",
-                goal_time:
-                    typeof event?.goal_time === "string" ? normalizeGoalClock(event.goal_time) : "",
-            }))
-            : [];
-
-        const goalieReport =
-            parsed.goalie_report &&
-                typeof parsed.goalie_report === "object" &&
-                typeof parsed.goalie_report.goalie_player_id === "string" &&
-                ["excellent", "good", "average", "bad"].includes(parsed.goalie_report.performance ?? "")
-                ? {
-                    goalie_player_id: parsed.goalie_report.goalie_player_id,
-                    performance: parsed.goalie_report.performance as GoaliePerformance,
-                }
-                : null;
-
-        return {
-            version: 1,
-            goal_events: normalizedEvents,
-            goalie_report: goalieReport,
-        };
-    } catch {
-        return null;
-    }
-}
-
-function formatPlayerOption(player: Profile) {
-    const number = player.jersey_number != null ? `#${player.jersey_number} ` : "";
-    return `${number}${player.first_name} ${player.last_name}`;
-}
+const createEmptyGoalEvent = createEmpty;
+const normalizeGoalEventsCount = normalizeCount;
 
 export function GameForm({
     initialData,
@@ -174,21 +95,6 @@ export function GameForm({
     const ta = useTranslations("admin");
 
     const supabase = useMemo(() => createClient(), []);
-
-    const GOALIE_PERFORMANCE_OPTIONS: { value: GoaliePerformance; label: string }[] = [
-        { value: "excellent", label: tg("goaliePerformance.excellent") },
-        { value: "good", label: tg("goaliePerformance.good") },
-        { value: "average", label: tg("goaliePerformance.average") },
-        { value: "bad", label: tg("goaliePerformance.bad") },
-    ];
-
-    const GOAL_PERIOD_OPTIONS: { value: GoalPeriod; label: string }[] = [
-        { value: "1", label: tg("period.1") },
-        { value: "2", label: tg("period.2") },
-        { value: "3", label: tg("period.3") },
-        { value: "OT", label: tg("period.OT") },
-        { value: "SO", label: tg("period.SO") },
-    ];
 
     // -- State --
     const [form, setForm] = useState<GameFormData>({
@@ -294,33 +200,6 @@ export function GameForm({
         setLineupPlayers(uniquePlayers);
         setLineupLoading(false);
     }, [supabase]);
-
-    function updateGoalEvent(
-        index: number,
-        field: keyof GoalEventInput,
-        value: string
-    ) {
-        setGoalEvents((prev) =>
-            prev.map((event, rowIndex) => {
-                if (rowIndex !== index) return event;
-
-                const nextEvent = { ...event, [field]: value };
-                if (field === "scorer_player_id" && value) {
-                    if (nextEvent.assist_1_player_id === value) nextEvent.assist_1_player_id = "";
-                    if (nextEvent.assist_2_player_id === value) nextEvent.assist_2_player_id = "";
-                }
-                if (field === "assist_1_player_id" && value && value === nextEvent.assist_2_player_id) {
-                    nextEvent.assist_2_player_id = "";
-                }
-                if (field === "assist_2_player_id" && value && value === nextEvent.assist_1_player_id) {
-                    nextEvent.assist_1_player_id = "";
-                }
-                return nextEvent;
-            })
-        );
-    }
-
-
 
     async function handleSubmit() {
         setSaving(true);
@@ -636,187 +515,15 @@ export function GameForm({
                         )}
                     </div>
 
-                    {teamGoals === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                            {tg("setScoreForGoals")}
-                        </p>
-                    ) : (
-                        <div className="space-y-3">
-                            {Array.from({ length: teamGoals }).map((_, index) => {
-                                const event = goalEvents[index] ?? createEmptyGoalEvent();
-                                return (
-                                    <div
-                                        key={`goal-event-${index}`}
-                                        className="grid gap-2 rounded-md border border-border/40 p-3 md:grid-cols-5"
-                                    >
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">{tg("goalNumber", { number: index + 1 })}</Label>
-                                            <Select
-                                                value={event.scorer_player_id || "__none__"}
-                                                onValueChange={(value) =>
-                                                    updateGoalEvent(
-                                                        index,
-                                                        "scorer_player_id",
-                                                        value === "__none__" ? "" : value
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger className="bg-background">
-                                                    <SelectValue placeholder={tg("selectPlayer")} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="__none__">{tg("selectPlayer")}</SelectItem>
-                                                    {availablePlayers.map((player) => (
-                                                        <SelectItem key={player.id} value={player.id}>
-                                                            {formatPlayerOption(player)}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">{tg("periodLabel")}</Label>
-                                            <Select
-                                                value={event.period}
-                                                onValueChange={(value) =>
-                                                    updateGoalEvent(index, "period", value as GoalPeriod)
-                                                }
-                                            >
-                                                <SelectTrigger className="bg-background">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {GOAL_PERIOD_OPTIONS.map((periodOption) => (
-                                                        <SelectItem key={periodOption.value} value={periodOption.value}>
-                                                            {periodOption.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">{tg("timeLabel")}</Label>
-                                            <Input
-                                                value={event.goal_time}
-                                                onChange={(e) =>
-                                                    updateGoalEvent(index, "goal_time", e.target.value)
-                                                }
-                                                className="bg-background"
-                                                placeholder={tg("timePlaceholder")}
-                                                inputMode="numeric"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">{tg("assist1Label")}</Label>
-                                            <Select
-                                                value={event.assist_1_player_id || "__none__"}
-                                                onValueChange={(value) =>
-                                                    updateGoalEvent(
-                                                        index,
-                                                        "assist_1_player_id",
-                                                        value === "__none__" ? "" : value
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger className="bg-background">
-                                                    <SelectValue placeholder={tg("noAssist")} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
-                                                    {availablePlayers
-                                                        .filter((player) => player.id !== event.scorer_player_id)
-                                                        .map((player) => (
-                                                            <SelectItem key={player.id} value={player.id}>
-                                                                {formatPlayerOption(player)}
-                                                            </SelectItem>
-                                                        ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">{tg("assist2Label")}</Label>
-                                            <Select
-                                                value={event.assist_2_player_id || "__none__"}
-                                                onValueChange={(value) =>
-                                                    updateGoalEvent(
-                                                        index,
-                                                        "assist_2_player_id",
-                                                        value === "__none__" ? "" : value
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger className="bg-background">
-                                                    <SelectValue placeholder={tg("noAssist")} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="__none__">{tg("noAssist")}</SelectItem>
-                                                    {availablePlayers
-                                                        .filter(
-                                                            (player) =>
-                                                                player.id !== event.scorer_player_id &&
-                                                                player.id !== event.assist_1_player_id
-                                                        )
-                                                        .map((player) => (
-                                                            <SelectItem key={player.id} value={player.id}>
-                                                                {formatPlayerOption(player)}
-                                                            </SelectItem>
-                                                        ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <div className="space-y-2 border-t border-border/40 pt-4">
-                        <Label>{tg("goalieAndPerformance")}</Label>
-                        <div className="grid gap-2 md:grid-cols-2">
-                            <Select
-                                value={goalieReport.goalie_player_id || "__none__"}
-                                onValueChange={(value) =>
-                                    setGoalieReport((prev) => ({
-                                        ...prev,
-                                        goalie_player_id: value === "__none__" ? "" : value,
-                                    }))
-                                }
-                            >
-                                <SelectTrigger className="bg-background">
-                                    <SelectValue placeholder={tg("selectGoalie")} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__none__">{tc("notSelected")}</SelectItem>
-                                    {goalieOptions.map((player) => (
-                                        <SelectItem key={player.id} value={player.id}>
-                                            {formatPlayerOption(player)}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            <Select
-                                value={goalieReport.performance}
-                                onValueChange={(value) =>
-                                    setGoalieReport((prev) => ({
-                                        ...prev,
-                                        performance: value as GoaliePerformance,
-                                    }))
-                                }
-                            >
-                                <SelectTrigger className="bg-background">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {GOALIE_PERFORMANCE_OPTIONS.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                    <GoalEventsEditor
+                        goalEvents={goalEvents}
+                        onGoalEventsChange={setGoalEvents}
+                        teamGoals={teamGoals}
+                        availablePlayers={availablePlayers}
+                        goalieReport={goalieReport}
+                        onGoalieReportChange={setGoalieReport}
+                        goalieOptions={goalieOptions}
+                    />
                 </div>
             )}
 
