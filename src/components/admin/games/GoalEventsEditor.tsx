@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { GripVertical, Plus, X } from "lucide-react";
 import {
