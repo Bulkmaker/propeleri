@@ -160,7 +160,7 @@
       "average": "Нормально",
       "bad": "Слабо"
     },
-    "goalsAndAssists": "Голы и ассисты (наша команда)",
+    "goalsAndAssists": "События",
     "goalNumber": "Гол #{number} - автор",
     "selectPlayer": "Выбрать игрока",
     "periodLabel": "Период",
@@ -215,6 +215,10 @@
     "scorerLabel": "Автор гола",
     "goalLabel": "Гол",
     "goalsSaved": "Голы сохранены!",
+    "penalties": "Штрафы",
+    "addPenalty": "Добавить штраф",
+    "penaltyMinutesShort": "мин",
+    "noPenalties": "Штрафов нет",
     "playerColumn": "Игрок"
   },
   "training": {
@@ -559,7 +563,9 @@
     "statsSaved": "Статистика сохранена",
     "playoffTeamsNote": "Для плей-офф команды можно оставить пустыми и заполнить позже.",
     "teamStats": "Статистика команды",
-    "noStatsYet": "Статистика игроков ещё недоступна"
+    "noStatsYet": "Статистика игроков ещё недоступна",
+    "shootout": "Буллиты",
+    "shootoutShort": "Б"
   },
   "schedule": {
     "title": "Расписание",

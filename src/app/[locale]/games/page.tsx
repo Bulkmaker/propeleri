@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GameMatchCard } from "@/components/matches/GameMatchCard";
 import { Swords, Award, Video } from "lucide-react";
-import type { Game, GameResult, GoalEventInput, Profile, Team, Tournament } from "@/types/database";
+import type { Game, GameResult, GoalEventInput, Profile, Team, Tournament, TournamentMatch } from "@/types/database";
 import { RESULT_COLORS, RESULT_BORDER_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { AdminEditButton } from "@/components/shared/AdminEditButton";
@@ -97,17 +97,22 @@ export default async function GamesPage({
   let allGames: Game[] = [];
   let allTournaments: Tournament[] = [];
   let teams: Team[] = [];
+  let tmatches: Pick<TournamentMatch, "game_id" | "shootout_winner" | "team_a_id" | "team_b_id">[] = [];
   let error: string | null = null;
 
   try {
     const supabase = await createClient();
-    const [gamesRes, tournamentsRes, teamsRes] = await Promise.all([
+    const [gamesRes, tournamentsRes, teamsRes, tmatchesRes] = await Promise.all([
       supabase.from("games").select("*").order("game_date", { ascending: false }),
       supabase
         .from("tournaments")
         .select("*")
         .order("start_date", { ascending: false }),
       supabase.from("teams").select("*"),
+      supabase
+        .from("tournament_matches")
+        .select("game_id, shootout_winner, team_a_id, team_b_id")
+        .not("game_id", "is", null),
     ]);
 
     if (gamesRes.error) throw gamesRes.error;
@@ -117,12 +122,26 @@ export default async function GamesPage({
     allGames = (gamesRes.data ?? []) as Game[];
     allTournaments = (tournamentsRes.data ?? []) as Tournament[];
     teams = (teamsRes.data ?? []) as Team[];
+    tmatches = (tmatchesRes.data ?? []) as Pick<TournamentMatch, "game_id" | "shootout_winner" | "team_a_id" | "team_b_id">[];
   } catch (err: unknown) {
     console.error("Error loading games page data:", err);
     error = err instanceof Error ? err.message : "Failed to load games";
   }
 
   const teamMap = new Map(teams.map((t) => [t.id, t]));
+
+  // Build shootout map: game_id -> "team" | "opponent" (relative to Propeleri)
+  const shootoutSideMap = new Map<string, "team" | "opponent">();
+  for (const tm of tmatches) {
+    if (!tm.game_id || !tm.shootout_winner) continue;
+    const teamA = tm.team_a_id ? teamMap.get(tm.team_a_id) : undefined;
+    const propIsTeamA = teamA?.is_propeleri ?? false;
+    if (propIsTeamA) {
+      shootoutSideMap.set(tm.game_id, tm.shootout_winner === "team_a" ? "team" : "opponent");
+    } else {
+      shootoutSideMap.set(tm.game_id, tm.shootout_winner === "team_b" ? "team" : "opponent");
+    }
+  }
 
   // Parse goal events and load scorer profiles
   const gameGoalEvents = new Map<string, GoalEventInput[]>();
@@ -255,6 +274,8 @@ export default async function GamesPage({
                         resultClassName={RESULT_COLORS[game.result as GameResult]}
                         borderColorClass={RESULT_BORDER_COLORS[game.result as GameResult]}
                         matchTimeLabel={tg("matchTime")}
+                        shootoutLabel={shootoutSideMap.has(game.id) ? tt("shootoutShort") : undefined}
+                        shootoutSide={shootoutSideMap.get(game.id)}
                         variant="poster"
                         badges={game.youtube_url ? (
                           <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">
@@ -326,6 +347,8 @@ export default async function GamesPage({
                       resultClassName={RESULT_COLORS[game.result as GameResult]}
                       borderColorClass={RESULT_BORDER_COLORS[game.result as GameResult]}
                       matchTimeLabel={tg("matchTime")}
+                      shootoutLabel={shootoutSideMap.has(game.id) ? tt("shootoutShort") : undefined}
+                      shootoutSide={shootoutSideMap.get(game.id)}
                       variant="poster"
                       badges={game.youtube_url ? (
                         <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 gap-1">

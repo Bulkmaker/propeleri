@@ -16,6 +16,7 @@ import type {
   Team,
   TrainingSession,
   TrainingSessionStatus,
+  TournamentMatch,
 } from "@/types/database";
 import { parseTrainingMatchData } from "@/lib/utils/training-match";
 import { formatInBelgrade } from "@/lib/utils/datetime";
@@ -57,6 +58,7 @@ type ScheduleItem = {
   status?: TrainingSessionStatus;
   location?: string;
   href: string;
+  shootoutSide?: "team" | "opponent";
 };
 
 function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
@@ -96,7 +98,7 @@ export default async function SchedulePage({
   const supabase = await createClient();
 
   // Get upcoming games
-  const [gamesRes, trainingsRes, teamsRes] = await Promise.all([
+  const [gamesRes, trainingsRes, teamsRes, tmatchesRes] = await Promise.all([
     supabase
       .from("games")
       .select("*")
@@ -106,13 +108,31 @@ export default async function SchedulePage({
       .select("*")
       .order("session_date", { ascending: true }),
     supabase.from("teams").select("*"),
+    supabase
+      .from("tournament_matches")
+      .select("game_id, shootout_winner, team_a_id, team_b_id")
+      .not("game_id", "is", null),
   ]);
 
   const games = (gamesRes.data ?? []) as Game[];
   const trainings = (trainingsRes.data ?? []) as TrainingSession[];
   const teams = (teamsRes.data ?? []) as Team[];
+  const tmatches = (tmatchesRes.data ?? []) as Pick<TournamentMatch, "game_id" | "shootout_winner" | "team_a_id" | "team_b_id">[];
 
   const teamMap = new Map(teams.map((t) => [t.id, t]));
+
+  // Build shootout map: game_id -> "team" | "opponent" (relative to Propeleri)
+  const shootoutSideMap = new Map<string, "team" | "opponent">();
+  for (const tm of tmatches) {
+    if (!tm.game_id || !tm.shootout_winner) continue;
+    const teamA = tm.team_a_id ? teamMap.get(tm.team_a_id) : undefined;
+    const propIsTeamA = teamA?.is_propeleri ?? false;
+    if (propIsTeamA) {
+      shootoutSideMap.set(tm.game_id, tm.shootout_winner === "team_a" ? "team" : "opponent");
+    } else {
+      shootoutSideMap.set(tm.game_id, tm.shootout_winner === "team_b" ? "team" : "opponent");
+    }
+  }
 
   const items: ScheduleItem[] = [
     ...games.map((game) => {
@@ -133,6 +153,7 @@ export default async function SchedulePage({
         result: game.result,
         location: game.location ?? undefined,
         href: `/games/${game.id}`,
+        shootoutSide: shootoutSideMap.get(game.id),
       };
     }),
     ...trainings.map((session) => {
@@ -212,6 +233,7 @@ export default async function SchedulePage({
 function ScheduleCard({ item }: { item: ScheduleItem }) {
   const tg = useTranslations("game");
   const tt = useTranslations("training");
+  const ttn = useTranslations("tournament");
   const dateLabel = formatInBelgrade(item.date, "sr-Latn", {
     weekday: "short",
     day: "numeric",
@@ -239,6 +261,8 @@ function ScheduleCard({ item }: { item: ScheduleItem }) {
         resultClassName={RESULT_COLORS[item.result as GameResult]}
         borderColorClass={RESULT_BORDER_COLORS[item.result as GameResult]}
         matchTimeLabel={tg("matchTime")}
+        shootoutLabel={item.shootoutSide ? ttn("shootoutShort") : undefined}
+        shootoutSide={item.shootoutSide}
         variant="poster"
       />
     );

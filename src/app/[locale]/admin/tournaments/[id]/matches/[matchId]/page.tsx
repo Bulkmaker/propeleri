@@ -62,6 +62,7 @@ type MatchFormState = {
   score_a: number;
   score_b: number;
   is_completed: boolean;
+  shootout_winner: "team_a" | "team_b" | null;
 };
 
 function toDateTimeLocalInput(value: string | null): string {
@@ -113,6 +114,7 @@ export default function TournamentMatchEditorPage() {
     score_a: 0,
     score_b: 0,
     is_completed: false,
+    shootout_winner: null,
   });
 
   const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
@@ -233,6 +235,7 @@ export default function TournamentMatchEditorPage() {
       score_a: loadedMatch.score_a,
       score_b: loadedMatch.score_b,
       is_completed: loadedMatch.is_completed,
+      shootout_winner: loadedMatch.shootout_winner,
     });
 
     if (!loadedMatch.game_id) {
@@ -356,6 +359,7 @@ export default function TournamentMatchEditorPage() {
         score_a: Math.max(0, form.score_a),
         score_b: Math.max(0, form.score_b),
         is_completed: form.is_completed,
+        shootout_winner: form.shootout_winner,
       })
       .eq("id", match.id);
 
@@ -492,32 +496,82 @@ export default function TournamentMatchEditorPage() {
 
                   {/* Score & Status */}
                   <div className="flex flex-col items-center gap-4 shrink-0">
-                    <div className="flex items-center gap-4">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.score_a}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            score_a: parseInt(event.target.value, 10) || 0,
-                          }))
-                        }
-                        className="w-20 h-16 text-center text-3xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
-                      />
-                      <span className="text-2xl font-bold text-muted-foreground">-</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.score_b}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            score_b: parseInt(event.target.value, 10) || 0,
-                          }))
-                        }
-                        className="w-20 h-16 text-center text-3xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
-                      />
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col items-center gap-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.score_a}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              score_a: parseInt(event.target.value, 10) || 0,
+                            }))
+                          }
+                          className="w-20 h-16 text-center text-3xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={form.shootout_winner === "team_a" ? "default" : "outline"}
+                          className={`text-[10px] h-6 px-2 ${form.shootout_winner === "team_a" ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
+                          disabled={form.shootout_winner === null && form.score_a !== form.score_b}
+                          onClick={() =>
+                            setForm((prev) => {
+                              if (prev.shootout_winner === "team_a") {
+                                return { ...prev, shootout_winner: null, score_a: Math.max(0, prev.score_a - 1) };
+                              }
+                              const wasB = prev.shootout_winner === "team_b";
+                              return {
+                                ...prev,
+                                shootout_winner: "team_a",
+                                score_a: prev.score_a + 1,
+                                score_b: wasB ? Math.max(0, prev.score_b - 1) : prev.score_b,
+                              };
+                            })
+                          }
+                        >
+                          {tt("shootoutShort")}
+                        </Button>
+                      </div>
+                      <span className="text-2xl font-bold text-muted-foreground mb-6">-</span>
+                      <div className="flex flex-col items-center gap-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.score_b}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              score_b: parseInt(event.target.value, 10) || 0,
+                            }))
+                          }
+                          className="w-20 h-16 text-center text-3xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={form.shootout_winner === "team_b" ? "default" : "outline"}
+                          className={`text-[10px] h-6 px-2 ${form.shootout_winner === "team_b" ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
+                          disabled={form.shootout_winner === null && form.score_a !== form.score_b}
+                          onClick={() =>
+                            setForm((prev) => {
+                              if (prev.shootout_winner === "team_b") {
+                                return { ...prev, shootout_winner: null, score_b: Math.max(0, prev.score_b - 1) };
+                              }
+                              const wasA = prev.shootout_winner === "team_a";
+                              return {
+                                ...prev,
+                                shootout_winner: "team_b",
+                                score_b: prev.score_b + 1,
+                                score_a: wasA ? Math.max(0, prev.score_a - 1) : prev.score_a,
+                              };
+                            })
+                          }
+                        >
+                          {tt("shootoutShort")}
+                        </Button>
+                      </div>
                     </div>
 
                     <Button

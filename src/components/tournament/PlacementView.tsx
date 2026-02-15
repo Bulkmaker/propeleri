@@ -10,6 +10,7 @@ interface Props {
   labels: {
     completed: string;
     playoffStage: string;
+    shootoutShort: string;
   };
 }
 
@@ -27,11 +28,16 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
         const winner =
           match.team_a_id &&
           match.team_b_id &&
-          match.is_completed &&
-          match.score_a !== match.score_b
-            ? match.score_a > match.score_b
+          match.is_completed
+            ? match.shootout_winner === "team_a"
               ? match.team_a_id
-              : match.team_b_id
+              : match.shootout_winner === "team_b"
+                ? match.team_b_id
+                : match.score_a !== match.score_b
+                  ? match.score_a > match.score_b
+                    ? match.team_a_id
+                    : match.team_b_id
+                  : null
             : null;
 
         return (
@@ -60,14 +66,26 @@ export function PlacementView({ matches, teamsMap, labels }: Props) {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-lg font-bold tabular-nums">
-                    {match.score_a}
-                  </span>
-                  <span className="text-muted-foreground">:</span>
-                  <span className="text-lg font-bold tabular-nums">
-                    {match.score_b}
-                  </span>
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="relative">
+                      <span className="text-lg font-bold tabular-nums">
+                        {match.score_a}
+                      </span>
+                      {match.shootout_winner === "team_a" && (
+                        <span className="absolute -top-2 -right-2.5 text-[8px] font-bold text-amber-400 bg-amber-500/15 px-0.5 rounded leading-tight">{labels.shootoutShort}</span>
+                      )}
+                    </span>
+                    <span className="text-muted-foreground">:</span>
+                    <span className="relative">
+                      <span className="text-lg font-bold tabular-nums">
+                        {match.score_b}
+                      </span>
+                      {match.shootout_winner === "team_b" && (
+                        <span className="absolute -top-2 -right-2.5 text-[8px] font-bold text-amber-400 bg-amber-500/15 px-0.5 rounded leading-tight">{labels.shootoutShort}</span>
+                      )}
+                    </span>
+                  </div>
                 </div>
                 <div
                   className={`text-left flex-1 ${

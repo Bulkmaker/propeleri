@@ -132,6 +132,14 @@ export default async function TournamentDetailPage({
     const propeleriScore = isPropeleriA ? match.score_a : match.score_b;
     const opponentScore = isPropeleriA ? match.score_b : match.score_a;
     if (propeleriScore == null || opponentScore == null) return "";
+    // Check shootout winner when scores are equal
+    if (match.shootout_winner) {
+      const propeleriIsTeamA = isPropeleriA;
+      const propeleriWon = propeleriIsTeamA
+        ? match.shootout_winner === "team_a"
+        : match.shootout_winner === "team_b";
+      return propeleriWon ? "border-green-500" : "border-red-500";
+    }
     if (propeleriScore > opponentScore) return "border-green-500";
     if (propeleriScore < opponentScore) return "border-red-500";
     return "border-yellow-500";
@@ -281,6 +289,8 @@ export default async function TournamentDetailPage({
                           resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
                           resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
                           borderColorClass={getPropeleriBorderColor(match, teamA, teamB)}
+                          shootoutLabel={match.shootout_winner ? tt("shootoutShort") : undefined}
+                          shootoutSide={match.shootout_winner === "team_a" ? "team" : match.shootout_winner === "team_b" ? "opponent" : undefined}
                           variant="tournament"
                           badges={
                             <>
@@ -330,6 +340,8 @@ export default async function TournamentDetailPage({
                           resultLabel={match.is_completed ? tt("completed") : tt("scheduled")}
                           resultClassName={match.is_completed ? "bg-green-600/20 text-green-400" : "bg-muted text-muted-foreground"}
                           borderColorClass={getPropeleriBorderColor(match, teamA, teamB)}
+                          shootoutLabel={match.shootout_winner ? tt("shootoutShort") : undefined}
+                          shootoutSide={match.shootout_winner === "team_a" ? "team" : match.shootout_winner === "team_b" ? "opponent" : undefined}
                           variant="tournament"
                           badges={
                             <>

@@ -27,6 +27,7 @@ import type {
     GoalPeriod,
     GoaliePerformance,
     GoalieReportInput,
+    PenaltyEventInput,
 } from "@/types/database";
 import {
     belgradeDateTimeLocalInputToUtcIso,
@@ -118,6 +119,7 @@ export function GameForm({
     const [lineupLoading, setLineupLoading] = useState(false);
 
     const [goalEvents, setGoalEvents] = useState<GoalEventInput[]>([]);
+    const [penaltyEvents, setPenaltyEvents] = useState<PenaltyEventInput[]>([]);
     const [goalieReport, setGoalieReport] = useState<GoalieReportInput>({
         goalie_player_id: "",
         performance: "average",
@@ -162,6 +164,7 @@ export function GameForm({
             const propeleriGoals = initialData.is_home ? initialData.home_score : initialData.away_score;
 
             setGoalEvents(normalizeGoalEventsCount(parsedGoalEvents, propeleriGoals));
+            setPenaltyEvents(parsedNotes?.penalty_events ?? []);
             setGoalieReport(
                 parsedNotes?.goalie_report ?? {
                     goalie_player_id: "",
@@ -239,11 +242,14 @@ export function GameForm({
                 }
                 : null;
 
+            const cleanedPenalties = penaltyEvents.filter((e) => e.player_id);
+
             const notesValue =
-                cleanedGoalEvents.length > 0 || cleanedGoalieReport
+                cleanedGoalEvents.length > 0 || cleanedPenalties.length > 0 || cleanedGoalieReport
                     ? JSON.stringify({
                         version: 1,
                         goal_events: cleanedGoalEvents,
+                        penalty_events: cleanedPenalties,
                         goalie_report: cleanedGoalieReport,
                     } as GameNotesPayload)
                     : null;
@@ -520,6 +526,8 @@ export function GameForm({
                         onGoalEventsChange={setGoalEvents}
                         teamGoals={teamGoals}
                         availablePlayers={availablePlayers}
+                        penaltyEvents={penaltyEvents}
+                        onPenaltyEventsChange={setPenaltyEvents}
                         goalieReport={goalieReport}
                         onGoalieReportChange={setGoalieReport}
                         goalieOptions={goalieOptions}

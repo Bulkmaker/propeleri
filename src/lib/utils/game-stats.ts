@@ -1,6 +1,6 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import type { GameNotesPayload, GoalEventInput, GameStats } from "@/types/database";
+import type { GameNotesPayload, GoalEventInput, PenaltyEventInput, GameStats } from "@/types/database";
 
 export async function updateGameStats(
     supabase: SupabaseClient,
@@ -10,31 +10,23 @@ export async function updateGameStats(
     if (!notesJson) return;
 
     let goalEvents: GoalEventInput[] = [];
+    let penaltyEvents: PenaltyEventInput[] = [];
     try {
         const parsed = JSON.parse(notesJson) as GameNotesPayload;
         if (parsed && Array.isArray(parsed.goal_events)) {
             goalEvents = parsed.goal_events;
+        }
+        if (parsed && Array.isArray(parsed.penalty_events)) {
+            penaltyEvents = parsed.penalty_events;
         }
     } catch (e) {
         console.error("Failed to parse game notes for stats update", e);
         return;
     }
 
-    // Fetch existing stats to know what to delete/update
-    // Actually easier to just calculate totals and upsert, and delete 0s
-    // But we also need to preserve penalty_minutes and plus_minus if they came from elsewhere? 
-    // The Admin panel previously handled goals/assists. Penalties/PlusMinus were in the same table.
-    // The Logic in previous page.tsx preserved existing penalties/plus_minus.
-
-    const { data: existingStats, error: existingStatsError } = await supabase
-        .from("game_stats")
-        .select("player_id, penalty_minutes, plus_minus")
-        .eq("game_id", gameId);
-
-    if (existingStatsError) throw existingStatsError;
-
     const goalsByPlayer = new Map<string, number>();
     const assistsByPlayer = new Map<string, number>();
+    const penaltiesByPlayer = new Map<string, number>();
 
     for (const event of goalEvents) {
         if (event.scorer_player_id) {
@@ -57,31 +49,43 @@ export async function updateGameStats(
         }
     }
 
-    const existingMap = new Map(
-        (existingStats ?? []).map((stat) => [stat.player_id as string, stat])
+    for (const event of penaltyEvents) {
+        if (event.player_id) {
+            penaltiesByPlayer.set(
+                event.player_id,
+                (penaltiesByPlayer.get(event.player_id) ?? 0) + event.minutes
+            );
+        }
+    }
+
+    // Fetch existing stats to handle deletions of rows no longer referenced
+    const { data: existingStats, error: existingStatsError } = await supabase
+        .from("game_stats")
+        .select("player_id")
+        .eq("game_id", gameId);
+
+    if (existingStatsError) throw existingStatsError;
+
+    const existingPlayerIds = new Set(
+        (existingStats ?? []).map((stat) => stat.player_id as string)
     );
 
     const candidatePlayerIds = new Set<string>([
-        ...existingMap.keys(),
+        ...existingPlayerIds,
         ...goalsByPlayer.keys(),
         ...assistsByPlayer.keys(),
+        ...penaltiesByPlayer.keys(),
     ]);
 
     const rowsToUpsert: Partial<GameStats>[] = [];
     const playerIdsToDelete: string[] = [];
 
     for (const playerId of candidatePlayerIds) {
-        const existing = existingMap.get(playerId);
         const goals = goalsByPlayer.get(playerId) ?? 0;
         const assists = assistsByPlayer.get(playerId) ?? 0;
+        const penaltyMinutes = penaltiesByPlayer.get(playerId) ?? 0;
 
-        // Preserve existing other stats or default to 0
-        const penaltyMinutes = Number(existing?.penalty_minutes ?? 0);
-        const plusMinus = Number(existing?.plus_minus ?? 0);
-
-        // If everything is 0, we can remove the row (unless we want to keep it for lineup purposes? 
-        // Lineup is game_lineups table. game_stats is for stats.)
-        if (goals === 0 && assists === 0 && penaltyMinutes === 0 && plusMinus === 0) {
+        if (goals === 0 && assists === 0 && penaltyMinutes === 0) {
             playerIdsToDelete.push(playerId);
             continue;
         }
@@ -92,7 +96,7 @@ export async function updateGameStats(
             goals,
             assists,
             penalty_minutes: penaltyMinutes,
-            plus_minus: plusMinus,
+            plus_minus: 0,
         });
     }
 

@@ -20,7 +20,7 @@ import {
 import { Exo_2 } from "next/font/google";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import type { Game, PlayerGameTotals, Team, TeamEvent, TrainingSession } from "@/types/database";
+import type { Game, PlayerGameTotals, Team, TeamEvent, TrainingSession, TournamentMatch } from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import type { GameResult } from "@/types/database";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
@@ -71,6 +71,7 @@ export default async function HomePage({
   const tc = await getTranslations("common");
   const tg = await getTranslations("game");
   const ttr = await getTranslations("training");
+  const ttn = await getTranslations("tournament");
   const localeTag = toIntlLocale(locale);
 
   const supabase = await createClient();
@@ -90,6 +91,7 @@ export default async function HomePage({
     { data: teamsData },
     { data: tournamentsData },
     { data: nextTrainingData },
+    { data: tmatchesData },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -140,6 +142,10 @@ export default async function HomePage({
       .gte("session_date", now.toISOString())
       .order("session_date", { ascending: true })
       .limit(1),
+    supabase
+      .from("tournament_matches")
+      .select("game_id, shootout_winner, team_a_id, team_b_id")
+      .not("game_id", "is", null),
   ]);
 
   const nextGame = (nextGameData?.[0] ?? null) as Game | null;
@@ -147,6 +153,20 @@ export default async function HomePage({
   const topScorers = (topScorersData ?? []) as PlayerGameTotals[];
   const teams = (teamsData ?? []) as Team[];
   const teamMap = new Map(teams.map((t) => [t.id, t]));
+  const tmatches = (tmatchesData ?? []) as Pick<TournamentMatch, "game_id" | "shootout_winner" | "team_a_id" | "team_b_id">[];
+
+  // Build shootout map: game_id -> "team" | "opponent" (relative to Propeleri)
+  const shootoutSideMap = new Map<string, "team" | "opponent">();
+  for (const tm of tmatches) {
+    if (!tm.game_id || !tm.shootout_winner) continue;
+    const teamA = tm.team_a_id ? teamMap.get(tm.team_a_id) : undefined;
+    const propIsTeamA = teamA?.is_propeleri ?? false;
+    if (propIsTeamA) {
+      shootoutSideMap.set(tm.game_id, tm.shootout_winner === "team_a" ? "team" : "opponent");
+    } else {
+      shootoutSideMap.set(tm.game_id, tm.shootout_winner === "team_b" ? "team" : "opponent");
+    }
+  }
 
   // Mix events, tournaments, and next training
   const rawEvents = (upcomingEventsData ?? []) as TeamEvent[];
@@ -396,6 +416,8 @@ export default async function HomePage({
                       opponentName={opponent?.name ?? "Unknown"}
                       opponentLogoUrl={opponent?.logo_url ?? null}
                       opponentCountry={opponent?.country ?? null}
+                      shootoutLabel={shootoutSideMap.has(game.id) ? ttn("shootoutShort") : undefined}
+                      shootoutSide={shootoutSideMap.get(game.id)}
                     />
                   );
                 })}
@@ -630,6 +652,8 @@ function ResultLine({
   opponentName,
   opponentLogoUrl,
   opponentCountry,
+  shootoutLabel,
+  shootoutSide,
 }: {
   game: Game;
   localeTag: string;
@@ -637,6 +661,8 @@ function ResultLine({
   opponentName: string;
   opponentLogoUrl: string | null;
   opponentCountry: string | null;
+  shootoutLabel?: string;
+  shootoutSide?: "team" | "opponent";
 }) {
   const dateLabel = formatInBelgrade(game.game_date, localeTag, {
     weekday: "short",
@@ -663,6 +689,8 @@ function ResultLine({
       timeLabel={timeLabel}
       resultLabel={resultLabel}
       resultClassName={RESULT_COLORS[game.result as GameResult]}
+      shootoutLabel={shootoutLabel}
+      shootoutSide={shootoutSide}
       variant="compact"
     />
   );

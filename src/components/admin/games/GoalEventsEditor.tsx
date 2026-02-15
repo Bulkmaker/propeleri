@@ -17,6 +17,7 @@ import type {
   GoaliePerformance,
   GoalieReportInput,
   GoalPeriod,
+  PenaltyEventInput,
   Profile,
 } from "@/types/database";
 
@@ -57,10 +58,15 @@ export function normalizeGoalClock(value: string): string {
 }
 
 export const GOAL_PERIOD_VALUES: GoalPeriod[] = ["1", "2", "3", "OT", "SO"];
+export const PENALTY_MINUTE_OPTIONS = [2, 4, 5, 10, 20];
+
+export function createEmptyPenaltyEvent(): PenaltyEventInput {
+  return { player_id: "", minutes: 2, period: "1" as GoalPeriod };
+}
 
 export function parseGameNotesPayload(
   notes: string | null,
-): { goal_events: GoalEventInput[]; goalie_report: GoalieReportInput | null } | null {
+): { goal_events: GoalEventInput[]; penalty_events: PenaltyEventInput[]; goalie_report: GoalieReportInput | null } | null {
   if (!notes) return null;
 
   try {
@@ -86,6 +92,19 @@ export function parseGameNotesPayload(
       }),
     );
 
+    const rawPenalties = Array.isArray(parsed.penalty_events) ? parsed.penalty_events : [];
+    const normalizedPenalties: PenaltyEventInput[] = rawPenalties.map(
+      (event: Record<string, unknown>) => ({
+        player_id: typeof event?.player_id === "string" ? event.player_id : "",
+        minutes: typeof event?.minutes === "number" ? event.minutes : 2,
+        period:
+          typeof event?.period === "string" &&
+          GOAL_PERIOD_VALUES.includes(event.period as GoalPeriod)
+            ? (event.period as GoalPeriod)
+            : "1",
+      }),
+    );
+
     const rawGoalie = parsed.goalie_report as Record<string, unknown> | null | undefined;
     const goalieReport =
       rawGoalie &&
@@ -100,7 +119,7 @@ export function parseGameNotesPayload(
           }
         : null;
 
-    return { goal_events: normalizedEvents, goalie_report: goalieReport };
+    return { goal_events: normalizedEvents, penalty_events: normalizedPenalties, goalie_report: goalieReport };
   } catch {
     return null;
   }
@@ -118,6 +137,8 @@ interface GoalEventsEditorProps {
   onGoalEventsChange: (events: GoalEventInput[]) => void;
   teamGoals: number;
   availablePlayers: Profile[];
+  penaltyEvents: PenaltyEventInput[];
+  onPenaltyEventsChange: (events: PenaltyEventInput[]) => void;
   goalieReport: GoalieReportInput;
   onGoalieReportChange: (report: GoalieReportInput) => void;
   goalieOptions: Profile[];
@@ -128,6 +149,8 @@ export function GoalEventsEditor({
   onGoalEventsChange,
   teamGoals,
   availablePlayers,
+  penaltyEvents,
+  onPenaltyEventsChange,
   goalieReport,
   onGoalieReportChange,
   goalieOptions,
@@ -223,6 +246,12 @@ export function GoalEventsEditor({
     return (
       <div className="space-y-4">
         <p className="text-xs text-muted-foreground">{tg("setScoreForGoals")}</p>
+        <PenaltySection
+          penaltyEvents={penaltyEvents}
+          onPenaltyEventsChange={onPenaltyEventsChange}
+          availablePlayers={availablePlayers}
+          tg={tg}
+        />
         <GoalieSection
           goalieReport={goalieReport}
           onGoalieReportChange={onGoalieReportChange}
@@ -384,6 +413,13 @@ export function GoalEventsEditor({
         })}
       </div>
 
+      <PenaltySection
+        penaltyEvents={penaltyEvents}
+        onPenaltyEventsChange={onPenaltyEventsChange}
+        availablePlayers={availablePlayers}
+        tg={tg}
+      />
+
       <GoalieSection
         goalieReport={goalieReport}
         onGoalieReportChange={onGoalieReportChange}
@@ -392,6 +428,134 @@ export function GoalEventsEditor({
         tc={tc}
         performanceOptions={GOALIE_PERFORMANCE_OPTIONS}
       />
+    </div>
+  );
+}
+
+// ─── penalty section ──────────────────────────────────────────────────────────
+
+function PenaltySection({
+  penaltyEvents,
+  onPenaltyEventsChange,
+  availablePlayers,
+  tg,
+}: {
+  penaltyEvents: PenaltyEventInput[];
+  onPenaltyEventsChange: (events: PenaltyEventInput[]) => void;
+  availablePlayers: Profile[];
+  tg: ReturnType<typeof useTranslations>;
+}) {
+  function addPenalty() {
+    onPenaltyEventsChange([...penaltyEvents, createEmptyPenaltyEvent()]);
+  }
+
+  function removePenalty(index: number) {
+    onPenaltyEventsChange(penaltyEvents.filter((_, i) => i !== index));
+  }
+
+  function updatePenalty(index: number, field: keyof PenaltyEventInput, value: string | number) {
+    onPenaltyEventsChange(
+      penaltyEvents.map((event, i) =>
+        i === index ? { ...event, [field]: value } : event
+      )
+    );
+  }
+
+  return (
+    <div className="space-y-2 border-t border-border/40 pt-4">
+      <div className="flex items-center justify-between">
+        <Label>{tg("penalties")}</Label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 px-2 text-xs"
+          onClick={addPenalty}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          {tg("addPenalty")}
+        </Button>
+      </div>
+
+      {penaltyEvents.length === 0 && (
+        <p className="text-xs text-muted-foreground">{tg("noPenalties")}</p>
+      )}
+
+      <div className="space-y-2">
+        {penaltyEvents.map((event, index) => (
+          <div
+            key={`penalty-${index}`}
+            className="rounded-md border border-border/40 p-3 flex flex-col md:flex-row md:items-center gap-2"
+          >
+            <div className="flex-1 min-w-0">
+              <Select
+                value={event.player_id || "__none__"}
+                onValueChange={(value) =>
+                  updatePenalty(index, "player_id", value === "__none__" ? "" : value)
+                }
+              >
+                <SelectTrigger className="bg-background h-9">
+                  <SelectValue placeholder={tg("selectPlayer")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{tg("selectPlayer")}</SelectItem>
+                  {availablePlayers.map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {formatPlayerOption(player)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-24 shrink-0">
+              <Select
+                value={String(event.minutes)}
+                onValueChange={(value) => updatePenalty(index, "minutes", Number(value))}
+              >
+                <SelectTrigger className="bg-background h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PENALTY_MINUTE_OPTIONS.map((min) => (
+                    <SelectItem key={min} value={String(min)}>
+                      {min} {tg("penaltyMinutesShort")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-20 shrink-0">
+              <Select
+                value={event.period}
+                onValueChange={(value) => updatePenalty(index, "period", value)}
+              >
+                <SelectTrigger className="bg-background h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GOAL_PERIOD_VALUES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      P{p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+              onClick={() => removePenalty(index)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

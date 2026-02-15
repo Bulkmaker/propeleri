@@ -21,6 +21,27 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
     date: "2026-02-15",
     category: "feature",
+    description: "Unos kazni (PIM) u događaje utakmice, kraći naziv kartice",
+    description_ru: "Ввод штрафных минут (PIM) в событиях матча, короче название вкладки",
+    description_en: "Penalty minutes (PIM) input in match events, shorter tab name",
+  },
+  {
+    date: "2026-02-15",
+    category: "feature",
+    description: "Podrska za penale (shootout) u turnirskim mečevima + SO oznaka na svim karticama rezultata",
+    description_ru: "Поддержка буллитов в турнирных матчах + SO метка на всех карточках результатов",
+    description_en: "Shootout support for tournament matches + SO indicator on all result cards",
+  },
+  {
+    date: "2026-02-15",
+    category: "refactor",
+    description: "Redizajn editora utakmice: spojeni tabovi, vizuelni skor, ogranicena sirina",
+    description_ru: "Редизайн редактора матча: объединённые вкладки, визуальный скорборд, ограниченная ширина",
+    description_en: "Match editor redesign: merged tabs, visual scoreboard, constrained width",
+  },
+  {
+    date: "2026-02-15",
+    category: "feature",
     description: "Statistika igraca na stranici turnira + univerzalna tabela statistike sa avatarima",
     description_ru: "Статистика игроков на странице турнира + универсальная таблица статистики с аватарами",
     description_en: "Player stats on tournament page + reusable stats table component with avatars",

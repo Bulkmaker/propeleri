@@ -26,6 +26,8 @@ type Props = {
   borderColorClass?: string;
   matchTimeLabel?: string;
   variant?: Variant;
+  shootoutLabel?: string;
+  shootoutSide?: "team" | "opponent";
   badges?: React.ReactNode;
   actions?: React.ReactNode;
   footer?: React.ReactNode;
@@ -48,6 +50,8 @@ export function GameMatchCard({
   resultClassName,
   borderColorClass,
   matchTimeLabel,
+  shootoutLabel,
+  shootoutSide,
   variant = "poster",
   badges,
   actions,
@@ -84,8 +88,16 @@ export function GameMatchCard({
                   {isPending ? (
                     <span className="text-muted-foreground text-xs mx-1">vs</span>
                   ) : (
-                    <span className="px-1.5 py-0.5 rounded bg-secondary text-xs font-bold tabular-nums shrink-0">
-                      {teamScore}:{opponentScore}
+                    <span className="inline-flex items-center gap-1 shrink-0">
+                      {shootoutLabel && shootoutSide === "team" && (
+                        <span className="text-[10px] font-bold text-amber-400">{shootoutLabel}</span>
+                      )}
+                      <span className="px-1.5 py-0.5 rounded bg-secondary text-xs font-bold tabular-nums">
+                        {teamScore}:{opponentScore}
+                      </span>
+                      {shootoutLabel && shootoutSide === "opponent" && (
+                        <span className="text-[10px] font-bold text-amber-400">{shootoutLabel}</span>
+                      )}
                     </span>
                   )}
                   <TeamAvatar
@@ -246,17 +258,29 @@ export function GameMatchCard({
                   <div className="flex flex-col items-center justify-center">
                     <div className="relative group p-4 md:p-0">
                       <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative flex items-center justify-center gap-3 md:gap-4 px-6 py-2 md:px-0 md:py-0 rounded-xl bg-background/5 md:bg-transparent border border-white/5 md:border-none backdrop-blur-sm md:backdrop-blur-none shadow-2xl md:shadow-none">
-                        <span className={cn("font-black tracking-tighter leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]", sizes.score)}>
-                          {teamScore}
-                        </span>
-                        <div className="flex flex-col items-center gap-0.5 opacity-40">
-                          <div className="h-1 w-1 rounded-full bg-white" />
-                          <div className="h-1 w-1 rounded-full bg-white" />
+                      <div className="relative flex flex-col items-center">
+                        <div className="flex items-center justify-center gap-3 md:gap-4 px-6 py-2 md:px-0 md:py-0 rounded-xl bg-background/5 md:bg-transparent border border-white/5 md:border-none backdrop-blur-sm md:backdrop-blur-none shadow-2xl md:shadow-none">
+                          <span className="relative inline-block">
+                            <span className={cn("font-black tracking-tighter leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]", sizes.score)}>
+                              {teamScore}
+                            </span>
+                            {shootoutLabel && shootoutSide === "team" && (
+                              <span className="absolute -top-1.5 -right-3 md:-top-2 md:-right-4 text-[9px] md:text-[11px] font-bold text-amber-400 bg-amber-500/15 px-1 rounded leading-tight">{shootoutLabel}</span>
+                            )}
+                          </span>
+                          <div className="flex flex-col items-center gap-0.5 opacity-40">
+                            <div className="h-1 w-1 rounded-full bg-white" />
+                            <div className="h-1 w-1 rounded-full bg-white" />
+                          </div>
+                          <span className="relative inline-block">
+                            <span className={cn("font-black tracking-tighter leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]", sizes.score)}>
+                              {opponentScore}
+                            </span>
+                            {shootoutLabel && shootoutSide === "opponent" && (
+                              <span className="absolute -top-1.5 -right-3 md:-top-2 md:-right-4 text-[9px] md:text-[11px] font-bold text-amber-400 bg-amber-500/15 px-1 rounded leading-tight">{shootoutLabel}</span>
+                            )}
+                          </span>
                         </div>
-                        <span className={cn("font-black tracking-tighter leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]", sizes.score)}>
-                          {opponentScore}
-                        </span>
                       </div>
                     </div>
                     <div className="mt-3 md:mt-1.5 flex flex-col md:gap-0.5">

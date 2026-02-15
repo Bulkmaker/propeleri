@@ -8,6 +8,7 @@ interface SimpleTournamentMatchProps {
   teamB: Team | null;
   dateLabel: string;
   timeLabel: string;
+  shootoutLabel?: string;
 }
 
 export function SimpleTournamentMatch({
@@ -16,6 +17,7 @@ export function SimpleTournamentMatch({
   teamB,
   dateLabel,
   timeLabel,
+  shootoutLabel,
 }: SimpleTournamentMatchProps) {
   const isCompleted = match.is_completed;
   const teamAName = teamA?.name || "TBD";
@@ -43,8 +45,22 @@ export function SimpleTournamentMatch({
           {/* Score or Time */}
           <div className="text-center shrink-0 px-4">
             {isCompleted ? (
-              <div className="text-2xl font-bold tabular-nums">
-                {match.score_a ?? 0}:{match.score_b ?? 0}
+              <div className="text-center">
+                <div className="text-2xl font-bold tabular-nums flex items-center justify-center gap-1">
+                  <span className="relative">
+                    <span>{match.score_a ?? 0}</span>
+                    {match.shootout_winner === "team_a" && shootoutLabel && (
+                      <span className="absolute -top-2 -right-3 text-[8px] font-bold text-amber-400 bg-amber-500/15 px-0.5 rounded leading-tight">{shootoutLabel}</span>
+                    )}
+                  </span>
+                  <span>:</span>
+                  <span className="relative">
+                    <span>{match.score_b ?? 0}</span>
+                    {match.shootout_winner === "team_b" && shootoutLabel && (
+                      <span className="absolute -top-2 -right-3 text-[8px] font-bold text-amber-400 bg-amber-500/15 px-0.5 rounded leading-tight">{shootoutLabel}</span>
+                    )}
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="space-y-1">

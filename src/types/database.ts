@@ -193,6 +193,7 @@ export interface TournamentMatch {
   score_b: number;
   match_date: string | null;
   is_completed: boolean;
+  shootout_winner: "team_a" | "team_b" | null;
   stage: TournamentMatchStage;
   bracket_round: number | null;
   bracket_position: number | null;
@@ -311,6 +312,12 @@ export interface GoalEventInput {
   goal_time: string;
 }
 
+export interface PenaltyEventInput {
+  player_id: string;
+  minutes: number;
+  period: GoalPeriod;
+}
+
 export interface GoalieReportInput {
   goalie_player_id: string;
   performance: GoaliePerformance;
@@ -319,5 +326,6 @@ export interface GoalieReportInput {
 export interface GameNotesPayload {
   version: 1;
   goal_events: GoalEventInput[];
+  penalty_events: PenaltyEventInput[];
   goalie_report: GoalieReportInput | null;
 }

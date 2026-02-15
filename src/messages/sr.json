@@ -160,7 +160,7 @@
       "average": "Prosecno",
       "bad": "Slabo"
     },
-    "goalsAndAssists": "Golovi i asistencije (nas tim)",
+    "goalsAndAssists": "Dogadjaji",
     "goalNumber": "Gol #{number} - strelac",
     "selectPlayer": "Izaberi igraca",
     "periodLabel": "Period",
@@ -215,6 +215,10 @@
     "scorerLabel": "Strelac",
     "goalLabel": "Gol",
     "goalsSaved": "Golovi sacuvani!",
+    "penalties": "Kazne",
+    "addPenalty": "Dodaj kaznu",
+    "penaltyMinutesShort": "min",
+    "noPenalties": "Nema kazni",
     "playerColumn": "Igrac"
   },
   "training": {
@@ -559,7 +563,9 @@
     "statsSaved": "Statistika sacuvana",
     "playoffTeamsNote": "Za plej-of timove mozete ostaviti praznim i popuniti kasnije.",
     "teamStats": "Statistika tima",
-    "noStatsYet": "Nema statistike igraca"
+    "noStatsYet": "Nema statistike igraca",
+    "shootout": "Penali",
+    "shootoutShort": "P"
   },
   "schedule": {
     "title": "Raspored",

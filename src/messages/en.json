@@ -160,7 +160,7 @@
       "average": "Average",
       "bad": "Poor"
     },
-    "goalsAndAssists": "Goals and assists (our team)",
+    "goalsAndAssists": "Events",
     "goalNumber": "Goal #{number} - scorer",
     "selectPlayer": "Select player",
     "periodLabel": "Period",
@@ -215,6 +215,10 @@
     "scorerLabel": "Scorer",
     "goalLabel": "Goal",
     "goalsSaved": "Goals saved!",
+    "penalties": "Penalties",
+    "addPenalty": "Add penalty",
+    "penaltyMinutesShort": "min",
+    "noPenalties": "No penalties",
     "playerColumn": "Player"
   },
   "training": {
@@ -559,7 +563,9 @@
     "statsSaved": "Stats saved",
     "playoffTeamsNote": "For playoff, teams can be left empty and filled later.",
     "teamStats": "Team Stats",
-    "noStatsYet": "No player statistics available yet"
+    "noStatsYet": "No player statistics available yet",
+    "shootout": "Shootout",
+    "shootoutShort": "SO"
   },
   "schedule": {
     "title": "Schedule",

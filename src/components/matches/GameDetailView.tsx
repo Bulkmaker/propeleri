@@ -146,12 +146,14 @@ export function GameDetailView({
 
   teams,
   tournaments,
+  tournamentMatch,
   locale,
 }: GameDetailViewProps) {
   const t = useTranslations("game");
   const ts = useTranslations("stats");
   const tp = useTranslations("positions");
   const tc = useTranslations("common");
+  const tt = useTranslations("tournament");
 
   const notes = useMemo(() => parseGameNotesPayload(game.notes), [game.notes]);
   const goalEvents = useMemo(() => notes?.goal_events ?? [], [notes]);
@@ -241,6 +243,17 @@ export function GameDetailView({
           resultClassName={RESULT_COLORS[game.result as GameResult]}
           borderColorClass={RESULT_BORDER_COLORS[game.result as GameResult]}
           matchTimeLabel={t("matchTime")}
+          shootoutLabel={tournamentMatch?.shootout_winner ? tt("shootoutShort") : undefined}
+          shootoutSide={
+            tournamentMatch?.shootout_winner
+              ? (() => {
+                  const teamA = tournamentMatch.team_a_id ? teams.find((t) => t.id === tournamentMatch.team_a_id) : undefined;
+                  const propIsTeamA = teamA?.is_propeleri ?? false;
+                  if (propIsTeamA) return tournamentMatch.shootout_winner === "team_a" ? "team" : "opponent";
+                  return tournamentMatch.shootout_winner === "team_b" ? "team" : "opponent";
+                })()
+              : undefined
+          }
           variant="poster"
           badges={
             <>

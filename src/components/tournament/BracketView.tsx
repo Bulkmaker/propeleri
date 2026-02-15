@@ -9,6 +9,7 @@ interface Props {
     completed: string;
     bracket: string;
     thirdPlace: string;
+    shootoutShort: string;
   };
 }
 
@@ -90,18 +91,23 @@ function BracketMatchCard({
 }: {
   match: TournamentMatch;
   teamsMap: Map<string, Team>;
-  labels: { completed: string };
+  labels: { completed: string; shootoutShort: string };
 }) {
   const teamA = match.team_a_id ? teamsMap.get(match.team_a_id) : undefined;
   const teamB = match.team_b_id ? teamsMap.get(match.team_b_id) : undefined;
   const winner =
     match.team_a_id &&
     match.team_b_id &&
-    match.is_completed &&
-    match.score_a !== match.score_b
-      ? match.score_a > match.score_b
+    match.is_completed
+      ? match.shootout_winner === "team_a"
         ? match.team_a_id
-        : match.team_b_id
+        : match.shootout_winner === "team_b"
+          ? match.team_b_id
+          : match.score_a !== match.score_b
+            ? match.score_a > match.score_b
+              ? match.team_a_id
+              : match.team_b_id
+            : null
       : null;
 
   return (
@@ -134,8 +140,11 @@ function BracketMatchCard({
               {teamA?.name ?? "TBD"}
             </span>
           </div>
-          <span className="text-sm font-bold tabular-nums ml-2">
+          <span className="text-sm font-bold tabular-nums ml-2 inline-flex items-center gap-1">
             {match.score_a}
+            {match.shootout_winner === "team_a" && (
+              <span className="text-[9px] font-bold text-amber-400">{labels.shootoutShort}</span>
+            )}
           </span>
         </div>
         <div
@@ -158,13 +167,16 @@ function BracketMatchCard({
               {teamB?.name ?? "TBD"}
             </span>
           </div>
-          <span className="text-sm font-bold tabular-nums ml-2">
+          <span className="text-sm font-bold tabular-nums ml-2 inline-flex items-center gap-1">
             {match.score_b}
+            {match.shootout_winner === "team_b" && (
+              <span className="text-[9px] font-bold text-amber-400">{labels.shootoutShort}</span>
+            )}
           </span>
         </div>
       </div>
       {match.is_completed && (
-        <div className="flex justify-center py-1 bg-card/20">
+        <div className="flex justify-center gap-1 py-1 bg-card/20">
           <Badge className="bg-green-600/20 text-green-400 text-[10px]">
             {labels.completed}
           </Badge>

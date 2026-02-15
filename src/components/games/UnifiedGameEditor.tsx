@@ -45,6 +45,7 @@ import type {
   GameNotesPayload,
   GoalEventInput,
   GoalieReportInput,
+  PenaltyEventInput,
   Profile,
   Team,
   Tournament,
@@ -64,6 +65,7 @@ type MatchFormState = {
   score_a: number;
   score_b: number;
   is_completed: boolean;
+  shootout_winner: "team_a" | "team_b" | null;
 };
 
 
@@ -117,9 +119,11 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     score_a: 0,
     score_b: 0,
     is_completed: false,
+    shootout_winner: null,
   });
 
   const [goalEvents, setGoalEvents] = useState<GoalEventInput[]>([]);
+  const [penaltyEvents, setPenaltyEvents] = useState<PenaltyEventInput[]>([]);
   const [goalieReport, setGoalieReport] = useState<GoalieReportInput>({
     goalie_player_id: "",
     performance: "average",
@@ -174,9 +178,11 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     const parsedNotes = parseGameNotesPayload(gameData.notes as string | null);
     if (parsedNotes) {
       setGoalEvents(parsedNotes.goal_events);
+      setPenaltyEvents(parsedNotes.penalty_events);
       setGoalieReport(parsedNotes.goalie_report ?? { goalie_player_id: "", performance: "average" });
     } else {
       setGoalEvents([]);
+      setPenaltyEvents([]);
       setGoalieReport({ goalie_player_id: "", performance: "average" });
     }
 
@@ -279,6 +285,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       score_a: matchData.score_a,
       score_b: matchData.score_b,
       is_completed: matchData.is_completed,
+      shootout_winner: matchData.shootout_winner,
     });
 
     // Загружаем lineup для определения goalEventPlayers
@@ -407,6 +414,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         score_a: Math.max(0, form.score_a),
         score_b: Math.max(0, form.score_b),
         is_completed: form.is_completed,
+        shootout_winner: form.shootout_winner,
       })
       .eq("id", match.id);
 
@@ -473,9 +481,12 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         goal_time: e.goal_time || "",
       }));
 
+    const cleanedPenalties = penaltyEvents.filter((e) => e.player_id);
+
     const payload: GameNotesPayload = {
       version: 1,
       goal_events: cleanedEvents,
+      penalty_events: cleanedPenalties,
       goalie_report: goalieReport.goalie_player_id ? goalieReport : null,
     };
 
@@ -555,6 +566,14 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         resultLabel={tg(`result.${game.result}`)}
         resultClassName={RESULT_COLORS[game.result as keyof typeof RESULT_COLORS]}
         matchTimeLabel={tg("matchTime")}
+        shootoutLabel={isTournamentMatch && form.shootout_winner ? tt("shootoutShort") : undefined}
+        shootoutSide={
+          form.shootout_winner
+            ? selectedTeamA?.is_propeleri
+              ? form.shootout_winner === "team_a" ? "team" : "opponent"
+              : form.shootout_winner === "team_b" ? "team" : "opponent"
+            : undefined
+        }
         variant="compact"
       />
 
@@ -562,16 +581,13 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         <TabsList className="mb-4 flex h-auto flex-wrap gap-1">
           <TabsTrigger value="match">{tt("matchAndTime")}</TabsTrigger>
           {isTournamentMatch && (
-            <>
-              <TabsTrigger value="opponent">{tt("opponent")}</TabsTrigger>
-              <TabsTrigger value="roster">{tt("roster")}</TabsTrigger>
-            </>
+            <TabsTrigger value="roster">{tt("roster")}</TabsTrigger>
           )}
           <TabsTrigger value="lineup">{tt("lineup")}</TabsTrigger>
           <TabsTrigger value="goals">{tg("goalsAndAssists")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="match" className="space-y-4">
+        <TabsContent value="match" className="space-y-4 max-w-4xl mx-auto">
           <Card className="border-border/40">
             <CardContent className="p-4 space-y-4">
               {!isTournamentMatch ? (
@@ -599,7 +615,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                         <SelectContent>
                           <SelectItem value="__none__">—</SelectItem>
                           {teams
-                            .filter(t => !t.is_propeleri) // Assuming Propeleri is not an opponent to itself usually
+                            .filter(t => !t.is_propeleri)
                             .map((team) => (
                               <SelectItem key={team.id} value={team.id}>
                                 {team.name}
@@ -730,334 +746,345 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                   </Button>
                 </>
               ) : (
-                // Турнирный матч - турнирные поля
+                // Турнирный матч — объединённая вкладка (матч + соперники)
                 <>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  {/* Team selectors */}
+                  <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] items-end">
                     <div className="space-y-2">
-                      <Label>{tt("stage")}</Label>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider">{tt("selectTeamA")}</Label>
                       <Select
-                        value={form.stage}
-                        disabled={!isTournamentMatch}
+                        value={form.team_a_id || "__none__"}
                         onValueChange={(value) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            stage: value as TournamentMatchStage,
-                            group_id: value === "group" ? prev.group_id : "",
-                          }))
+                          setForm((prev) => {
+                            const nextTeamAId = value === "__none__" ? "" : value;
+                            return {
+                              ...prev,
+                              team_a_id: nextTeamAId,
+                              team_b_id: prev.team_b_id === nextTeamAId ? "" : prev.team_b_id,
+                            };
+                          })
                         }
                       >
-                        <SelectTrigger>
-                          <SelectValue />
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder={tt("selectTeam")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="group">{tt("groupStage")}</SelectItem>
-                          <SelectItem value="playoff">{tt("playoffStage")}</SelectItem>
+                          <SelectItem value="__none__">—</SelectItem>
+                          {scopedTeams.map((team) => (
+                            <SelectItem key={team.id} value={team.id}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {form.stage === "group" ? (
-                      <div className="space-y-2">
-                        <Label>{tt("group")}</Label>
-                        <Select
-                          value={form.group_id || "__none__"}
-                          disabled={!isTournamentMatch}
-                          onValueChange={(value) =>
-                            setForm((prev) => {
-                              const nextGroupId = value === "__none__" ? "" : value;
-                              if (!nextGroupId) {
-                                return { ...prev, group_id: "" };
-                              }
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          team_a_id: prev.team_b_id,
+                          team_b_id: prev.team_a_id,
+                        }))
+                      }
+                    >
+                      <ArrowLeftRight className="h-4 w-4" />
+                    </Button>
 
-                              const allowedIds = new Set(
-                                groupTeams
-                                  .filter((entry) => entry.group_id === nextGroupId)
-                                  .map((entry) => entry.team_id)
-                              );
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider">{tt("selectTeamB")}</Label>
+                      <Select
+                        value={form.team_b_id || "__none__"}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            team_b_id: value === "__none__" ? "" : value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder={tt("selectTeam")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">—</SelectItem>
+                          {scopedTeamBOptions.map((team) => (
+                            <SelectItem key={team.id} value={team.id}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-                              let teamAId = prev.team_a_id;
-                              let teamBId = prev.team_b_id;
+                  {form.stage === "group" && form.group_id && scopedTeams.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {tt("noTeamsInGroup")}
+                    </p>
+                  )}
 
-                              if (allowedIds.size > 0) {
-                                if (teamAId && !allowedIds.has(teamAId)) teamAId = "";
-                                if (teamBId && !allowedIds.has(teamBId)) teamBId = "";
-                              }
+                  {/* Visual scoreboard */}
+                  <div className="flex items-center justify-center gap-4 sm:gap-6 py-4">
+                    <div className="flex flex-col items-center gap-2 min-w-0">
+                      <TeamAvatar
+                        name={selectedTeamA?.name ?? tt("teamA")}
+                        logoUrl={selectedTeamA?.logo_url}
+                        country={selectedTeamA?.country}
+                        size="md"
+                      />
+                      <p className="text-sm font-medium truncate max-w-[120px] text-center">
+                        {selectedTeamA?.name ?? tt("teamA")}
+                      </p>
+                    </div>
 
-                              if (teamAId && teamBId && teamAId === teamBId) {
-                                teamBId = "";
-                              }
-
-                              return {
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center gap-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={form.score_a}
+                            onChange={(event) =>
+                              setForm((prev) => ({
                                 ...prev,
-                                group_id: nextGroupId,
-                                team_a_id: teamAId,
-                                team_b_id: teamBId,
-                              };
-                            })
+                                score_a: parseInt(event.target.value, 10) || 0,
+                              }))
+                            }
+                            className="w-16 h-14 text-center text-2xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={form.shootout_winner === "team_a" ? "default" : "outline"}
+                            className={`text-[10px] h-6 px-2 ${form.shootout_winner === "team_a" ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
+                            disabled={form.shootout_winner === null && form.score_a !== form.score_b}
+                            onClick={() =>
+                              setForm((prev) => {
+                                if (prev.shootout_winner === "team_a") {
+                                  return { ...prev, shootout_winner: null, score_a: Math.max(0, prev.score_a - 1) };
+                                }
+                                const wasB = prev.shootout_winner === "team_b";
+                                return {
+                                  ...prev,
+                                  shootout_winner: "team_a",
+                                  score_a: prev.score_a + 1,
+                                  score_b: wasB ? Math.max(0, prev.score_b - 1) : prev.score_b,
+                                };
+                              })
+                            }
+                          >
+                            {tt("shootoutShort")}
+                          </Button>
+                        </div>
+                        <span className="text-xl font-bold text-muted-foreground mb-6">:</span>
+                        <div className="flex flex-col items-center gap-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={form.score_b}
+                            onChange={(event) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                score_b: parseInt(event.target.value, 10) || 0,
+                              }))
+                            }
+                            className="w-16 h-14 text-center text-2xl font-bold bg-background/50 border-2 focus-visible:ring-primary/50"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={form.shootout_winner === "team_b" ? "default" : "outline"}
+                            className={`text-[10px] h-6 px-2 ${form.shootout_winner === "team_b" ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
+                            disabled={form.shootout_winner === null && form.score_a !== form.score_b}
+                            onClick={() =>
+                              setForm((prev) => {
+                                if (prev.shootout_winner === "team_b") {
+                                  return { ...prev, shootout_winner: null, score_b: Math.max(0, prev.score_b - 1) };
+                                }
+                                const wasA = prev.shootout_winner === "team_a";
+                                return {
+                                  ...prev,
+                                  shootout_winner: "team_b",
+                                  score_b: prev.score_b + 1,
+                                  score_a: wasA ? Math.max(0, prev.score_a - 1) : prev.score_a,
+                                };
+                              })
+                            }
+                          >
+                            {tt("shootoutShort")}
+                          </Button>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={form.is_completed ? "default" : "outline"}
+                        className={`text-xs ${form.is_completed ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                        onClick={() =>
+                          setForm((prev) => ({ ...prev, is_completed: !prev.is_completed }))
+                        }
+                      >
+                        {form.is_completed ? (
+                          <>
+                            <Check className="mr-1 h-3 w-3" />
+                            {tt("completed")}
+                          </>
+                        ) : (
+                          tt("markCompleted")
+                        )}
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-2 min-w-0">
+                      <TeamAvatar
+                        name={selectedTeamB?.name ?? tt("teamB")}
+                        logoUrl={selectedTeamB?.logo_url}
+                        country={selectedTeamB?.country}
+                        size="md"
+                      />
+                      <p className="text-sm font-medium truncate max-w-[120px] text-center">
+                        {selectedTeamB?.name ?? tt("teamB")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Match metadata */}
+                  <div className="border-t border-border/40 pt-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>{tt("stage")}</Label>
+                        <Select
+                          value={form.stage}
+                          onValueChange={(value) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              stage: value as TournamentMatchStage,
+                              group_id: value === "group" ? prev.group_id : "",
+                            }))
                           }
                         >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">—</SelectItem>
-                            {groups.map((group) => (
-                              <SelectItem key={group.id} value={group.id}>
-                                {group.name}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value="group">{tt("groupStage")}</SelectItem>
+                            <SelectItem value="playoff">{tt("playoffStage")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                    ) : (
+
+                      {form.stage === "group" ? (
+                        <div className="space-y-2">
+                          <Label>{tt("group")}</Label>
+                          <Select
+                            value={form.group_id || "__none__"}
+                            onValueChange={(value) =>
+                              setForm((prev) => {
+                                const nextGroupId = value === "__none__" ? "" : value;
+                                if (!nextGroupId) {
+                                  return { ...prev, group_id: "" };
+                                }
+
+                                const allowedIds = new Set(
+                                  groupTeams
+                                    .filter((entry) => entry.group_id === nextGroupId)
+                                    .map((entry) => entry.team_id)
+                                );
+
+                                let teamAId = prev.team_a_id;
+                                let teamBId = prev.team_b_id;
+
+                                if (allowedIds.size > 0) {
+                                  if (teamAId && !allowedIds.has(teamAId)) teamAId = "";
+                                  if (teamBId && !allowedIds.has(teamBId)) teamBId = "";
+                                }
+
+                                if (teamAId && teamBId && teamAId === teamBId) {
+                                  teamBId = "";
+                                }
+
+                                return {
+                                  ...prev,
+                                  group_id: nextGroupId,
+                                  team_a_id: teamAId,
+                                  team_b_id: teamBId,
+                                };
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">—</SelectItem>
+                              {groups.map((group) => (
+                                <SelectItem key={group.id} value={group.id}>
+                                  {group.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label>{tt("label")}</Label>
+                          <Input
+                            value={form.bracket_label}
+                            onChange={(event) =>
+                              setForm((prev) => ({ ...prev, bracket_label: event.target.value }))
+                            }
+                            placeholder={tt("labelPlaceholder")}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2 mt-4">
                       <div className="space-y-2">
-                        <Label>{tt("label")}</Label>
+                        <Label>{tt("matchDate")}</Label>
                         <Input
-                          value={form.bracket_label}
-                          disabled={!isTournamentMatch}
+                          type="datetime-local"
+                          value={form.match_date}
                           onChange={(event) =>
-                            setForm((prev) => ({ ...prev, bracket_label: event.target.value }))
+                            setForm((prev) => ({ ...prev, match_date: event.target.value }))
                           }
-                          placeholder={tt("labelPlaceholder")}
                         />
                       </div>
-                    )}
-                  </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>{tt("matchDate")}</Label>
-                      <Input
-                        type="datetime-local"
-                        value={form.match_date}
-                        disabled={!isTournamentMatch}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, match_date: event.target.value }))
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>{tt("location")}</Label>
-                      <Input
-                        value={tournament?.location ?? ""}
-                        placeholder={tt("scorePlaceholder")}
-                        disabled
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {tt("locationFromTournament")}
-                      </p>
+                      <div className="space-y-2">
+                        <Label>{tt("location")}</Label>
+                        <Input
+                          value={tournament?.location ?? ""}
+                          placeholder={tt("scorePlaceholder")}
+                          disabled
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {tt("locationFromTournament")}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="space-y-2">
-                      <Label>{tt("score")} A</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.score_a}
-                        disabled={!isTournamentMatch}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            score_a: parseInt(event.target.value, 10) || 0,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>{tt("score")} B</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.score_b}
-                        disabled={!isTournamentMatch}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            score_b: parseInt(event.target.value, 10) || 0,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>{tt("completed")}</Label>
-                      <Button
-                        type="button"
-                        variant={form.is_completed ? "default" : "outline"}
-                        className="w-full"
-                        disabled={!isTournamentMatch}
-                        onClick={() =>
-                          setForm((prev) => ({ ...prev, is_completed: !prev.is_completed }))
-                        }
-                      >
-                        {form.is_completed ? tt("reopen") : tt("complete")}
-                      </Button>
-                    </div>
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={() => void saveMatch()}
+                      disabled={savingAction === "match"}
+                      className="min-w-[150px]"
+                    >
+                      {savingAction === "match" ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
+                      {tc("save")}
+                    </Button>
                   </div>
-
-                  <Button
-                    onClick={() => void saveMatch()}
-                    disabled={!isTournamentMatch || savingAction === "match"}
-                  >
-                    {savingAction === "match" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    {tc("save")}
-                  </Button>
                 </>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="opponent" className="space-y-4">
-          <Card className="border-border/40">
-            <CardContent className="p-4 space-y-4">
-              {!isTournamentMatch && (
-                <p className="text-sm text-muted-foreground border-l-4 border-yellow-500 pl-3 py-2">
-                  {tg("tournamentFieldsOnly")}
-                </p>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] items-end">
-                <div className="space-y-2">
-                  <Label>{tt("selectTeamA")}</Label>
-                  <Select
-                    value={form.team_a_id || "__none__"}
-                    disabled={!isTournamentMatch}
-                    onValueChange={(value) =>
-                      setForm((prev) => {
-                        const nextTeamAId = value === "__none__" ? "" : value;
-                        return {
-                          ...prev,
-                          team_a_id: nextTeamAId,
-                          team_b_id: prev.team_b_id === nextTeamAId ? "" : prev.team_b_id,
-                        };
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">—</SelectItem>
-                      {scopedTeams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10"
-                  disabled={!isTournamentMatch}
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      team_a_id: prev.team_b_id,
-                      team_b_id: prev.team_a_id,
-                    }))
-                  }
-                >
-                  <ArrowLeftRight className="h-4 w-4" />
-                </Button>
-
-                <div className="space-y-2">
-                  <Label>{tt("selectTeamB")}</Label>
-                  <Select
-                    value={form.team_b_id || "__none__"}
-                    disabled={!isTournamentMatch}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        team_b_id: value === "__none__" ? "" : value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">—</SelectItem>
-                      {scopedTeamBOptions.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {form.stage === "group" && form.group_id && scopedTeams.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {tt("noTeamsInGroup")}
-                </p>
-              )}
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-md border border-border/40 p-3">
-                  <div className="flex items-center gap-2">
-                    <TeamAvatar
-                      name={selectedTeamA?.name ?? tt("teamA")}
-                      logoUrl={selectedTeamA?.logo_url}
-                      country={selectedTeamA?.country}
-                      size="sm"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{selectedTeamA?.name ?? tc("notSelected")}</p>
-                      {selectedTeamA?.is_propeleri && (
-                        <Badge className="bg-primary/20 text-primary text-xs mt-1">{tt("propeleri")}</Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-md border border-border/40 p-3">
-                  <div className="flex items-center gap-2">
-                    <TeamAvatar
-                      name={selectedTeamB?.name ?? tt("teamB")}
-                      logoUrl={selectedTeamB?.logo_url}
-                      country={selectedTeamB?.country}
-                      size="sm"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{selectedTeamB?.name ?? tc("notSelected")}</p>
-                      {selectedTeamB?.is_propeleri && (
-                        <Badge className="bg-primary/20 text-primary text-xs mt-1">{tt("propeleri")}</Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                {hasPropeleriTeam
-                  ? tt("lineupAvailable")
-                  : tt("lineupNotAvailable")}
-              </p>
-
-              <Button
-                onClick={() => void saveMatch()}
-                disabled={!isTournamentMatch || savingAction === "match"}
-              >
-                {savingAction === "match" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                {tc("save")}
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1144,6 +1171,8 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                 onGoalEventsChange={setGoalEvents}
                 teamGoals={game ? (game.is_home ? game.home_score : game.away_score) : 0}
                 availablePlayers={goalEventPlayers}
+                penaltyEvents={penaltyEvents}
+                onPenaltyEventsChange={setPenaltyEvents}
                 goalieReport={goalieReport}
                 onGoalieReportChange={setGoalieReport}
                 goalieOptions={goalEventPlayers.filter(p => p.position === "goalie")}
