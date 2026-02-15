@@ -678,7 +678,7 @@ export default function AdminTournamentDetailPage() {
   async function updateMatchScore(matchId: string, scoreA: number, scoreB: number) {
     await supabase
       .from("tournament_matches")
-      .update({ score_a: scoreA, score_b: scoreB })
+      .update({ score_a: scoreA, score_b: scoreB, is_completed: true })
       .eq("id", matchId);
     await loadAll();
   }
@@ -804,7 +804,7 @@ export default function AdminTournamentDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="players" className="gap-2">
               <Check className="h-4 w-4" />
-              Players
+              {tt("players")}
             </TabsTrigger>
             <TabsTrigger value="groups" className="gap-2">
               <Layers className="h-4 w-4" />
@@ -1165,14 +1165,14 @@ export default function AdminTournamentDetailPage() {
 
           <TabsContent value="players">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Tournament roster</h2>
+              <h2 className="text-lg font-semibold">{tt("tournamentRoster")}</h2>
               <Badge className="bg-primary/20 text-primary">
-                {registeredPlayerIds.length} selected
+                {tt("selectedCount", { count: registeredPlayerIds.length })}
               </Badge>
             </div>
 
             {players.length === 0 ? (
-              <p className="text-muted-foreground text-center py-10">No active players found</p>
+              <p className="text-muted-foreground text-center py-10">{tt("noAvailablePlayers")}</p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {players.map((player) => {
@@ -1206,7 +1206,7 @@ export default function AdminTournamentDetailPage() {
             )}
 
             <p className="text-xs text-muted-foreground mt-3">
-              Only selected players will be shown first when setting lineup for tournament games.
+              {tt("playersHint")}
             </p>
           </TabsContent>
 
