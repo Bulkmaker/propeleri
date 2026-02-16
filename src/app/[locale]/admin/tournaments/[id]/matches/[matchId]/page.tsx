@@ -252,7 +252,7 @@ export default function TournamentMatchEditorPage() {
 
     setGame((gameRes.data ?? null) as Game | null);
     setLoading(false);
-  }, [matchId, supabase, tournamentId, tt]);
+  }, [matchId, router, supabase, tournamentId, tt]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

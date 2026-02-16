@@ -20,7 +20,15 @@ import {
 import { Exo_2 } from "next/font/google";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import type { Game, PlayerGameTotals, Team, TeamEvent, TrainingSession, TournamentMatch } from "@/types/database";
+import type {
+  Game,
+  PlayerGameTotals,
+  Team,
+  TeamEvent,
+  TrainingSession,
+  Tournament,
+  TournamentMatch,
+} from "@/types/database";
 import { RESULT_COLORS } from "@/lib/utils/constants";
 import type { GameResult } from "@/types/database";
 import { TeamAvatar } from "@/components/matches/TeamAvatar";
@@ -58,6 +66,18 @@ export async function generateMetadata({
 function toIntlLocale(locale: string) {
   return locale === "sr" ? "sr-Latn" : locale;
 }
+
+type HomeEventCard = {
+  id: string;
+  title: string;
+  title_ru: string | null;
+  title_en: string | null;
+  event_date: string | null;
+  location: string | null;
+  href: string;
+};
+
+type HomeUpcomingTournament = Pick<Tournament, "id" | "slug" | "name" | "start_date" | "location">;
 
 export default async function HomePage({
   params,
@@ -169,45 +189,48 @@ export default async function HomePage({
   }
 
   // Mix events, tournaments, and next training
-  const rawEvents = (upcomingEventsData ?? []) as TeamEvent[];
-  const rawTournaments = (tournamentsData ?? []) as any[];
+  const rawEvents = ((upcomingEventsData ?? []) as Pick<
+    TeamEvent,
+    "id" | "slug" | "title" | "title_ru" | "title_en" | "event_date" | "location"
+  >[]).map((event) => ({
+    id: event.id,
+    title: event.title,
+    title_ru: event.title_ru,
+    title_en: event.title_en,
+    event_date: event.event_date,
+    location: event.location,
+    href: `/events/${event.slug}`,
+  }));
+  const rawTournaments = (tournamentsData ?? []) as HomeUpcomingTournament[];
   const nextTraining = (nextTrainingData?.[0] ?? null) as TrainingSession | null;
 
-  const mixedEvents = [
-    ...rawEvents.map(e => ({ type: 'event' as const, data: { ...e, href: `/events/${e.slug}` }, date: e.event_date })),
-    ...rawTournaments.map(t => ({
-      type: 'tournament' as const,
-      data: {
-        id: t.id,
-        title: t.name,
-        title_ru: t.name,
-        title_en: t.name,
-        event_date: t.start_date,
-        location: t.location,
-        is_published: true,
-        href: `/tournaments/${t.slug}`
-      } as unknown as TeamEvent,
-      date: t.start_date
-    })),
-    ...(nextTraining ? [{
-      type: 'training' as const,
-      data: {
-        id: nextTraining.id,
-        title: nextTraining.title || ttr("session"),
-        title_ru: nextTraining.title || ttr("session"),
-        title_en: nextTraining.title || ttr("session"),
-        event_date: nextTraining.session_date,
-        location: nextTraining.location,
-        is_published: true,
-        href: `/training/${nextTraining.slug}`
-      } as unknown as TeamEvent,
-      date: nextTraining.session_date
-    }] : [])
-  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 4)
-    .map(item => item.data);
+  const trainingCards: HomeEventCard[] = nextTraining
+    ? [{
+      id: nextTraining.id,
+      title: nextTraining.title || ttr("session"),
+      title_ru: nextTraining.title || ttr("session"),
+      title_en: nextTraining.title || ttr("session"),
+      event_date: nextTraining.session_date,
+      location: nextTraining.location,
+      href: `/training/${nextTraining.slug}`,
+    }]
+    : [];
 
-  const upcomingEvents = mixedEvents;
+  const upcomingEvents: HomeEventCard[] = [
+    ...rawEvents,
+    ...rawTournaments.map((tournament) => ({
+      id: tournament.id,
+      title: tournament.name,
+      title_ru: tournament.name,
+      title_en: tournament.name,
+      event_date: tournament.start_date,
+      location: tournament.location,
+      href: `/tournaments/${tournament.slug}`,
+    })),
+    ...trainingCards,
+  ]
+    .sort((a, b) => new Date(a.event_date ?? 0).getTime() - new Date(b.event_date ?? 0).getTime())
+    .slice(0, 4);
 
 
   const nextGameOpponent = nextGame?.opponent_team_id ? teamMap.get(nextGame.opponent_team_id) ?? null : null;
@@ -700,7 +723,7 @@ function EventPoster({
   event,
   locale,
 }: {
-  event: TeamEvent;
+  event: HomeEventCard;
   locale: string;
 }) {
   const localeTag = toIntlLocale(locale);
@@ -713,7 +736,7 @@ function EventPoster({
         : event.title;
 
   return (
-    <Link href={(event as any).href || `/events/${event.id}`} className="club-event-poster">
+    <Link href={event.href} className="club-event-poster">
       {date && (
         <div className="club-event-poster__date">
           <span>{formatInBelgrade(date, localeTag, { month: "short" })}</span>

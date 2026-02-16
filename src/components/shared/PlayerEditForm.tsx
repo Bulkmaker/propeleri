@@ -352,7 +352,7 @@ export function PlayerEditForm({
             <div className="space-y-2">
               <Label>{tAdmin("loginPassword")}</Label>
               <Input
-                type="text"
+                type="password"
                 value={adminFields.password}
                 onChange={(e) => updateAdmin({ password: e.target.value })}
                 placeholder={tAdmin("credentialsOptional")}

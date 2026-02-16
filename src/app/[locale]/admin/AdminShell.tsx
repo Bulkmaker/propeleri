@@ -32,6 +32,57 @@ const adminLinks = [
     { href: "/admin/gallery", icon: Camera, key: "manageGallery" },
 ] as const;
 
+interface AdminSidebarContentProps {
+    isAdmin: boolean;
+    pathname: string;
+    t: (key: string) => string;
+    onNavigate?: () => void;
+}
+
+function AdminSidebarContent({
+    isAdmin,
+    pathname,
+    t,
+    onNavigate,
+}: AdminSidebarContentProps) {
+    return (
+        <div className="flex h-full flex-col gap-4">
+            <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+                <Link href="/" className="flex items-center gap-2 font-semibold" onClick={onNavigate}>
+                    <Image src="/logo.svg" alt="HC Propeleri" width={24} height={24} />
+                    <span className="">{t("dashboard")}</span>
+                </Link>
+            </div>
+            <div className="flex-1">
+                <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+                    {adminLinks.map((link) => {
+                        if (!isAdmin && link.key === "manageSeasons") {
+                            return null;
+                        }
+                        const isActive = pathname === link.href;
+                        return (
+                            <Link
+                                key={link.key}
+                                href={link.href}
+                                onClick={onNavigate}
+                                className={cn(
+                                    "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
+                                    isActive
+                                        ? "bg-muted text-primary"
+                                        : "text-muted-foreground"
+                                )}
+                            >
+                                <link.icon className="h-4 w-4" />
+                                {t(link.key)}
+                            </Link>
+                        );
+                    })}
+                </nav>
+            </div>
+        </div>
+    );
+}
+
 export default function AdminShell({
     children,
     isAdmin,
@@ -68,48 +119,16 @@ export default function AdminShell({
         };
     }, []);
 
-    const SidebarContent = () => (
-        <div className="flex h-full flex-col gap-4">
-            <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-                <Link href="/" className="flex items-center gap-2 font-semibold">
-                    <Image src="/logo.svg" alt="HC Propeleri" width={24} height={24} />
-                    <span className="">{t("dashboard")}</span>
-                </Link>
-            </div>
-            <div className="flex-1">
-                <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-                    {adminLinks.map((link) => {
-                        if (!isAdmin && link.key === "manageSeasons") {
-                            return null;
-                        }
-                        const isActive = pathname === link.href;
-                        return (
-                            <Link
-                                key={link.key}
-                                href={link.href}
-                                onClick={() => setOpen(false)}
-                                className={cn(
-                                    "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
-                                    isActive
-                                        ? "bg-muted text-primary"
-                                        : "text-muted-foreground"
-                                )}
-                            >
-                                <link.icon className="h-4 w-4" />
-                                {t(link.key)}
-                            </Link>
-                        );
-                    })}
-                </nav>
-            </div>
-        </div>
-    );
-
     return (
         <div className="flex h-full w-full overflow-hidden">
             {/* Desktop Sidebar */}
             <aside className="hidden border-r bg-muted/40 md:block fixed top-16 left-0 h-[calc(100vh-4rem)] w-[220px] lg:w-[280px] z-30 overflow-y-auto">
-                <SidebarContent />
+                <AdminSidebarContent
+                    isAdmin={isAdmin}
+                    pathname={pathname}
+                    t={t}
+                    onNavigate={() => setOpen(false)}
+                />
             </aside>
 
             {/* Mobile Header & Content */}
@@ -129,7 +148,12 @@ export default function AdminShell({
                         </SheetTrigger>
                         <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
                             <SheetTitle className="sr-only">{t("dashboard")}</SheetTitle>
-                            <SidebarContent />
+                            <AdminSidebarContent
+                                isAdmin={isAdmin}
+                                pathname={pathname}
+                                t={t}
+                                onNavigate={() => setOpen(false)}
+                            />
                         </SheetContent>
                     </Sheet>
                     <div className="flex items-center gap-2 font-semibold">

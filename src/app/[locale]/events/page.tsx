@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, MapPin, Megaphone } from "lucide-react";
+import { Award, CalendarDays, MapPin, Megaphone } from "lucide-react";
 import type { TeamEvent } from "@/types/database";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 
@@ -80,11 +80,9 @@ export default async function EventsPage({
     .limit(1)
     .single();
 
-  let allEvents = (events ?? []) as TeamEvent[];
-
-  // If we have a tournament, convert it to TeamEvent structure and add it
-  if (latestTournament) {
-    const tournamentEvent: TeamEvent = {
+  const baseEvents = (events ?? []) as TeamEvent[];
+  const tournamentEvents: TeamEvent[] = latestTournament
+    ? [{
       id: latestTournament.id,
       slug: latestTournament.slug,
       title: latestTournament.name,
@@ -101,17 +99,15 @@ export default async function EventsPage({
       is_published: true,
       created_by: null,
       created_at: latestTournament.created_at,
-      updated_at: latestTournament.created_at
-    };
+      updated_at: latestTournament.created_at,
+    }]
+    : [];
 
-    // merging tournament into events list and sorting by date
-    allEvents.push(tournamentEvent);
-    allEvents.sort((a, b) => {
-      const dateA = new Date(a.event_date || 0).getTime();
-      const dateB = new Date(b.event_date || 0).getTime();
-      return dateB - dateA;
-    });
-  }
+  const allEvents = [...baseEvents, ...tournamentEvents].sort((a, b) => {
+    const dateA = new Date(a.event_date || 0).getTime();
+    const dateB = new Date(b.event_date || 0).getTime();
+    return dateB - dateA;
+  });
 
 
   return (
@@ -232,6 +228,3 @@ export default async function EventsPage({
     </div>
   );
 }
-
-import { Award } from "lucide-react";
-

@@ -6,7 +6,7 @@ type AccessibilityFixtures = {
 };
 
 export const test = base.extend<AccessibilityFixtures>({
-  makeAxeBuilder: async ({ page }, use) => {
+  makeAxeBuilder: async ({ page }, applyFixture) => {
     const makeAxeBuilder = () =>
       new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -14,7 +14,7 @@ export const test = base.extend<AccessibilityFixtures>({
         // on dark backgrounds that are design decisions (brand orange, status
         // colors). Contrast is tracked via the dedicated report test instead.
         .disableRules(["color-contrast"]);
-    await use(makeAxeBuilder);
+    await applyFixture(makeAxeBuilder);
   },
 });
 

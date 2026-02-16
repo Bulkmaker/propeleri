@@ -1,42 +1,44 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test.describe('Internationalization (i18n)', () => {
-    test('should switch language from English to Serbian', async ({ page }) => {
-        await page.goto('/en');
-
-        // The locale switcher button has a Globe icon
+    async function openLocaleMenu(page: Page) {
         const localeSwitcher = page.locator('header button').filter({ has: page.locator('svg.lucide-globe') }).first();
-
-        // Wait for the dynamic component to load and be visible
         await expect(localeSwitcher).toBeVisible({ timeout: 15000 });
         await localeSwitcher.click();
+    }
 
-        // Look for Serbian (sr) option - "Srpski"
-        const srOption = page.getByRole('menuitem', { name: /srpski/i });
+    test('should switch language from English to Serbian', async ({ page }) => {
+        await page.goto('/');
+
+        await openLocaleMenu(page);
+        const enOption = page.getByRole('menuitem', { name: /english|английский|engleski/i });
+        await expect(enOption).toBeVisible();
+        await enOption.click();
+
+        const rosterEn = page.locator('nav').getByRole('link', { name: /roster/i }).first();
+        await expect(rosterEn).toBeVisible();
+
+        await openLocaleMenu(page);
+        const srOption = page.getByRole('menuitem', { name: /serbian|сербский|srpski/i });
         await expect(srOption).toBeVisible();
         await srOption.click();
 
-        // Since sr is default and prefix is 'as-needed', it might go to /
-        // Wait for URL change
-        await page.waitForURL(url => url.pathname === '/' || url.pathname === '/sr');
+        await expect(page).toHaveURL(/\/$/);
 
-        // Serbian translation for Roster is "Tim" in sr.json
-        const rosterLink = page.locator('nav').getByRole('link', { name: /Tim/i }).first();
-        await expect(rosterLink).toBeVisible();
+        const rosterSr = page.locator('nav').getByRole('link', { name: /tim/i }).first();
+        await expect(rosterSr).toBeVisible();
     });
 
     test('should switch to Russian', async ({ page }) => {
-        await page.goto('/en');
+        await page.goto('/');
 
-        const localeSwitcher = page.locator('header button').filter({ has: page.locator('svg.lucide-globe') }).first();
-        await expect(localeSwitcher).toBeVisible({ timeout: 15000 });
-        await localeSwitcher.click();
-
-        const ruOption = page.getByRole('menuitem', { name: /русский/i });
+        await openLocaleMenu(page);
+        const ruOption = page.getByRole('menuitem', { name: /russian|русский|ruski/i });
         await expect(ruOption).toBeVisible();
         await ruOption.click();
 
-        await page.waitForURL(/.*\/ru/);
-        await expect(page).toHaveURL(/.*\/ru/);
+        await expect(page).toHaveURL(/\/$/);
+        const rosterRu = page.locator('nav').getByRole('link', { name: /команда/i }).first();
+        await expect(rosterRu).toBeVisible();
     });
 });

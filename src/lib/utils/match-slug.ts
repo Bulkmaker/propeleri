@@ -169,9 +169,28 @@ export function buildAlbumSlug(title: string): string {
  * Check if a slug is unique in the given table.
  * Pass a Supabase client instance.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface SlugLookupResult {
+  data: { id: string }[] | null;
+}
+
+interface SlugLimitQuery {
+  limit(count: number): PromiseLike<SlugLookupResult>;
+}
+
+interface SlugEqQuery extends SlugLimitQuery {
+  neq(column: string, value: string): SlugLimitQuery;
+}
+
+interface SlugSupabaseClient {
+  from(table: string): {
+    select(columns: string): {
+      eq(column: string, value: string): SlugEqQuery;
+    };
+  };
+}
+
 export async function ensureUniqueSlug(
-  supabase: Record<string, any>,
+  supabase: SlugSupabaseClient,
   table: string,
   baseSlug: string,
   excludeId?: string
@@ -180,13 +199,12 @@ export async function ensureUniqueSlug(
   let suffix = 2;
 
   for (;;) {
-    let query = supabase.from(table).select("id").eq("slug", slug);
-    if (excludeId) query = query.neq("id", excludeId);
-    const { data } = await query.limit(1);
+    const query = supabase.from(table).select("id").eq("slug", slug);
+    const limitedQuery = excludeId ? query.neq("id", excludeId) : query;
+    const { data } = await limitedQuery.limit(1);
     if (!data || data.length === 0) return slug;
     slug = `${baseSlug}-${suffix}`;
     suffix++;
     if (suffix > 100) return `${baseSlug}-${Date.now()}`;
   }
 }
-
