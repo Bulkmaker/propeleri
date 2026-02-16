@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SkipToContentLink } from "@/components/layout/SkipToContentLink";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { createClient } from "@/lib/supabase/server";
 import { exo2 } from "@/lib/fonts";
@@ -47,12 +48,7 @@ export default async function LocaleLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <AuthProvider initialUser={user} initialProfile={profile}>
-            <a
-              href="#main-content"
-              className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-100 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm focus:font-medium"
-            >
-              Skip to content
-            </a>
+            <SkipToContentLink />
             <Header />
             <main
               id="main-content"

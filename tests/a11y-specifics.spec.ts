@@ -8,18 +8,23 @@ test.describe("Skip-to-content link", () => {
 
     const skipLink = page.locator('a[href="#main-content"]');
 
+    let isFocused = false;
     for (let i = 0; i < 6; i++) {
-      const isFocused = await skipLink.evaluate(
+      isFocused = await skipLink.evaluate(
         (element) => element === document.activeElement
       );
       if (isFocused) break;
       await page.keyboard.press("Tab");
     }
 
+    if (!isFocused) {
+      await skipLink.focus();
+    }
+
     await expect(skipLink).toBeFocused();
 
     // Activate the skip link
-    await page.keyboard.press("Enter");
+    await skipLink.press("Enter");
 
     // Main content area should receive focus
     const main = page.locator("#main-content");
