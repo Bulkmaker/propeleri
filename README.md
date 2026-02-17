@@ -79,4 +79,4 @@ src/
 
 ## Deployment
 
-Deploy on [Vercel](https://vercel.com/) with environment variables configured. The app uses `as-needed` locale prefix strategy — Serbian URLs have no prefix, other languages are prefixed (`/ru/...`, `/en/...`).
+Deploy on [Vercel](https://vercel.com/) with environment variables configured. The app uses `never` locale prefix strategy — all locales share the same URL paths (locale is resolved via middleware/cookie, not URL prefix).

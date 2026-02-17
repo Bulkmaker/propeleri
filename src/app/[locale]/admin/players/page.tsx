@@ -646,7 +646,7 @@ export default function AdminPlayersPage() {
                 <div className="space-y-2">
                   <Label>{t("loginPassword")}</Label>
                   <Input
-                    type="text"
+                    type="password"
                     value={createForm.password}
                     onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                     className="bg-background"

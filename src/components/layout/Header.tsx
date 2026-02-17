@@ -100,15 +100,17 @@ export function Header() {
 
         {/* Right side: locale switcher + auth + mobile menu */}
         <div className="flex items-center gap-2">
-          <Link href="/changelog" aria-label={t("changelog")}>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground hover:text-primary hover:bg-primary/10"
-            >
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("changelog")}
+            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+          >
+            <Link href="/changelog">
               <ScrollText className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <LocaleSwitcher />
 
           {/* Desktop auth */}

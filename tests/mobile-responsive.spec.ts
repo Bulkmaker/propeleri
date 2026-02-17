@@ -4,11 +4,11 @@ test.describe("Mobile Responsiveness", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   const pages = [
-    { name: "Home", path: "/en" },
-    { name: "Roster", path: "/en/roster" },
-    { name: "Stats", path: "/en/stats" },
-    { name: "Events", path: "/en/events" },
-    { name: "Login", path: "/en/login" },
+    { name: "Home", path: "/" },
+    { name: "Roster", path: "/roster" },
+    { name: "Stats", path: "/stats" },
+    { name: "Events", path: "/events" },
+    { name: "Login", path: "/login" },
   ];
 
   for (const { name, path } of pages) {
@@ -29,15 +29,15 @@ test.describe("Mobile Responsiveness", () => {
   test("login form inputs and button should be fully visible", async ({
     page,
   }) => {
-    await page.goto("/en/login");
+    await page.goto("/login");
 
-    const loginInput = page.getByLabel(/login|email/i);
+    const loginInput = page.locator("#login");
     await expect(loginInput).toBeVisible();
 
-    const passwordInput = page.getByLabel(/password/i);
+    const passwordInput = page.locator("#password");
     await expect(passwordInput).toBeVisible();
 
-    const submitButton = page.getByRole("button", { name: /log in|sign in/i });
+    const submitButton = page.locator('form button[type="submit"]');
     await expect(submitButton).toBeVisible();
 
     // Verify the button is not cut off by the viewport
@@ -49,7 +49,7 @@ test.describe("Mobile Responsiveness", () => {
   test("stats tables should scroll within container, not overflow page", async ({
     page,
   }) => {
-    await page.goto("/en/stats");
+    await page.goto("/stats");
     await page.waitForLoadState("networkidle");
 
     // Page body should not overflow

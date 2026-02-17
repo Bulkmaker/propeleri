@@ -24,11 +24,11 @@ async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("app_role, team_role")
+    .select("app_role, team_role, is_approved")
     .eq("id", user.id)
     .single();
 
-  if (!isAdminRole(profile)) {
+  if (!isAdminRole(profile) || !profile?.is_approved) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) } as const;
   }
 
@@ -69,9 +69,18 @@ function mapAuthAdminError(message: string) {
   return message;
 }
 
+function getClientIdentifier(request: NextRequest) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const cfIp = request.headers.get("cf-connecting-ip");
+  const userAgent = (request.headers.get("user-agent") ?? "unknown").slice(0, 120);
+  const ip = (forwardedFor?.split(",")[0] ?? realIp ?? cfIp ?? "unknown").trim().toLowerCase();
+  return `${ip}:${userAgent}`;
+}
+
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-  const { success, resetMs } = limiter.check(`post:${ip}`);
+  const clientId = getClientIdentifier(request);
+  const { success, resetMs } = limiter.check(`post:${clientId}`);
   if (!success) {
     return NextResponse.json(
       { error: "Too many requests" },
@@ -137,6 +146,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: mapAuthAdminError(createError.message) }, { status: 400 });
   }
 
+  const createdUserId = newUser.user?.id;
+  if (!createdUserId) {
+    return NextResponse.json({ error: "User was created without an id" }, { status: 500 });
+  }
+
   // Update profile with additional fields
   const { error: updateError } = await admin
     .from("profiles")
@@ -152,18 +166,26 @@ export async function POST(request: NextRequest) {
       is_approved: true,
       is_active: true,
     })
-    .eq("id", newUser.user.id);
+    .eq("id", createdUserId);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 400 });
+    const { error: rollbackError } = await admin.auth.admin.deleteUser(createdUserId);
+    const rollbackHint = rollbackError ? "Also failed to rollback auth user." : "";
+    const errorMessage = rollbackHint
+      ? `${updateError.message} ${rollbackHint}`
+      : updateError.message;
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ id: newUser.user.id, hasLogin: credentials.hasLogin });
+  return NextResponse.json({ id: createdUserId, hasLogin: credentials.hasLogin });
 }
 
 export async function PATCH(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-  const { success, resetMs } = limiter.check(`patch:${ip}`);
+  const clientId = getClientIdentifier(request);
+  const { success, resetMs } = limiter.check(`patch:${clientId}`);
   if (!success) {
     return NextResponse.json(
       { error: "Too many requests" },
@@ -210,14 +232,18 @@ export async function PATCH(request: NextRequest) {
   const normalizedEmail = loginToEmail(normalizedLogin);
   const admin = createAdminClient();
 
-  const { error: authError } = await admin.auth.admin.updateUserById(id, {
-    email: normalizedEmail,
-    password: normalizedPassword,
-    email_confirm: true,
-  });
+  const { data: currentProfile, error: currentProfileError } = await admin
+    .from("profiles")
+    .select("email, username")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (authError) {
-    return NextResponse.json({ error: mapAuthAdminError(authError.message) }, { status: 400 });
+  if (currentProfileError) {
+    return NextResponse.json({ error: currentProfileError.message }, { status: 400 });
+  }
+
+  if (!currentProfile) {
+    return NextResponse.json({ error: "Player profile not found" }, { status: 404 });
   }
 
   const { error: profileError } = await admin
@@ -227,6 +253,32 @@ export async function PATCH(request: NextRequest) {
 
   if (profileError) {
     return NextResponse.json({ error: profileError.message }, { status: 400 });
+  }
+
+  const { error: authError } = await admin.auth.admin.updateUserById(id, {
+    email: normalizedEmail,
+    password: normalizedPassword,
+    email_confirm: true,
+  });
+
+  if (authError) {
+    const { error: rollbackError } = await admin
+      .from("profiles")
+      .update({
+        email: currentProfile.email,
+        username: currentProfile.username,
+      })
+      .eq("id", id);
+
+    const rollbackHint = rollbackError ? "Also failed to rollback profile email/username." : "";
+    const authErrorMessage = mapAuthAdminError(authError.message);
+    const errorMessage = rollbackHint
+      ? `${authErrorMessage} ${rollbackHint}`
+      : authErrorMessage;
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ id, hasLogin: true });

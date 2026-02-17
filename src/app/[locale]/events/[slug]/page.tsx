@@ -24,6 +24,7 @@ export async function generateMetadata({
     .from("events")
     .select("title, title_ru, title_en, description, description_ru, description_en, cover_image_url")
     .eq("slug", slug)
+    .eq("is_published", true)
     .single();
 
   if (!event) return { title: "Event Not Found" };
@@ -100,6 +101,7 @@ export default async function EventDetailPage({
     .from("events")
     .select("*")
     .eq("slug", slug)
+    .eq("is_published", true)
     .single();
   const event = eventRaw as TeamEvent | null;
 

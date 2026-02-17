@@ -31,7 +31,12 @@ export function LocaleSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          data-testid="locale-switcher-trigger"
+          className="gap-1.5 text-muted-foreground hover:text-foreground"
+        >
           <Globe className="h-4 w-4" />
           <span className="text-xs uppercase">{locale}</span>
         </Button>
@@ -40,6 +45,8 @@ export function LocaleSwitcher() {
         {routing.locales.map((loc) => (
           <DropdownMenuItem
             key={loc}
+            data-testid={`locale-option-${loc}`}
+            data-locale={loc}
             onClick={() => handleLocaleChange(loc)}
             className={`cursor-pointer ${loc === locale ? "text-primary" : ""}`}
           >

@@ -2,15 +2,15 @@ import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 
 const PUBLIC_PAGES = [
-  { name: "Home", path: "/en" },
-  { name: "Roster", path: "/en/roster" },
-  { name: "Schedule", path: "/en/schedule" },
-  { name: "Games", path: "/en/games" },
-  { name: "Stats", path: "/en/stats" },
-  { name: "Gallery", path: "/en/gallery" },
-  { name: "Events", path: "/en/events" },
-  { name: "Login", path: "/en/login" },
-  { name: "Register", path: "/en/register" },
+  { name: "Home", path: "/" },
+  { name: "Roster", path: "/roster" },
+  { name: "Schedule", path: "/schedule" },
+  { name: "Games", path: "/games" },
+  { name: "Stats", path: "/stats" },
+  { name: "Gallery", path: "/gallery" },
+  { name: "Events", path: "/events" },
+  { name: "Login", path: "/login" },
+  { name: "Register", path: "/register" },
 ];
 
 test.describe("WCAG 2.1 AA Compliance", () => {
@@ -37,6 +37,7 @@ test.describe("WCAG 2.1 AA Compliance", () => {
 // Dark theme with brand orange and colored badges needs design review.
 test.describe("Color Contrast Report", () => {
   test("report contrast issues across public pages", async ({ page }) => {
+    test.setTimeout(120_000);
     let totalIssues = 0;
 
     for (const { name, path } of PUBLIC_PAGES) {

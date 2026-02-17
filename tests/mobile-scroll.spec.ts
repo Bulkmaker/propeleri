@@ -4,11 +4,9 @@ test.describe('Mobile Horizontal Scroll Navigation', () => {
     test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE size
 
     test('horizontal navigation should be visible and scrollable on mobile', async ({ page }) => {
-        // Navigate to English version explicitly
-        await page.goto('/en');
+        await page.goto('/');
 
-        // Locate the horizontal scroll container added in Header.tsx
-        const scrollNav = page.locator('nav.overflow-x-auto').filter({ hasText: /ROSTER/i });
+        const scrollNav = page.locator('nav.overflow-x-auto').first();
         await expect(scrollNav).toBeVisible();
 
         // Verify it is scrollable horizontally
@@ -18,17 +16,16 @@ test.describe('Mobile Horizontal Scroll Navigation', () => {
 
         expect(isScrollable).toBe(true);
 
-        // Get the last link and verify it can be scrolled to
-        const lastLink = scrollNav.getByRole('link', { name: /EVENTS/i });
+        const lastLink = scrollNav.locator('a[href="/events"]').first();
         await lastLink.scrollIntoViewIfNeeded();
         await expect(lastLink).toBeInViewport();
 
         await lastLink.click();
-        await expect(page).toHaveURL(/.*\/en\/events/);
+        await expect(page).toHaveURL(/\/events(?:\/)?$/);
     });
 
     test('mobile burger menu should still work', async ({ page }) => {
-        await page.goto('/en');
+        await page.goto('/');
 
         // Open sheet via burger menu
         // Header.tsx uses Button with Menu icon for SheetTrigger
@@ -39,8 +36,7 @@ test.describe('Mobile Horizontal Scroll Navigation', () => {
         const sheetContent = page.locator('[role="dialog"]');
         await expect(sheetContent).toBeVisible();
 
-        // Verify link inside sheet
-        const rosterLink = sheetContent.getByRole('link', { name: /ROSTER/i });
+        const rosterLink = sheetContent.locator('a[href="/roster"]').first();
         await expect(rosterLink).toBeVisible();
 
         // Close sheet

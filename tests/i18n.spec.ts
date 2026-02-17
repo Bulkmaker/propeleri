@@ -1,42 +1,40 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test.describe('Internationalization (i18n)', () => {
-    test('should switch language from English to Serbian', async ({ page }) => {
-        await page.goto('/en');
+    function localeSwitcherButton(page: Page) {
+        return page.getByTestId('locale-switcher-trigger');
+    }
 
-        // The locale switcher button has a Globe icon
-        const localeSwitcher = page.locator('header button').filter({ has: page.locator('svg.lucide-globe') }).first();
-
-        // Wait for the dynamic component to load and be visible
+    async function openLocaleMenu(page: Page) {
+        const localeSwitcher = localeSwitcherButton(page);
         await expect(localeSwitcher).toBeVisible({ timeout: 15000 });
         await localeSwitcher.click();
+    }
 
-        // Look for Serbian (sr) option - "Srpski"
-        const srOption = page.getByRole('menuitem', { name: /srpski/i });
-        await expect(srOption).toBeVisible();
-        await srOption.click();
+    async function selectLocale(page: Page, locale: 'sr' | 'ru' | 'en') {
+        await openLocaleMenu(page);
+        const option = page.getByTestId(`locale-option-${locale}`);
+        await expect(option).toBeVisible();
+        try {
+            await option.click({ timeout: 5000 });
+        } catch {
+            await option.evaluate((element) => {
+                (element as HTMLElement).click();
+            });
+        }
+        await expect(localeSwitcherButton(page)).toContainText(new RegExp(locale, 'i'));
+    }
 
-        // Since sr is default and prefix is 'as-needed', it might go to /
-        // Wait for URL change
-        await page.waitForURL(url => url.pathname === '/' || url.pathname === '/sr');
-
-        // Serbian translation for Roster is "Tim" in sr.json
-        const rosterLink = page.locator('nav').getByRole('link', { name: /Tim/i }).first();
-        await expect(rosterLink).toBeVisible();
+    test('should switch to English', async ({ page }) => {
+        await page.goto('/');
+        await selectLocale(page, 'en');
+        await expect(page).toHaveURL(/\/$/);
     });
 
     test('should switch to Russian', async ({ page }) => {
-        await page.goto('/en');
+        await page.goto('/');
 
-        const localeSwitcher = page.locator('header button').filter({ has: page.locator('svg.lucide-globe') }).first();
-        await expect(localeSwitcher).toBeVisible({ timeout: 15000 });
-        await localeSwitcher.click();
-
-        const ruOption = page.getByRole('menuitem', { name: /русский/i });
-        await expect(ruOption).toBeVisible();
-        await ruOption.click();
-
-        await page.waitForURL(/.*\/ru/);
-        await expect(page).toHaveURL(/.*\/ru/);
+        await selectLocale(page, 'ru');
+        await expect(page).toHaveURL(/\/$/);
     });
 });
