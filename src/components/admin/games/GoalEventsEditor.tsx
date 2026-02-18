@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -46,6 +47,7 @@ export function createEmptyGoalEvent(): GoalEventInput {
     assist_2_player_id: "",
     period: "1" as GoalPeriod,
     goal_time: "",
+    video_url: "",
   };
 }
 
@@ -105,6 +107,7 @@ export function parseGameNotesPayload(
             : "1",
         goal_time:
           typeof event?.goal_time === "string" ? normalizeGoalClock(event.goal_time) : "",
+        video_url: typeof event?.video_url === "string" ? event.video_url.trim() : "",
         ...(event?.is_penalty_shot === true ? { is_penalty_shot: true } : {}),
       }),
     );
@@ -502,6 +505,24 @@ function SortableGoalRow({
           </div>
         </div>
       )}
+
+      {/* Row 3: goal clock + optional video link */}
+      <div className="mt-1 grid gap-1.5 md:grid-cols-[110px_1fr]">
+        <Input
+          value={event.goal_time}
+          onChange={(e) => updateGoalEvent(index, "goal_time", e.target.value)}
+          placeholder={tg("goalTimePlaceholder")}
+          className="h-8 bg-background text-sm"
+          inputMode="numeric"
+        />
+        <Input
+          value={event.video_url ?? ""}
+          onChange={(e) => updateGoalEvent(index, "video_url", e.target.value)}
+          placeholder={tg("goalVideoUrlPlaceholder")}
+          className="h-8 bg-background text-sm"
+          type="url"
+        />
+      </div>
     </div>
   );
 }

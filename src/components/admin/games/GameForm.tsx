@@ -235,6 +235,7 @@ export function GameForm({
                         assist_2_player_id: assist2Id,
                         period: GOAL_PERIOD_VALUES.includes(event.period) ? event.period : "1",
                         goal_time: normalizeGoalClock(event.goal_time),
+                        video_url: event.video_url?.trim() || "",
                     };
                 })
                 .filter((event) => Boolean(event.scorer_player_id));

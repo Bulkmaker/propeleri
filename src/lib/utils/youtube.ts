@@ -30,3 +30,42 @@ export function getYouTubeEmbedUrl(videoId: string): string {
 export function isValidYouTubeUrl(url: string): boolean {
   return extractYouTubeVideoId(url) !== null;
 }
+
+/**
+ * Parse "m:ss" / "mm:ss" goal clock to seconds.
+ * Returns null for invalid values.
+ */
+export function goalClockToSeconds(value: string): number | null {
+  if (!value || typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.replace(/\./g, ":");
+  if (!/^\d{1,2}:\d{2}$/.test(normalized)) return null;
+
+  const [minutesRaw, secondsRaw] = normalized.split(":");
+  const minutes = Number(minutesRaw);
+  const seconds = Number(secondsRaw);
+  if (!Number.isInteger(minutes) || !Number.isInteger(seconds) || seconds >= 60) {
+    return null;
+  }
+  return minutes * 60 + seconds;
+}
+
+/**
+ * Build YouTube watch link with timestamp from goal clock.
+ * If parsing fails or URL is invalid, returns the original URL.
+ */
+export function withYouTubeTimestamp(url: string, goalClock: string): string {
+  if (!isValidYouTubeUrl(url)) return url;
+  const seconds = goalClockToSeconds(goalClock);
+  if (seconds == null) return url;
+
+  try {
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.set("t", `${seconds}s`);
+    return parsedUrl.toString();
+  } catch {
+    return url;
+  }
+}

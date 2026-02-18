@@ -41,6 +41,7 @@ import { SlugField } from "@/components/admin/SlugField";
 import { buildGameSlug } from "@/lib/utils/match-slug";
 import {
   GoalEventsEditor,
+  normalizeGoalClock,
   normalizeGoalEventsCount,
   parseGameNotesPayload,
 } from "@/components/admin/games/GoalEventsEditor";
@@ -452,6 +453,19 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       return;
     }
 
+    const { error: gameUpdateError } = await supabase
+      .from("games")
+      .update({
+        youtube_url: game?.youtube_url?.trim() || null,
+      })
+      .eq("id", gameId);
+
+    if (gameUpdateError) {
+      setError(gameUpdateError.message);
+      setSavingAction(null);
+      return;
+    }
+
     await loadAll();
     setSavingAction(null);
     setSuccess(tt("matchSaved"));
@@ -506,7 +520,8 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       .map((e) => ({
         ...e,
         period: e.period || "1",
-        goal_time: e.goal_time || "",
+        goal_time: normalizeGoalClock(e.goal_time || ""),
+        video_url: e.video_url?.trim() || "",
       }));
 
     const cleanedPenalties = penaltyEvents.filter((e) => e.player_id);
@@ -1130,6 +1145,19 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                           {tt("locationFromTournament")}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <Label>{tg("youtubeUrl")}</Label>
+                      <Input
+                        value={game.youtube_url || ""}
+                        onChange={(e) => setGame({ ...game, youtube_url: e.target.value || null })}
+                        placeholder={tg("youtubeUrlPlaceholder")}
+                        type="url"
+                      />
+                      {game.youtube_url && !isValidYouTubeUrl(game.youtube_url) && (
+                        <p className="text-xs text-destructive">{tg("youtubeUrlInvalid")}</p>
+                      )}
                     </div>
                   </div>
 

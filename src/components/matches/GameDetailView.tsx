@@ -34,6 +34,7 @@ import type { ReadOnlyPlayer } from "@/components/games/GameLineupEditor";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { YouTubeEmbed } from "@/components/shared/YouTubeEmbed";
 import { AdminEditButton } from "@/components/shared/AdminEditButton";
+import { withYouTubeTimestamp } from "@/lib/utils/youtube";
 
 type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
   line_number: number | null;
@@ -51,6 +52,7 @@ type GoalEventInput = {
   assist_2_player_id: string;
   period: GoalPeriod;
   goal_time: string;
+  video_url?: string;
 };
 
 type GoalPeriod = "1" | "2" | "3" | "OT" | "SO";
@@ -115,6 +117,7 @@ function parseGameNotesPayload(notes: string | null): GameNotesPayload | null {
             : "1",
         goal_time:
           typeof event?.goal_time === "string" ? normalizeGoalClock(event.goal_time) : "",
+        video_url: typeof event?.video_url === "string" ? event.video_url.trim() : "",
       }))
       : [];
 
@@ -204,9 +207,15 @@ export function GameDetailView({
         const assists = [event.assist_1_player_id, event.assist_2_player_id]
           .filter(Boolean)
           .map((id) => getPlayerName(id));
-        return { scorer, assists };
+        const goalTime = event.goal_time || "";
+        const videoUrl = event.video_url
+          ? event.video_url
+          : game.youtube_url && goalTime
+            ? withYouTubeTimestamp(game.youtube_url, goalTime)
+            : "";
+        return { scorer, assists, goalTime, videoUrl };
       });
-  }, [goalEvents, getPlayerName]);
+  }, [game.youtube_url, goalEvents, getPlayerName]);
 
   const opponentTeam = game.opponent_team || teams.find((t) => t.id === game.opponent_team_id);
   const opponentName = opponentTeam?.name ?? game.opponent ?? t("unknownOpponent");
@@ -281,6 +290,19 @@ export function GameDetailView({
                       <span className="ml-1 opacity-70">
                         ({goal.assists.join(", ")})
                       </span>
+                    )}
+                    {goal.goalTime && (
+                      <span className="ml-2 opacity-80">[{goal.goalTime}]</span>
+                    )}
+                    {goal.videoUrl && (
+                      <a
+                        href={goal.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-2 text-primary hover:underline"
+                      >
+                        {t("goalVideo")}
+                      </a>
                     )}
                   </p>
                 ))}

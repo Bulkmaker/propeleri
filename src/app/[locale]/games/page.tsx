@@ -10,10 +10,23 @@ import type { Game, GameResult, GoalEventInput, Profile, Team, Tournament, Tourn
 import { RESULT_COLORS, RESULT_BORDER_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { AdminEditButton } from "@/components/shared/AdminEditButton";
+import { withYouTubeTimestamp } from "@/lib/utils/youtube";
 
 import { PageHeader } from "@/components/ui/page-header";
 
 // Minimal server-side parser for goal events from game.notes
+function normalizeGoalClock(value: string): string {
+  const cleaned = value.trim();
+  if (!cleaned) return "";
+  const normalized = cleaned.replace(/\./g, ":");
+  if (!/^\d{1,2}:\d{2}$/.test(normalized)) return "";
+  const [minutesRaw, secondsRaw] = normalized.split(":");
+  const minutes = Number(minutesRaw);
+  const seconds = Number(secondsRaw);
+  if (Number.isNaN(minutes) || Number.isNaN(seconds) || seconds >= 60) return "";
+  return `${minutes}:${secondsRaw}`;
+}
+
 function parseGoalEvents(notes: string | null): GoalEventInput[] {
   if (!notes) return [];
   try {
@@ -25,7 +38,8 @@ function parseGoalEvents(notes: string | null): GoalEventInput[] {
         assist_1_player_id: typeof e?.assist_1_player_id === "string" ? e.assist_1_player_id : "",
         assist_2_player_id: typeof e?.assist_2_player_id === "string" ? e.assist_2_player_id : "",
         period: "1" as const,
-        goal_time: "",
+        goal_time: typeof e?.goal_time === "string" ? normalizeGoalClock(e.goal_time) : "",
+        video_url: typeof e?.video_url === "string" ? e.video_url.trim() : "",
       }))
       .filter((e) => Boolean(e.scorer_player_id));
   } catch {
@@ -36,6 +50,7 @@ function parseGoalEvents(notes: string | null): GoalEventInput[] {
 function buildGoalFooter(
   events: GoalEventInput[],
   playerMap: Map<string, Pick<Profile, "id" | "first_name" | "last_name" | "nickname" | "jersey_number">>,
+  gameVideoUrl: string | null,
 ) {
   if (events.length === 0) return null;
 
@@ -54,9 +69,15 @@ function buildGoalFooter(
         .filter(Boolean)
         .map((id) => getName(id))
         .filter(Boolean);
-      return { scorer, assists };
+      const goalTime = e.goal_time || "";
+      const videoUrl = e.video_url
+        ? e.video_url
+        : gameVideoUrl && goalTime
+          ? withYouTubeTimestamp(gameVideoUrl, goalTime)
+          : "";
+      return { scorer, assists, goalTime, videoUrl };
     })
-    .filter(Boolean) as { scorer: string; assists: string[] }[];
+    .filter(Boolean) as { scorer: string; assists: string[]; goalTime: string; videoUrl: string }[];
 
   if (lines.length === 0) return null;
   return lines;
@@ -256,7 +277,7 @@ export default async function GamesPage({
                     hour: "2-digit",
                     minute: "2-digit",
                   });
-                  const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap);
+                  const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap, game.youtube_url);
                   return (
                     <div key={game.id} className="relative max-w-4xl mx-auto">
                       <GameMatchCard
@@ -292,6 +313,10 @@ export default async function GamesPage({
                                 {g.assists.length > 0 && (
                                   <span className="ml-1 opacity-70">({g.assists.join(", ")})</span>
                                 )}
+                                {g.goalTime && (
+                                  <span className="ml-2 opacity-80">[{g.goalTime}]</span>
+                                )}
+                                {g.videoUrl && <span className="ml-2 text-primary/90">{tg("goalVideo")}</span>}
                               </p>
                             ))}
                           </div>
@@ -329,7 +354,7 @@ export default async function GamesPage({
                   hour: "2-digit",
                   minute: "2-digit",
                 });
-                const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap);
+                const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap, game.youtube_url);
                 return (
                   <div key={game.id} className="relative max-w-4xl mx-auto">
                     <GameMatchCard
@@ -365,6 +390,10 @@ export default async function GamesPage({
                               {g.assists.length > 0 && (
                                 <span className="ml-1 opacity-70">({g.assists.join(", ")})</span>
                               )}
+                              {g.goalTime && (
+                                <span className="ml-2 opacity-80">[{g.goalTime}]</span>
+                              )}
+                              {g.videoUrl && <span className="ml-2 text-primary/90">{tg("goalVideo")}</span>}
                             </p>
                           ))}
                         </div>
