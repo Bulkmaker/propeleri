@@ -278,12 +278,22 @@ export function GameForm({
                 throw new Error(tg("errorInvalidGameDate"));
             }
 
+            const slugValue =
+                form.slug.trim() ||
+                buildGameSlug({
+                    gameDate: form.game_date,
+                    opponentName: opponentTeam.name,
+                    isHome: form.is_home,
+                    tournamentName:
+                        tournaments.find((t) => t.id === (form.tournament_id || ""))?.name,
+                });
+
             // 4. Construct Payload
             const payload: Record<string, unknown> = {
                 season_id: form.season_id,
                 tournament_id: form.tournament_id || null,
                 opponent_team_id: opponentTeam.id,
-                slug: form.slug,
+                slug: slugValue,
                 location: form.location || null,
                 game_date: gameDateUtc,
                 is_home: form.is_home,
