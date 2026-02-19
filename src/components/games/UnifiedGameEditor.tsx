@@ -423,42 +423,56 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     setError("");
     setSuccess("");
 
-    const resolvedGroupId =
-      form.stage === "group"
-        ? form.group_id ||
-        (form.team_a_id && form.team_b_id
-          ? findGroupForMatch(form.team_a_id, form.team_b_id)
-          : null)
+    const hasMatchFieldChanges =
+      form.team_a_id !== (match.team_a_id ?? "") ||
+      form.team_b_id !== (match.team_b_id ?? "") ||
+      form.stage !== match.stage ||
+      form.group_id !== (match.group_id ?? "") ||
+      form.match_date !== toDateTimeLocalInput(match.match_date) ||
+      form.bracket_label !== (match.bracket_label ?? "") ||
+      form.score_a !== match.score_a ||
+      form.score_b !== match.score_b ||
+      form.is_completed !== match.is_completed ||
+      form.shootout_winner !== match.shootout_winner;
+
+    if (hasMatchFieldChanges) {
+      const resolvedGroupId =
+        form.stage === "group"
+          ? form.group_id ||
+          (form.team_a_id && form.team_b_id
+            ? findGroupForMatch(form.team_a_id, form.team_b_id)
+            : null)
+          : null;
+      const matchDateUtc = form.match_date
+        ? belgradeDateTimeLocalInputToUtcIso(form.match_date)
         : null;
-    const matchDateUtc = form.match_date
-      ? belgradeDateTimeLocalInputToUtcIso(form.match_date)
-      : null;
-    if (form.match_date && !matchDateUtc) {
-      setError(tt("errorInvalidDate"));
-      setSavingAction(null);
-      return;
-    }
+      if (form.match_date && !matchDateUtc) {
+        setError(tt("errorInvalidDate"));
+        setSavingAction(null);
+        return;
+      }
 
-    const { error: updateError } = await supabase
-      .from("tournament_matches")
-      .update({
-        team_a_id: form.team_a_id || null,
-        team_b_id: form.team_b_id || null,
-        stage: form.stage,
-        group_id: resolvedGroupId,
-        match_date: matchDateUtc,
-        bracket_label: form.bracket_label.trim() || null,
-        score_a: Math.max(0, form.score_a),
-        score_b: Math.max(0, form.score_b),
-        is_completed: form.is_completed,
-        shootout_winner: form.shootout_winner,
-      })
-      .eq("id", match.id);
+      const { error: updateError } = await supabase
+        .from("tournament_matches")
+        .update({
+          team_a_id: form.team_a_id || null,
+          team_b_id: form.team_b_id || null,
+          stage: form.stage,
+          group_id: resolvedGroupId,
+          match_date: matchDateUtc,
+          bracket_label: form.bracket_label.trim() || null,
+          score_a: Math.max(0, form.score_a),
+          score_b: Math.max(0, form.score_b),
+          is_completed: form.is_completed,
+          shootout_winner: form.shootout_winner,
+        })
+        .eq("id", match.id);
 
-    if (updateError) {
-      setError(updateError.message);
-      setSavingAction(null);
-      return;
+      if (updateError) {
+        setError(updateError.message);
+        setSavingAction(null);
+        return;
+      }
     }
 
     const { error: gameUpdateError } = await supabase
