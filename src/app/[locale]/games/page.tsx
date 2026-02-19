@@ -11,6 +11,8 @@ import { RESULT_COLORS, RESULT_BORDER_COLORS } from "@/lib/utils/constants";
 import { formatInBelgrade } from "@/lib/utils/datetime";
 import { AdminEditButton } from "@/components/shared/AdminEditButton";
 import { withYouTubeTimestamp } from "@/lib/utils/youtube";
+import { GoalScorersFooter } from "@/components/matches/GoalScorersFooter";
+import { NavigableCardLink } from "@/components/matches/NavigableCardLink";
 
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -279,9 +281,12 @@ export default async function GamesPage({
                   });
                   const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap, game.youtube_url);
                   return (
-                    <div key={game.id} className="relative max-w-4xl mx-auto">
+                    <NavigableCardLink
+                      key={game.id}
+                      href={`/games/${game.slug}`}
+                      className="relative max-w-4xl mx-auto"
+                    >
                       <GameMatchCard
-                        href={`/games/${game.slug}`}
                         teamName={tt("propeleri")}
                         opponentName={opponentName}
                         opponentLogoUrl={opponent?.logo_url || null}
@@ -304,29 +309,13 @@ export default async function GamesPage({
                             Video
                           </Badge>
                         ) : undefined}
-                        footer={goals ? (
-                          <div className="flex flex-col gap-1 items-start">
-                            {goals.map((g, i) => (
-                              <p key={`g-${i}`} className="text-xs md:text-sm text-muted-foreground">
-                                <span className="mr-1">&#127954;</span>
-                                <span className="font-semibold text-foreground">{g.scorer}</span>
-                                {g.assists.length > 0 && (
-                                  <span className="ml-1 opacity-70">({g.assists.join(", ")})</span>
-                                )}
-                                {g.goalTime && (
-                                  <span className="ml-2 opacity-80">[{g.goalTime}]</span>
-                                )}
-                                {g.videoUrl && <span className="ml-2 text-primary/90">{tg("goalVideo")}</span>}
-                              </p>
-                            ))}
-                          </div>
-                        ) : undefined}
+                        footer={goals ? <GoalScorersFooter items={goals} videoLabel={tg("goalVideo")} /> : undefined}
                       />
                       <AdminEditButton
                         href={`/admin/games/${game.id}`}
                         className="absolute top-2 right-2 z-10"
                       />
-                    </div>
+                    </NavigableCardLink>
                   );
                 })}
               </div>
@@ -356,9 +345,12 @@ export default async function GamesPage({
                 });
                 const goals = buildGoalFooter(gameGoalEvents.get(game.id) ?? [], playerMap, game.youtube_url);
                 return (
-                  <div key={game.id} className="relative max-w-4xl mx-auto">
+                  <NavigableCardLink
+                    key={game.id}
+                    href={`/games/${game.slug}`}
+                    className="relative max-w-4xl mx-auto"
+                  >
                     <GameMatchCard
-                      href={`/games/${game.slug}`}
                       teamName={tt("propeleri")}
                       opponentName={opponentName}
                       opponentLogoUrl={opponent?.logo_url || null}
@@ -381,29 +373,13 @@ export default async function GamesPage({
                           Video
                         </Badge>
                       ) : undefined}
-                      footer={goals ? (
-                        <div className="flex flex-col gap-1 items-start">
-                          {goals.map((g, i) => (
-                            <p key={`g-${i}`} className="text-xs md:text-sm text-muted-foreground">
-                              <span className="mr-1">&#127954;</span>
-                              <span className="font-semibold text-foreground">{g.scorer}</span>
-                              {g.assists.length > 0 && (
-                                <span className="ml-1 opacity-70">({g.assists.join(", ")})</span>
-                              )}
-                              {g.goalTime && (
-                                <span className="ml-2 opacity-80">[{g.goalTime}]</span>
-                              )}
-                              {g.videoUrl && <span className="ml-2 text-primary/90">{tg("goalVideo")}</span>}
-                            </p>
-                          ))}
-                        </div>
-                      ) : undefined}
+                      footer={goals ? <GoalScorersFooter items={goals} videoLabel={tg("goalVideo")} /> : undefined}
                     />
                     <AdminEditButton
                       href={`/admin/games/${game.id}`}
                       className="absolute top-2 right-2 z-10"
                     />
-                  </div>
+                  </NavigableCardLink>
                 );
               })}
             </div>

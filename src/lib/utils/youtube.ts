@@ -21,9 +21,57 @@ export function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
+function parseYouTubeTimestamp(value: string): number | null {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+
+  const unitMatch = trimmed.match(
+    /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/
+  );
+  if (!unitMatch) return null;
+
+  const hours = Number(unitMatch[1] ?? 0);
+  const minutes = Number(unitMatch[2] ?? 0);
+  const seconds = Number(unitMatch[3] ?? 0);
+  const total = hours * 3600 + minutes * 60 + seconds;
+  return total > 0 ? total : null;
+}
+
+/** Extract start time (seconds) from YouTube URL params/hash, if present. */
+export function extractYouTubeStartSeconds(url: string): number | null {
+  if (!url || typeof url !== "string") return null;
+
+  try {
+    const parsedUrl = new URL(url);
+    const fromParams =
+      parseYouTubeTimestamp(parsedUrl.searchParams.get("t") ?? "") ??
+      parseYouTubeTimestamp(parsedUrl.searchParams.get("start") ?? "");
+    if (fromParams != null) return fromParams;
+
+    const hash = parsedUrl.hash.startsWith("#")
+      ? parsedUrl.hash.slice(1)
+      : parsedUrl.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash);
+      const fromHash =
+        parseYouTubeTimestamp(hashParams.get("t") ?? "") ??
+        parseYouTubeTimestamp(hashParams.get("start") ?? "");
+      if (fromHash != null) return fromHash;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 /** Privacy-enhanced embed URL (youtube-nocookie.com). */
-export function getYouTubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube-nocookie.com/embed/${videoId}`;
+export function getYouTubeEmbedUrl(videoId: string, startSeconds?: number | null): string {
+  const base = `https://www.youtube-nocookie.com/embed/${videoId}`;
+  if (!startSeconds || startSeconds <= 0) return base;
+  return `${base}?start=${Math.floor(startSeconds)}`;
 }
 
 /** Check if a string is a valid YouTube URL. */

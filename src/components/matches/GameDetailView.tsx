@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Link } from "@/i18n/navigation";
 import { Shield, Swords } from "lucide-react";
 import { RESULT_COLORS, RESULT_BORDER_COLORS, POSITION_COLORS } from "@/lib/utils/constants";
 import type {
@@ -35,6 +34,7 @@ import { formatInBelgrade } from "@/lib/utils/datetime";
 import { YouTubeEmbed } from "@/components/shared/YouTubeEmbed";
 import { AdminEditButton } from "@/components/shared/AdminEditButton";
 import { withYouTubeTimestamp } from "@/lib/utils/youtube";
+import { GoalScorersFooter } from "@/components/matches/GoalScorersFooter";
 
 type GameLineupEntry = Omit<GameLineup, "line_number" | "slot_position" | "player"> & {
   line_number: number | null;
@@ -278,35 +278,10 @@ export function GameDetailView({
           }
           footer={
             scorersSummary && scorersSummary.length > 0 ? (
-              <div className="flex flex-col gap-1 items-start">
-                {scorersSummary.map((goal, i) => (
-                  <p
-                    key={`scorer-${i}`}
-                    className="text-xs md:text-sm text-muted-foreground"
-                  >
-                    <span className="mr-1">&#127954;</span>
-                    <span className="font-semibold text-foreground">{goal.scorer}</span>
-                    {goal.assists.length > 0 && (
-                      <span className="ml-1 opacity-70">
-                        ({goal.assists.join(", ")})
-                      </span>
-                    )}
-                    {goal.goalTime && (
-                      <span className="ml-2 opacity-80">[{goal.goalTime}]</span>
-                    )}
-                    {goal.videoUrl && (
-                      <a
-                        href={goal.videoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="ml-2 text-primary hover:underline"
-                      >
-                        {t("goalVideo")}
-                      </a>
-                    )}
-                  </p>
-                ))}
-              </div>
+              <GoalScorersFooter
+                items={scorersSummary}
+                videoLabel={t("goalVideo")}
+              />
             ) : undefined
           }
         />
