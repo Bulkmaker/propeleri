@@ -68,10 +68,20 @@ export function extractYouTubeStartSeconds(url: string): number | null {
 }
 
 /** Privacy-enhanced embed URL (youtube-nocookie.com). */
-export function getYouTubeEmbedUrl(videoId: string, startSeconds?: number | null): string {
-  const base = `https://www.youtube-nocookie.com/embed/${videoId}`;
-  if (!startSeconds || startSeconds <= 0) return base;
-  return `${base}?start=${Math.floor(startSeconds)}`;
+export function getYouTubeEmbedUrl(
+  videoId: string,
+  startSeconds?: number | null,
+  autoplay = false
+): string {
+  const url = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
+  if (startSeconds && startSeconds > 0) {
+    url.searchParams.set("start", String(Math.floor(startSeconds)));
+  }
+  if (autoplay) {
+    url.searchParams.set("autoplay", "1");
+    url.searchParams.set("playsinline", "1");
+  }
+  return url.toString();
 }
 
 /** Check if a string is a valid YouTube URL. */

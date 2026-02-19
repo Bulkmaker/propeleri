@@ -69,6 +69,7 @@ export function GoalScorersFooter({ items, videoLabel }: GoalScorersFooterProps)
               url={activeVideo.videoUrl}
               title={`${activeVideo.scorer} ${activeVideo.goalTime ?? ""}`.trim()}
               rounded={false}
+              autoplay
             />
           )}
         </DialogContent>

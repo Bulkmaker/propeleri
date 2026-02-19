@@ -13,7 +13,7 @@ function hasInteractiveAncestor(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return Boolean(
     target.closest(
-      'a,button,input,select,textarea,[role="button"],[role="link"],[data-prevent-card-nav="true"]'
+      'a,button,input,select,textarea,[role="button"],[data-prevent-card-nav="true"]'
     )
   );
 }

@@ -10,6 +10,7 @@ interface YouTubeEmbedProps {
   title?: string;
   className?: string;
   rounded?: boolean;
+  autoplay?: boolean;
 }
 
 export function YouTubeEmbed({
@@ -17,6 +18,7 @@ export function YouTubeEmbed({
   title = "YouTube video",
   className,
   rounded = true,
+  autoplay = false,
 }: YouTubeEmbedProps) {
   const videoId = extractYouTubeVideoId(url);
   const startSeconds = extractYouTubeStartSeconds(url);
@@ -29,7 +31,7 @@ export function YouTubeEmbed({
       style={{ paddingBottom: "56.25%" }}
     >
       <iframe
-        src={getYouTubeEmbedUrl(videoId, startSeconds)}
+        src={getYouTubeEmbedUrl(videoId, startSeconds, autoplay)}
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
