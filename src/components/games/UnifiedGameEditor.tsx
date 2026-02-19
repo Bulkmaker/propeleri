@@ -359,6 +359,10 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
   async function saveGameFields() {
     if (!game) return;
+    if (game.youtube_url && !isValidYouTubeUrl(game.youtube_url)) {
+      setError(tg("youtubeUrlInvalid"));
+      return;
+    }
 
     setSavingAction("match");
     setError("");
@@ -393,6 +397,10 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
   async function saveMatch() {
     if (!match) return;
+    if (game?.youtube_url && !isValidYouTubeUrl(game.youtube_url)) {
+      setError(tg("youtubeUrlInvalid"));
+      return;
+    }
 
     const hasBothTeams = Boolean(form.team_a_id && form.team_b_id);
     const hasOneTeamOnly = Boolean(form.team_a_id) !== Boolean(form.team_b_id);

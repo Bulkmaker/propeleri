@@ -213,6 +213,10 @@ export function GameForm({
         setError("");
 
         try {
+            if (form.youtube_url && !isValidYouTubeUrl(form.youtube_url)) {
+                throw new Error(tg("youtubeUrlInvalid"));
+            }
+
             // 1. Prepare Notes
             const cleanedGoalEvents = goalEvents
                 .slice(0, teamGoals)
