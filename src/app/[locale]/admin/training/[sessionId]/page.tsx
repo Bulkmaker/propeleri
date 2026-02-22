@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import type {
   Profile,
   Season,
+  TrainingFieldRole,
   TrainingGoalEvent,
   TrainingMatchData,
   TrainingSession,
@@ -60,6 +61,33 @@ function PlayerAvatar({ src, initials, className }: { src: string | null; initia
   );
 }
 
+function PlayerCardPhoto({
+  src,
+  initials,
+}: {
+  src: string | null;
+  initials: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="relative self-stretch shrink-0 w-11 overflow-hidden bg-muted">
+      {src && !failed ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-[11px] font-bold text-muted-foreground">
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
+
 const NONE_OPTION = "__none__";
 const SESSION_STATUSES: TrainingSessionStatus[] = ["planned", "completed", "canceled"];
 
@@ -74,6 +102,8 @@ interface TrainingRow {
   last_name: string;
   nickname: string | null;
   jersey_number: number | null;
+  position: Profile["position"];
+  can_play_goalie: boolean;
   avatar_url: string | null;
   default_training_team: TrainingTeam | null;
   attended: boolean;
@@ -87,6 +117,25 @@ interface GoalEventForm {
   team: TrainingTeam;
   scorer_player_id: string;
   assist_player_id: string;
+}
+
+function getDefaultRoleForPosition(position: TrainingRow["position"]): TrainingFieldRole | null {
+  if (position === "defense") return "defense";
+  if (position === "forward") return "forward";
+  return null;
+}
+
+function normalizeRoleOverrides(raw: unknown): Record<string, TrainingFieldRole> {
+  if (!raw || typeof raw !== "object") return {};
+  return Object.entries(raw as Record<string, unknown>).reduce<Record<string, TrainingFieldRole>>(
+    (acc, [playerId, value]) => {
+      if (value === "defense" || value === "forward") {
+        acc[playerId] = value;
+      }
+      return acc;
+    },
+    {}
+  );
 }
 
 function parseTrainingMatchData(raw: unknown): TrainingMatchData | null {
@@ -110,6 +159,9 @@ function parseTrainingMatchData(raw: unknown): TrainingMatchData | null {
         })
         .filter((event): event is TrainingGoalEvent => Boolean(event))
     : [];
+  const roleOverrides = normalizeRoleOverrides(
+    (value as { role_overrides?: unknown }).role_overrides
+  );
 
   return {
     version: 1,
@@ -130,6 +182,7 @@ function parseTrainingMatchData(raw: unknown): TrainingMatchData | null {
         ? value.team_b_goalie_player_id
         : null,
     goal_events: events,
+    role_overrides: roleOverrides,
   };
 }
 
@@ -160,8 +213,15 @@ function buildAutosaveSnapshot(
   matchScoreB: number,
   teamAGoalieId: string,
   teamBGoalieId: string,
-  goalEvents: GoalEventForm[]
+  goalEvents: GoalEventForm[],
+  roleOverrides: Record<string, TrainingFieldRole>
 ) {
+  const orderedRoleOverrides = Object.fromEntries(
+    Object.entries(roleOverrides).sort(([playerIdA], [playerIdB]) =>
+      playerIdA.localeCompare(playerIdB)
+    )
+  );
+
   return JSON.stringify({
     rows: [...rows]
       .map((row) => ({
@@ -182,6 +242,7 @@ function buildAutosaveSnapshot(
         scorer_player_id: event.scorer_player_id,
         assist_player_id: event.assist_player_id,
       })),
+      role_overrides: orderedRoleOverrides,
     },
   });
 }
@@ -267,17 +328,55 @@ function PlayerAttendanceCard({
   );
 }
 
+function PositionBadge({
+  position,
+  tp,
+}: {
+  position: TrainingRow["position"];
+  tp: ReturnType<typeof useTranslations>;
+}) {
+  if (!position) return null;
+
+  const config =
+    position === "forward"
+      ? {
+          label: "FW",
+          className: "border-orange-500/40 bg-orange-500/15 text-orange-300",
+        }
+      : position === "defense"
+        ? {
+            label: "DF",
+            className: "border-sky-500/40 bg-sky-500/15 text-sky-300",
+          }
+        : {
+            label: "GK",
+            className: "border-emerald-500/40 bg-emerald-500/15 text-emerald-300",
+          };
+
+  return (
+    <Badge
+      variant="outline"
+      title={tp(position)}
+      className={`h-5 px-1.5 text-[10px] font-semibold uppercase ${config.className}`}
+    >
+      {config.label}
+    </Badge>
+  );
+}
+
 // Compact row for attended players sidebar
 function AttendedPlayerRow({
   row,
   onToggleAttendance,
   onSetTeam,
   tt,
+  tp,
 }: {
   row: TrainingRow;
   onToggleAttendance: (playerId: string) => void;
   onSetTeam: (playerId: string, team: TrainingTeam | null) => void;
   tt: ReturnType<typeof useTranslations>;
+  tp: ReturnType<typeof useTranslations>;
 }) {
   return (
     <div
@@ -292,6 +391,7 @@ function AttendedPlayerRow({
       <span className="text-xs font-medium truncate flex-1 min-w-0">
         {formatPlayerName(row)}
       </span>
+      <PositionBadge position={row.position} tp={tp} />
       {row.is_guest && (
         <span className="text-[8px] rounded-full border border-amber-500/30 bg-amber-500/10 px-1 text-amber-400 shrink-0">
           {tt("guest")}
@@ -334,6 +434,183 @@ function AttendedPlayerRow({
   );
 }
 
+function TeamDistributionCard({
+  row,
+  onToggleAttendance,
+  tt,
+  tp,
+}: {
+  row: TrainingRow;
+  onToggleAttendance: (playerId: string) => void;
+  tt: ReturnType<typeof useTranslations>;
+  tp: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", row.player_id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className="group flex min-h-[62px] overflow-hidden rounded-md border border-border/40 bg-card/60 cursor-grab active:cursor-grabbing"
+    >
+      <PlayerCardPhoto
+        src={row.avatar_url}
+        initials={`${row.first_name?.[0] ?? ""}${row.last_name?.[0] ?? ""}`}
+      />
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{formatPlayerName(row)}</p>
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground">#{row.jersey_number ?? "—"}</span>
+            <PositionBadge position={row.position} tp={tp} />
+            {row.is_guest && (
+              <span className="text-[9px] rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-amber-400">
+                {tt("guest")}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onToggleAttendance(row.player_id)}
+          className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+          title={tt("absent")}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GoalieDropSlot({
+  label,
+  goalie,
+  onDropPlayer,
+  onClear,
+  tt,
+  tp,
+}: {
+  label: string;
+  goalie: TrainingRow | null;
+  onDropPlayer: (playerId: string) => void;
+  onClear: () => void;
+  tt: ReturnType<typeof useTranslations>;
+  tp: ReturnType<typeof useTranslations>;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const playerId = e.dataTransfer.getData("text/plain");
+        if (playerId) onDropPlayer(playerId);
+      }}
+      className={`rounded-md border px-2.5 py-2 transition-colors ${
+        dragOver
+          ? "border-primary/50 bg-primary/10"
+          : "border-border/50 bg-background/40"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex items-center gap-2">
+          <PlayerAvatar
+            src={goalie?.avatar_url ?? null}
+            initials={
+              goalie
+                ? `${goalie.first_name?.[0] ?? ""}${goalie.last_name?.[0] ?? ""}`
+                : "GK"
+            }
+            className="h-7 w-7"
+          />
+          <div className="min-w-0">
+            <p className="text-[11px] text-muted-foreground">{label}</p>
+            {goalie ? (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-sm font-medium truncate">{formatPlayerName(goalie)}</p>
+                <span className="text-[11px] text-muted-foreground">#{goalie.jersey_number ?? "—"}</span>
+                <PositionBadge position={goalie.position} tp={tp} />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/70">{tt("goalieDropHint")}</p>
+            )}
+          </div>
+        </div>
+        {goalie && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+            }}
+            className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+            title={tt("absent")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TeamRoleDropSlot({
+  label,
+  count,
+  onDropPlayer,
+  tt,
+  children,
+}: {
+  label: string;
+  count: number;
+  onDropPlayer: (playerId: string) => void;
+  tt: ReturnType<typeof useTranslations>;
+  children: React.ReactNode;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const playerId = e.dataTransfer.getData("text/plain");
+        if (playerId) onDropPlayer(playerId);
+      }}
+      className={`rounded-md border px-2.5 py-2 transition-colors ${
+        dragOver
+          ? "border-primary/50 bg-primary/10"
+          : "border-border/50 bg-background/40"
+      }`}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
+      </div>
+      {count > 0 ? (
+        children
+      ) : (
+        <p className="text-xs text-muted-foreground/70">{tt("roleDropHint")}</p>
+      )}
+    </div>
+  );
+}
+
 // Drop zone wrapper for team groups in sidebar
 function TeamDropZone({
   team,
@@ -370,8 +647,8 @@ export default function TrainingStatsEntryPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
   const tc = useTranslations("common");
-  const ts = useTranslations("stats");
   const tt = useTranslations("training");
+  const tp = useTranslations("positions");
   const ta = useTranslations("admin");
   const tg = useTranslations("game");
 
@@ -403,6 +680,7 @@ export default function TrainingStatsEntryPage() {
   const [matchScoreB, setMatchScoreB] = useState(0);
   const [teamAGoalieId, setTeamAGoalieId] = useState("");
   const [teamBGoalieId, setTeamBGoalieId] = useState("");
+  const [roleOverrides, setRoleOverrides] = useState<Record<string, TrainingFieldRole>>({});
   const [goalEvents, setGoalEvents] = useState<GoalEventForm[]>([]);
 
   const supabase = useMemo(() => createClient(), []);
@@ -437,6 +715,8 @@ export default function TrainingStatsEntryPage() {
           last_name: p.last_name,
           nickname: p.nickname,
           jersey_number: p.jersey_number,
+          position: p.position,
+          can_play_goalie: p.can_play_goalie ?? false,
           avatar_url: p.avatar_url,
           default_training_team: p.default_training_team,
           attended: e?.attended ?? false,
@@ -471,6 +751,7 @@ export default function TrainingStatsEntryPage() {
         setMatchScoreB(parsedMatch.team_b_score);
         setTeamAGoalieId(parsedMatch.team_a_goalie_player_id ?? "");
         setTeamBGoalieId(parsedMatch.team_b_goalie_player_id ?? "");
+        setRoleOverrides(parsedMatch.role_overrides ?? {});
         setGoalEvents(
           normalizeGoalEventsCount(
             parsedMatch.goal_events.map((event) => ({
@@ -491,6 +772,7 @@ export default function TrainingStatsEntryPage() {
           .reduce((acc, row) => acc + row.goals, 0);
         setMatchScoreA(teamAGoals);
         setMatchScoreB(teamBGoals);
+        setRoleOverrides({});
         setGoalEvents(normalizeGoalEventsCount([], teamAGoals, teamBGoals));
       }
 
@@ -520,18 +802,6 @@ export default function TrainingStatsEntryPage() {
             : row.training_team,
         };
       })
-    );
-  }
-
-  function updateRow(
-    playerId: string,
-    field: "goals" | "assists",
-    value: number
-  ) {
-    setRows((prev) =>
-      prev.map((row) =>
-        row.player_id === playerId ? { ...row, [field]: value } : row
-      )
     );
   }
 
@@ -566,6 +836,36 @@ export default function TrainingStatsEntryPage() {
         .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)),
     [rows]
   );
+  const goalieCandidatesTeamA = useMemo(
+    () =>
+      attendedTeamA.filter(
+        (row) => row.position === "goalie" || row.can_play_goalie
+      ),
+    [attendedTeamA]
+  );
+  const goalieCandidatesTeamB = useMemo(
+    () =>
+      attendedTeamB.filter(
+        (row) => row.position === "goalie" || row.can_play_goalie
+      ),
+    [attendedTeamB]
+  );
+  const validTeamAGoalieId = useMemo(
+    () =>
+      teamAGoalieId &&
+      goalieCandidatesTeamA.some((player) => player.player_id === teamAGoalieId)
+        ? teamAGoalieId
+        : "",
+    [goalieCandidatesTeamA, teamAGoalieId]
+  );
+  const validTeamBGoalieId = useMemo(
+    () =>
+      teamBGoalieId &&
+      goalieCandidatesTeamB.some((player) => player.player_id === teamBGoalieId)
+        ? teamBGoalieId
+        : "",
+    [goalieCandidatesTeamB, teamBGoalieId]
+  );
 
   const attendedRows = useMemo(
     () =>
@@ -581,6 +881,38 @@ export default function TrainingStatsEntryPage() {
         .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)),
     [rows]
   );
+  const normalizedRoleOverrides = useMemo(() => {
+    const next: Record<string, TrainingFieldRole> = {};
+    for (const row of rows) {
+      if (!row.attended) continue;
+      const override = roleOverrides[row.player_id];
+      if (override !== "defense" && override !== "forward") continue;
+      const defaultRole = getDefaultRoleForPosition(row.position);
+      if (defaultRole === override) continue;
+      next[row.player_id] = override;
+    }
+    return next;
+  }, [roleOverrides, rows]);
+
+  function getEffectiveRole(row: TrainingRow): TrainingFieldRole | null {
+    const override = roleOverrides[row.player_id];
+    if (override === "defense" || override === "forward") return override;
+    return getDefaultRoleForPosition(row.position);
+  }
+
+  function setPlayerRole(playerId: string, role: TrainingFieldRole | null) {
+    setRoleOverrides((prev) => {
+      const next = { ...prev };
+      const row = rows.find((item) => item.player_id === playerId);
+      const defaultRole = row ? getDefaultRoleForPosition(row.position) : null;
+      if (!role || role === defaultRole) {
+        delete next[playerId];
+      } else {
+        next[playerId] = role;
+      }
+      return next;
+    });
+  }
 
   function getPlayersByTeam(team: TrainingTeam) {
     return team === "team_a" ? attendedTeamA : attendedTeamB;
@@ -624,11 +956,20 @@ export default function TrainingStatsEntryPage() {
         rows,
         matchScoreA,
         matchScoreB,
-        teamAGoalieId,
-        teamBGoalieId,
-        goalEvents
+        validTeamAGoalieId,
+        validTeamBGoalieId,
+        goalEvents,
+        normalizedRoleOverrides
       ),
-    [goalEvents, matchScoreA, matchScoreB, rows, teamAGoalieId, teamBGoalieId]
+    [
+      goalEvents,
+      matchScoreA,
+      matchScoreB,
+      normalizedRoleOverrides,
+      rows,
+      validTeamAGoalieId,
+      validTeamBGoalieId,
+    ]
   );
 
   const persistChanges = useCallback(async (showMessage: boolean) => {
@@ -713,8 +1054,9 @@ export default function TrainingStatsEntryPage() {
 
     const hasMatchData =
       structuredMode ||
-      Boolean(teamAGoalieId) ||
-      Boolean(teamBGoalieId) ||
+      Boolean(validTeamAGoalieId) ||
+      Boolean(validTeamBGoalieId) ||
+      Object.keys(normalizedRoleOverrides).length > 0 ||
       matchScoreA > 0 ||
       matchScoreB > 0;
 
@@ -723,9 +1065,10 @@ export default function TrainingStatsEntryPage() {
           version: 1,
           team_a_score: matchScoreA,
           team_b_score: matchScoreB,
-          team_a_goalie_player_id: teamAGoalieId || null,
-          team_b_goalie_player_id: teamBGoalieId || null,
+          team_a_goalie_player_id: validTeamAGoalieId || null,
+          team_b_goalie_player_id: validTeamBGoalieId || null,
           goal_events: normalizedGoalEvents,
+          role_overrides: normalizedRoleOverrides,
         }
       : null;
 
@@ -754,12 +1097,13 @@ export default function TrainingStatsEntryPage() {
     goalEvents,
     matchScoreA,
     matchScoreB,
+    normalizedRoleOverrides,
     rows,
     sessionId,
     supabase,
-    teamAGoalieId,
-    teamBGoalieId,
     tt,
+    validTeamAGoalieId,
+    validTeamBGoalieId,
   ]);
 
   async function handleSave() {
@@ -853,6 +1197,53 @@ export default function TrainingStatsEntryPage() {
   const attendedByTeamA = attendedRows.filter((r) => r.training_team === "team_a");
   const attendedByTeamB = attendedRows.filter((r) => r.training_team === "team_b");
   const attendedNoTeam = attendedRows.filter((r) => !r.training_team);
+  const teamAFieldPlayers = attendedByTeamA.filter((row) => row.player_id !== validTeamAGoalieId);
+  const teamBFieldPlayers = attendedByTeamB.filter((row) => row.player_id !== validTeamBGoalieId);
+  const teamADefense = teamAFieldPlayers.filter((row) => getEffectiveRole(row) === "defense");
+  const teamAForward = teamAFieldPlayers.filter((row) => getEffectiveRole(row) === "forward");
+  const teamAOther = teamAFieldPlayers.filter((row) => !getEffectiveRole(row));
+  const teamBDefense = teamBFieldPlayers.filter((row) => getEffectiveRole(row) === "defense");
+  const teamBForward = teamBFieldPlayers.filter((row) => getEffectiveRole(row) === "forward");
+  const teamBOther = teamBFieldPlayers.filter((row) => !getEffectiveRole(row));
+  const selectedGoalieTeamA =
+    (validTeamAGoalieId &&
+      goalieCandidatesTeamA.find((player) => player.player_id === validTeamAGoalieId)) ||
+    null;
+  const selectedGoalieTeamB =
+    (validTeamBGoalieId &&
+      goalieCandidatesTeamB.find((player) => player.player_id === validTeamBGoalieId)) ||
+    null;
+
+  function assignGoalieByDrop(team: TrainingTeam, playerId: string) {
+    const player = rows.find((row) => row.player_id === playerId);
+    if (!player || !player.attended) return;
+
+    if (player.position !== "goalie" && !player.can_play_goalie) {
+      setError(tt("goalieEligibleOnly"));
+      return;
+    }
+
+    setError("");
+    if (player.training_team !== team) setTeam(playerId, team);
+    if (team === "team_a") {
+      setTeamAGoalieId(playerId);
+      return;
+    }
+    setTeamBGoalieId(playerId);
+  }
+
+  function assignPlayerToTeamRole(
+    team: TrainingTeam,
+    role: TrainingFieldRole | null,
+    playerId: string
+  ) {
+    const player = rows.find((row) => row.player_id === playerId);
+    if (!player || !player.attended) return;
+
+    setError("");
+    if (player.training_team !== team) setTeam(playerId, team);
+    setPlayerRole(playerId, role);
+  }
 
   return (
     <div>
@@ -877,6 +1268,7 @@ export default function TrainingStatsEntryPage() {
               {tt("attendance")}
               <Badge variant="secondary" className="ml-1.5 text-xs">{attendedRows.length}</Badge>
             </TabsTrigger>
+            <TabsTrigger value="teams">{tt("teams")}</TabsTrigger>
             <TabsTrigger value="match">{tt("trainingMatch")}</TabsTrigger>
           </TabsList>
 
@@ -1094,6 +1486,7 @@ export default function TrainingStatsEntryPage() {
                             onToggleAttendance={toggleAttendance}
                             onSetTeam={setTeam}
                             tt={tt}
+                            tp={tp}
                           />
                         ))}
                         {attendedByTeamA.length === 0 && (
@@ -1112,6 +1505,7 @@ export default function TrainingStatsEntryPage() {
                             onToggleAttendance={toggleAttendance}
                             onSetTeam={setTeam}
                             tt={tt}
+                            tp={tp}
                           />
                         ))}
                         {attendedByTeamB.length === 0 && (
@@ -1129,6 +1523,7 @@ export default function TrainingStatsEntryPage() {
                             onToggleAttendance={toggleAttendance}
                             onSetTeam={setTeam}
                             tt={tt}
+                            tp={tp}
                             />
                           ))}
                           {attendedNoTeam.length === 0 && (
@@ -1170,7 +1565,266 @@ export default function TrainingStatsEntryPage() {
             <p className="text-xs text-muted-foreground">{tt("autosaveHint")}</p>
           </TabsContent>
 
-          {/* Tab 3: Match */}
+          {/* Tab 3: Team distribution */}
+          <TabsContent value="teams" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold">{tt("teams")}</h2>
+                <Badge className="bg-primary/20 text-primary">
+                  {attendedRows.length} / {rows.length}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground text-right hidden sm:block min-w-28">
+                  {autosaveStatus === "saving"
+                    ? tt("autosaveSaving")
+                    : autosaveStatus === "saved"
+                      ? tt("autosaveSaved")
+                      : autosaveStatus === "error"
+                        ? tt("autosaveError")
+                        : ""}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={autoAssignTeams}
+                  className="border-primary/30 text-primary"
+                >
+                  <Wand2 className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{tt("autoAssign")}</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-primary"
+                >
+                  {saving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 sm:mr-2" />
+                  )}
+                  <span className="hidden sm:inline">{tc("save")}</span>
+                </Button>
+              </div>
+            </div>
+
+            {attendedRows.length === 0 ? (
+              <Card className="border-border/40">
+                <CardContent className="py-6">
+                  <p className="text-sm text-muted-foreground text-center">{tg("noPlayersSelected")}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {attendedNoTeam.length > 0 && (
+                  <Card className="border-border/40">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        {tt("noTeam")}
+                        <Badge variant="secondary" className="text-xs">{attendedNoTeam.length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <TeamDropZone team={null} onSetTeam={setTeam}>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {attendedNoTeam.map((row) => (
+                            <TeamDistributionCard
+                              key={row.player_id}
+                              row={row}
+                              onToggleAttendance={toggleAttendance}
+                              tt={tt}
+                              tp={tp}
+                            />
+                          ))}
+                        </div>
+                      </TeamDropZone>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card className="border-border/40">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-white border border-border" />
+                          {tt("teamA")}
+                        </span>
+                        <Badge variant="secondary" className="text-xs">{attendedByTeamA.length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        <TeamRoleDropSlot
+                          label={tp("forward")}
+                          count={teamAForward.length}
+                          onDropPlayer={(playerId) => assignPlayerToTeamRole("team_a", "forward", playerId)}
+                          tt={tt}
+                        >
+                          <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+                            {teamAForward.map((row) => (
+                              <TeamDistributionCard
+                                key={row.player_id}
+                                row={row}
+                                onToggleAttendance={toggleAttendance}
+                                tt={tt}
+                                tp={tp}
+                              />
+                            ))}
+                          </div>
+                        </TeamRoleDropSlot>
+
+                        <TeamRoleDropSlot
+                          label={tp("defense")}
+                          count={teamADefense.length}
+                          onDropPlayer={(playerId) => assignPlayerToTeamRole("team_a", "defense", playerId)}
+                          tt={tt}
+                        >
+                          <div className="grid gap-2 2xl:grid-cols-2">
+                            {teamADefense.map((row) => (
+                              <TeamDistributionCard
+                                key={row.player_id}
+                                row={row}
+                                onToggleAttendance={toggleAttendance}
+                                tt={tt}
+                                tp={tp}
+                              />
+                            ))}
+                          </div>
+                        </TeamRoleDropSlot>
+
+                        <TeamRoleDropSlot
+                          label={tt("noPosition")}
+                          count={teamAOther.length}
+                          onDropPlayer={(playerId) => assignPlayerToTeamRole("team_a", null, playerId)}
+                          tt={tt}
+                        >
+                          <div className="grid gap-2 2xl:grid-cols-2">
+                            {teamAOther.map((row) => (
+                              <TeamDistributionCard
+                                key={row.player_id}
+                                row={row}
+                                onToggleAttendance={toggleAttendance}
+                                tt={tt}
+                                tp={tp}
+                              />
+                            ))}
+                          </div>
+                        </TeamRoleDropSlot>
+                      </div>
+                      <div className="mt-3">
+                        <GoalieDropSlot
+                          label={tp("goalie")}
+                          goalie={selectedGoalieTeamA}
+                          onDropPlayer={(playerId) => assignGoalieByDrop("team_a", playerId)}
+                          onClear={() => setTeamAGoalieId("")}
+                          tt={tt}
+                          tp={tp}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-border/40">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-gray-600" />
+                          {tt("teamB")}
+                        </span>
+                        <Badge variant="secondary" className="text-xs">{attendedByTeamB.length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        <TeamRoleDropSlot
+                          label={tp("forward")}
+                          count={teamBForward.length}
+                          onDropPlayer={(playerId) => assignPlayerToTeamRole("team_b", "forward", playerId)}
+                          tt={tt}
+                        >
+                          <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+                            {teamBForward.map((row) => (
+                              <TeamDistributionCard
+                                key={row.player_id}
+                                row={row}
+                                onToggleAttendance={toggleAttendance}
+                                tt={tt}
+                                tp={tp}
+                              />
+                            ))}
+                          </div>
+                        </TeamRoleDropSlot>
+
+                        <TeamRoleDropSlot
+                          label={tp("defense")}
+                          count={teamBDefense.length}
+                          onDropPlayer={(playerId) => assignPlayerToTeamRole("team_b", "defense", playerId)}
+                          tt={tt}
+                        >
+                          <div className="grid gap-2 2xl:grid-cols-2">
+                            {teamBDefense.map((row) => (
+                              <TeamDistributionCard
+                                key={row.player_id}
+                                row={row}
+                                onToggleAttendance={toggleAttendance}
+                                tt={tt}
+                                tp={tp}
+                              />
+                            ))}
+                          </div>
+                        </TeamRoleDropSlot>
+
+                        <TeamRoleDropSlot
+                          label={tt("noPosition")}
+                          count={teamBOther.length}
+                          onDropPlayer={(playerId) => assignPlayerToTeamRole("team_b", null, playerId)}
+                          tt={tt}
+                        >
+                          <div className="grid gap-2 2xl:grid-cols-2">
+                            {teamBOther.map((row) => (
+                              <TeamDistributionCard
+                                key={row.player_id}
+                                row={row}
+                                onToggleAttendance={toggleAttendance}
+                                tt={tt}
+                                tp={tp}
+                              />
+                            ))}
+                          </div>
+                        </TeamRoleDropSlot>
+                      </div>
+                      <div className="mt-3">
+                        <GoalieDropSlot
+                          label={tp("goalie")}
+                          goalie={selectedGoalieTeamB}
+                          onDropPlayer={(playerId) => assignGoalieByDrop("team_b", playerId)}
+                          onClear={() => setTeamBGoalieId("")}
+                          tt={tt}
+                          tp={tp}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
+
+            {error && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                {error}
+              </p>
+            )}
+            {message && (
+              <p className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
+                {message}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">{tt("autosaveHint")}</p>
+          </TabsContent>
+
+          {/* Tab 4: Match */}
           <TabsContent value="match" className="space-y-4">
             <Card className="border-border/40">
               <CardHeader>
@@ -1205,7 +1859,7 @@ export default function TrainingStatsEntryPage() {
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">{tt("goalieTeamA")}</p>
                     <Select
-                      value={teamAGoalieId || NONE_OPTION}
+                      value={validTeamAGoalieId || NONE_OPTION}
                       onValueChange={(value) => setTeamAGoalieId(value === NONE_OPTION ? "" : value)}
                     >
                       <SelectTrigger className="bg-background">
@@ -1213,7 +1867,7 @@ export default function TrainingStatsEntryPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={NONE_OPTION}>-</SelectItem>
-                        {attendedTeamA.map((player) => (
+                        {goalieCandidatesTeamA.map((player) => (
                           <SelectItem key={player.player_id} value={player.player_id}>
                             {formatPlayerNameWithNumber(player)}
                           </SelectItem>
@@ -1224,7 +1878,7 @@ export default function TrainingStatsEntryPage() {
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">{tt("goalieTeamB")}</p>
                     <Select
-                      value={teamBGoalieId || NONE_OPTION}
+                      value={validTeamBGoalieId || NONE_OPTION}
                       onValueChange={(value) => setTeamBGoalieId(value === NONE_OPTION ? "" : value)}
                     >
                       <SelectTrigger className="bg-background">
@@ -1232,7 +1886,7 @@ export default function TrainingStatsEntryPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={NONE_OPTION}>-</SelectItem>
-                        {attendedTeamB.map((player) => (
+                        {goalieCandidatesTeamB.map((player) => (
                           <SelectItem key={player.player_id} value={player.player_id}>
                             {formatPlayerNameWithNumber(player)}
                           </SelectItem>

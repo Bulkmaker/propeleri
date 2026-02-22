@@ -25,6 +25,7 @@ import { formatInBelgrade } from "@/lib/utils/datetime";
 import type {
   PlayerPosition,
   Profile,
+  TrainingFieldRole,
   TrainingSessionStatus,
   TrainingStats,
 } from "@/types/database";
@@ -70,6 +71,13 @@ type TrainingStatWithPlayer = TrainingStats & {
   player: Profile | null;
 };
 
+type GroupedTeamPlayers = {
+  forwards: TrainingStatWithPlayer[];
+  defense: TrainingStatWithPlayer[];
+  goalie: TrainingStatWithPlayer[];
+  other: TrainingStatWithPlayer[];
+};
+
 function normalizeStatus(status: string | null | undefined): TrainingSessionStatus {
   if (status === "completed" || status === "canceled") return status;
   return "planned";
@@ -79,6 +87,60 @@ function statusBadgeClass(status: TrainingSessionStatus) {
   if (status === "completed") return "bg-green-500/10 text-green-500 border-green-500/20";
   if (status === "canceled") return "bg-red-500/10 text-red-500 border-red-500/20";
   return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+}
+
+function getDefaultRoleForPosition(position: PlayerPosition | null): TrainingFieldRole | null {
+  if (position === "forward") return "forward";
+  if (position === "defense") return "defense";
+  return null;
+}
+
+function groupTeamPlayersByRole(
+  players: TrainingStatWithPlayer[],
+  goaliePlayerId: string | null | undefined,
+  roleOverrides: Record<string, TrainingFieldRole>
+): GroupedTeamPlayers {
+  const grouped: GroupedTeamPlayers = {
+    forwards: [],
+    defense: [],
+    goalie: [],
+    other: [],
+  };
+
+  for (const stat of players) {
+    const player = stat.player;
+    if (!player) continue;
+
+    if (goaliePlayerId && player.id === goaliePlayerId) {
+      grouped.goalie.push(stat);
+      continue;
+    }
+
+    const override = roleOverrides[player.id];
+    const effectiveRole =
+      override === "forward" || override === "defense"
+        ? override
+        : getDefaultRoleForPosition(player.position);
+
+    if (effectiveRole === "forward") {
+      grouped.forwards.push(stat);
+      continue;
+    }
+
+    if (effectiveRole === "defense") {
+      grouped.defense.push(stat);
+      continue;
+    }
+
+    if (player.position === "goalie") {
+      grouped.goalie.push(stat);
+      continue;
+    }
+
+    grouped.other.push(stat);
+  }
+
+  return grouped;
 }
 
 export default async function TrainingDetailPage({
@@ -92,6 +154,7 @@ export default async function TrainingDetailPage({
   const t = await getTranslations("training");
   const ts = await getTranslations("stats");
   const tc = await getTranslations("common");
+  const tp = await getTranslations("positions");
 
   const supabase = await createClient();
 
@@ -117,6 +180,17 @@ export default async function TrainingDetailPage({
   const teamA = stats.filter((s) => s.training_team === "team_a");
   const teamB = stats.filter((s) => s.training_team === "team_b");
   const noTeam = stats.filter((s) => !s.training_team);
+  const roleOverrides = matchData?.role_overrides ?? {};
+  const teamAGrouped = groupTeamPlayersByRole(
+    teamA,
+    matchData?.team_a_goalie_player_id,
+    roleOverrides
+  );
+  const teamBGrouped = groupTeamPlayersByRole(
+    teamB,
+    matchData?.team_b_goalie_player_id,
+    roleOverrides
+  );
 
   const playerLookup = new Map<
     string,
@@ -281,12 +355,29 @@ export default async function TrainingDetailPage({
                   <Badge variant="outline" className="ml-auto">{teamA.length}</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {teamA.map((s) => (
-                    <TeamPlayerCard key={s.id} stat={s} guestLabel={t("guest")} />
-                  ))}
-                </div>
+              <CardContent className="space-y-3">
+                <TeamRoleSection
+                  title={tp("forward")}
+                  players={teamAGrouped.forwards}
+                  guestLabel={t("guest")}
+                />
+                <TeamRoleSection
+                  title={tp("defense")}
+                  players={teamAGrouped.defense}
+                  guestLabel={t("guest")}
+                />
+                {teamAGrouped.other.length > 0 && (
+                  <TeamRoleSection
+                    title={t("noPosition")}
+                    players={teamAGrouped.other}
+                    guestLabel={t("guest")}
+                  />
+                )}
+                <TeamRoleSection
+                  title={tp("goalie")}
+                  players={teamAGrouped.goalie}
+                  guestLabel={t("guest")}
+                />
               </CardContent>
             </Card>
 
@@ -299,12 +390,29 @@ export default async function TrainingDetailPage({
                   <Badge variant="outline" className="ml-auto">{teamB.length}</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {teamB.map((s) => (
-                    <TeamPlayerCard key={s.id} stat={s} guestLabel={t("guest")} />
-                  ))}
-                </div>
+              <CardContent className="space-y-3">
+                <TeamRoleSection
+                  title={tp("forward")}
+                  players={teamBGrouped.forwards}
+                  guestLabel={t("guest")}
+                />
+                <TeamRoleSection
+                  title={tp("defense")}
+                  players={teamBGrouped.defense}
+                  guestLabel={t("guest")}
+                />
+                {teamBGrouped.other.length > 0 && (
+                  <TeamRoleSection
+                    title={t("noPosition")}
+                    players={teamBGrouped.other}
+                    guestLabel={t("guest")}
+                  />
+                )}
+                <TeamRoleSection
+                  title={tp("goalie")}
+                  players={teamBGrouped.goalie}
+                  guestLabel={t("guest")}
+                />
               </CardContent>
             </Card>
           </div>
@@ -389,7 +497,7 @@ function TeamPlayerCard({
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
 
   return (
-    <div className="flex items-center gap-3 py-2 px-3 rounded-md bg-secondary/30">
+    <div className="flex min-h-12 items-center gap-3 py-2 px-3 rounded-md bg-secondary/30">
       <Avatar className="h-8 w-8">
         <AvatarImage src={player.avatar_url ?? undefined} alt={`${player.first_name} ${player.last_name}`} />
         <AvatarFallback className="bg-secondary text-xs font-bold">
@@ -403,9 +511,6 @@ function TeamPlayerCard({
           )}
           {formatPlayerName(player)}
         </p>
-        {stat.is_guest && (
-          <p className="text-[10px] text-amber-400 mt-0.5">{`• ${guestLabel}`}</p>
-        )}
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         {stat.attended ? (
@@ -415,10 +520,45 @@ function TeamPlayerCard({
         )}
         {stat.goals > 0 && <span className="text-primary font-bold">{stat.goals}G</span>}
         {stat.assists > 0 && <span>{stat.assists}A</span>}
+        {stat.is_guest && (
+          <span className="text-[9px] rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-amber-400 whitespace-nowrap">
+            {guestLabel}
+          </span>
+        )}
       </div>
       <Badge className={`text-[10px] ${POSITION_COLORS[player.position as PlayerPosition]}`}>
         {player.position === "forward" ? "FW" : player.position === "defense" ? "DF" : "GK"}
       </Badge>
+    </div>
+  );
+}
+
+function TeamRoleSection({
+  title,
+  players,
+  guestLabel,
+}: {
+  title: string;
+  players: TrainingStatWithPlayer[];
+  guestLabel: string;
+}) {
+  return (
+    <div className="rounded-md border border-border/40 p-2.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-muted-foreground">{title}</p>
+        <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+          {players.length}
+        </Badge>
+      </div>
+      {players.length > 0 ? (
+        <div className="space-y-2">
+          {players.map((stat) => (
+            <TeamPlayerCard key={stat.id} stat={stat} guestLabel={guestLabel} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground/70">&mdash;</p>
+      )}
     </div>
   );
 }

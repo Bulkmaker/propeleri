@@ -1,4 +1,8 @@
-import type { TrainingGoalEvent, TrainingMatchData } from "@/types/database";
+import type {
+  TrainingFieldRole,
+  TrainingGoalEvent,
+  TrainingMatchData,
+} from "@/types/database";
 
 type ParsedTrainingGoalEvent = {
   team: "team_a" | "team_b";
@@ -29,6 +33,17 @@ export function parseTrainingMatchData(raw: unknown): TrainingMatchData | null {
         })
         .filter((event): event is ParsedTrainingGoalEvent => Boolean(event))
     : [];
+  const roleOverrides = Object.entries(
+    (value as { role_overrides?: unknown }).role_overrides &&
+      typeof (value as { role_overrides?: unknown }).role_overrides === "object"
+      ? ((value as { role_overrides?: unknown }).role_overrides as Record<string, unknown>)
+      : {}
+  ).reduce<Record<string, TrainingFieldRole>>((acc, [playerId, role]) => {
+    if (role === "forward" || role === "defense") {
+      acc[playerId] = role;
+    }
+    return acc;
+  }, {});
 
   return {
     version: 1,
@@ -49,5 +64,6 @@ export function parseTrainingMatchData(raw: unknown): TrainingMatchData | null {
         ? value.team_b_goalie_player_id
         : null,
     goal_events: events,
+    role_overrides: roleOverrides,
   };
 }

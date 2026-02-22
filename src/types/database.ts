@@ -8,6 +8,7 @@ export type TournamentFormat = "cup" | "placement" | "round_robin" | "custom";
 export type TournamentMatchStage = "group" | "playoff";
 export type TrainingTeam = "team_a" | "team_b";
 export type TrainingSessionStatus = "planned" | "completed" | "canceled";
+export type TrainingFieldRole = "forward" | "defense";
 export type SlotPosition = "LW" | "C" | "RW" | "LD" | "RD" | "GK";
 
 export interface TrainingGoalEvent {
@@ -23,6 +24,7 @@ export interface TrainingMatchData {
   team_a_goalie_player_id: string | null;
   team_b_goalie_player_id: string | null;
   goal_events: TrainingGoalEvent[];
+  role_overrides?: Record<string, TrainingFieldRole>;
 }
 
 export interface Profile {
