@@ -364,19 +364,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       return;
     }
 
-    const opponentName =
-      teams.find((team) => team.id === game.opponent_team_id)?.name ??
-      game.opponent ??
-      "";
-    const safeSlug =
-      (game.slug ?? "").trim() ||
-      buildGameSlug({
-        gameDate: game.game_date,
-        opponentName,
-        isHome: game.is_home,
-        tournamentName: tournament?.name ?? null,
-      });
-
     setSavingAction("match");
     setError("");
     setSuccess("");
@@ -385,7 +372,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
       .from("games")
       .update({
         opponent_team_id: game.opponent_team_id,
-        slug: safeSlug,
+        slug: game.slug,
         location: game.location,
         game_date: game.game_date,
         home_score: game.home_score,
@@ -770,7 +757,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                   </div>
 
                   <SlugField
-                    value={game.slug ?? ""}
+                    value={game.slug}
                     onChange={(slug) => setGame({ ...game, slug })}
                     onRegenerate={() => {
                       const opponent = teams.find(t => t.id === game.opponent_team_id);
