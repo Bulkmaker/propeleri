@@ -46,6 +46,7 @@ function adminFromPlayer(player: Profile): AdminFields {
     password: "",
     team_role: player.team_role,
     app_role: player.app_role,
+    can_play_goalie: player.can_play_goalie ?? false,
     is_guest: player.is_guest ?? false,
     is_active: player.is_active,
     is_approved: player.is_approved,
@@ -161,6 +162,7 @@ function PlayerEditDialogInner({
     password: "",
     team_role: "player",
     app_role: "player",
+    can_play_goalie: false,
     is_guest: false,
     is_active: true,
     is_approved: true,
@@ -217,6 +219,7 @@ function PlayerEditDialogInner({
           form.default_training_team === "none"
             ? null
             : form.default_training_team,
+        can_play_goalie: form.position === "goalie" ? false : adminFields.can_play_goalie,
         is_guest: adminFields.is_guest,
         is_active: adminFields.is_active,
         is_approved: adminFields.is_approved,
