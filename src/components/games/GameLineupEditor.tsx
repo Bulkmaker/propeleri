@@ -200,7 +200,7 @@ export function GameLineupEditor({
             .eq("is_active", true)
             .eq("is_approved", true)
             .in("id", declaredPlayerIds)
-            .order("jersey_number");
+            .order("first_name");
 
           selectablePlayers = (declaredPlayers ?? []) as Profile[];
         } else {
@@ -209,7 +209,7 @@ export function GameLineupEditor({
             .select("*")
             .eq("is_active", true)
             .eq("is_approved", true)
-            .order("jersey_number");
+            .order("first_name");
 
           selectablePlayers = (fallbackPlayers ?? []) as Profile[];
         }
@@ -219,7 +219,7 @@ export function GameLineupEditor({
           .select("*")
           .eq("is_active", true)
           .eq("is_approved", true)
-          .order("jersey_number");
+          .order("first_name");
 
         selectablePlayers = (allPlayers ?? []) as Profile[];
         setRegisteredPlayersCount(null);
@@ -332,10 +332,11 @@ export function GameLineupEditor({
   // Sort players: matching position first
   function sortedPlayersForSlot(slotPos: SlotPosition): Profile[] {
     const targetPosition = SLOT_TO_POSITION[slotPos];
+    const isGoalieSlot = slotPos === "GK";
     return [...availablePlayers].sort((a, b) => {
-      const aMatch = a.position === targetPosition ? 0 : 1;
-      const bMatch = b.position === targetPosition ? 0 : 1;
-      return aMatch - bMatch || (a.jersey_number ?? 99) - (b.jersey_number ?? 99);
+      const aMatch = a.position === targetPosition ? 0 : (isGoalieSlot && a.can_play_goalie ? 0 : 1);
+      const bMatch = b.position === targetPosition ? 0 : (isGoalieSlot && b.can_play_goalie ? 0 : 1);
+      return aMatch - bMatch || `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
     });
   }
 
@@ -1085,8 +1086,13 @@ function PositionSlot({
 
   // Split available players: position matches first
   const targetPosition = SLOT_TO_POSITION[slotPosition];
-  const matchingPlayers = availablePlayers.filter((p) => p.position === targetPosition);
-  const otherPlayersList = availablePlayers.filter((p) => p.position !== targetPosition);
+  const isGoalieSlot = slotPosition === "GK";
+  const matchingPlayers = availablePlayers.filter((p) =>
+    p.position === targetPosition || (isGoalieSlot && p.can_play_goalie)
+  );
+  const otherPlayersList = availablePlayers.filter((p) =>
+    p.position !== targetPosition && !(isGoalieSlot && p.can_play_goalie)
+  );
 
   const displayName = player
     ? (player.nickname || player.last_name || player.first_name || "")

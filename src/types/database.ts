@@ -46,6 +46,7 @@ export interface Profile {
   nationality: string | null;
   second_nationality: string | null;
   default_training_team: TrainingTeam | null;
+  can_play_goalie: boolean;
   is_guest: boolean;
   is_active: boolean;
   is_approved: boolean;

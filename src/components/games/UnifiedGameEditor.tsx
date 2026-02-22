@@ -106,13 +106,10 @@ function toDateTimeLocalInput(value: string | null): string {
   return utcToBelgradeDateTimeLocalInput(value);
 }
 
-function sortPlayersByNumberAndName(list: Profile[]) {
-  return [...list].sort((a, b) => {
-    const aNumber = a.jersey_number ?? 999;
-    const bNumber = b.jersey_number ?? 999;
-    if (aNumber !== bNumber) return aNumber - bNumber;
-    return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
-  });
+function sortPlayersByName(list: Profile[]) {
+  return [...list].sort((a, b) =>
+    `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+  );
 }
 
 export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps) {
@@ -160,7 +157,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
 
   const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
   const registeredSet = useMemo(() => new Set(registeredPlayerIds), [registeredPlayerIds]);
-  const sortedPlayers = useMemo(() => sortPlayersByNumberAndName(players), [players]);
+  const sortedPlayers = useMemo(() => sortPlayersByName(players), [players]);
   const goalEventPlayers = useMemo(() => {
     if (lineupIds.length === 0) return sortedPlayers;
     const idSet = new Set(lineupIds);
@@ -231,7 +228,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
           .select("*")
           .eq("is_active", true)
           .eq("is_approved", true)
-          .order("jersey_number", { ascending: true }),
+          .order("first_name", { ascending: true }),
         supabase.from("teams").select("*").order("name"),
       ]);
 
@@ -269,7 +266,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         .select("*")
         .eq("is_active", true)
         .eq("is_approved", true)
-        .order("jersey_number", { ascending: true }),
+        .order("first_name", { ascending: true }),
       supabase
         .from("tournament_player_registrations")
         .select("player_id")
@@ -1378,7 +1375,7 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
                 onPenaltyEventsChange={setPenaltyEvents}
                 goalieReport={goalieReport}
                 onGoalieReportChange={setGoalieReport}
-                goalieOptions={goalEventPlayers.filter(p => p.position === "goalie")}
+                goalieOptions={goalEventPlayers.filter(p => p.position === "goalie" || p.can_play_goalie)}
               />
             </CardContent>
           </Card>

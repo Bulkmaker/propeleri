@@ -65,6 +65,7 @@ interface PlayerForm {
   nationality: string | null;
   second_nationality: string | null;
   default_training_team: string;
+  can_play_goalie: boolean;
   is_guest: boolean;
   is_active: boolean;
   is_approved: boolean;
@@ -133,6 +134,7 @@ export default function AdminPlayersPage() {
     nationality: null,
     second_nationality: null,
     default_training_team: "none",
+    can_play_goalie: false,
     is_guest: false,
     is_active: true,
     is_approved: true,
@@ -145,7 +147,7 @@ export default function AdminPlayersPage() {
       .from("profiles")
       .select("*")
       .order("is_approved", { ascending: true })
-      .order("last_name", { ascending: true });
+      .order("first_name", { ascending: true });
     setPlayers(data ?? []);
     setLoading(false);
   }
@@ -158,7 +160,7 @@ export default function AdminPlayersPage() {
         .from("profiles")
         .select("*")
         .order("is_approved", { ascending: true })
-        .order("last_name", { ascending: true });
+        .order("first_name", { ascending: true });
 
       if (!isMounted) return;
       setPlayers(data ?? []);
@@ -218,6 +220,7 @@ export default function AdminPlayersPage() {
       nationality: player.nationality,
       second_nationality: player.second_nationality,
       default_training_team: player.default_training_team ?? "none",
+      can_play_goalie: player.can_play_goalie ?? false,
       is_guest: player.is_guest ?? false,
       is_active: player.is_active,
       is_approved: player.is_approved,
@@ -248,6 +251,7 @@ export default function AdminPlayersPage() {
         nationality: form.nationality,
         second_nationality: form.second_nationality,
         default_training_team: form.default_training_team === "none" ? null : form.default_training_team,
+        can_play_goalie: form.position === "goalie" ? false : form.can_play_goalie,
         is_guest: form.is_guest,
         is_active: form.is_active,
         is_approved: form.is_approved,
@@ -416,7 +420,7 @@ export default function AdminPlayersPage() {
       (source: Profile[], sortBy: ActivePlayersSort, direction: SortDirection) => {
         const sorted = [...source];
         const byName = (a: Profile, b: Profile) =>
-          `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+          `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
 
         const compare = (a: Profile, b: Profile) => {
           if (sortBy === "number") {
@@ -592,6 +596,7 @@ export default function AdminPlayersPage() {
                   password: credentialsForm.password,
                   team_role: form.team_role,
                   app_role: form.app_role,
+                  can_play_goalie: form.can_play_goalie,
                   is_guest: form.is_guest,
                   is_active: form.is_active,
                   is_approved: form.is_approved,
@@ -602,6 +607,7 @@ export default function AdminPlayersPage() {
                     ...prev,
                     team_role: fields.team_role,
                     app_role: fields.app_role,
+                    can_play_goalie: fields.can_play_goalie,
                     is_guest: fields.is_guest,
                     is_active: fields.is_active,
                     is_approved: fields.is_approved,

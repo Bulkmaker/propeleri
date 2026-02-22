@@ -419,6 +419,7 @@
     "active": "Aktivan",
     "inactive": "Neaktivan",
     "approved": "Odobren",
+    "canPlayGoalie": "Može u gol",
     "minPasswordChars": "Minimalno 6 karaktera",
     "goToManagePlayers": "Idi na \"Upravljanje igračima\" za odobravanje",
     "deletePlayerConfirm": "Da li ste sigurni da želite da obrišete igrača",

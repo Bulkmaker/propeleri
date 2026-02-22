@@ -17,6 +17,42 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
+  // ── 2026-02-22 ────────────────────────────────────────────────
+  {
+    date: "2026-02-22",
+    category: "feature",
+    description: "Opcija \"Može u gol\" za igrače koji igraju i u polju i u golu — pojavljuju se i u GK slotu i u linijama",
+    description_ru: "Опция «Может в ворота» для полевых игроков, которые также играют в воротах — появляются и в слоте GK, и в полевых линиях",
+    description_en: "\"Can play goalie\" option for field players who also play in goal — they appear in both GK slot and field lines",
+  },
+  {
+    date: "2026-02-22",
+    category: "fix",
+    description: "Ispravljen bug sa NULL slug-om pri ažuriranju rezultata turnirskih mečeva (trigger u bazi podataka)",
+    description_ru: "Исправлен баг с NULL slug при обновлении счёта турнирных матчей (триггер в базе данных)",
+    description_en: "Fixed NULL slug bug when updating tournament match scores (database trigger)",
+  },
+  {
+    date: "2026-02-22",
+    category: "refactor",
+    description: "Sortiranje igrača po imenu umesto broja dresa u svim listama (admin panel, roster, editor utakmica)",
+    description_ru: "Сортировка игроков по имени вместо номера во всех списках (админ-панель, состав, редактор матчей)",
+    description_en: "Player sorting by name instead of jersey number across all lists (admin panel, roster, game editor)",
+  },
+  {
+    date: "2026-02-22",
+    category: "style",
+    description: "Veći modal za video golova na desktopu (min 1000px); uklonjene bedževi pozicija sa kartica igrača u grid prikazu",
+    description_ru: "Увеличен модал видео голов на десктопе (мин 1000px); убраны бейджи позиций с карточек игроков в grid-виде",
+    description_en: "Larger goal video modal on desktop (min 1000px); removed position badges from player cards in grid view",
+  },
+  {
+    date: "2026-02-22",
+    category: "fix",
+    description: "Gost igrači (is_guest) sada se pojavljuju u editoru utakmica za golove i asistencije",
+    description_ru: "Гостевые игроки (is_guest) теперь отображаются в редакторе матчей для голов и ассистов",
+    description_en: "Guest players (is_guest) now appear in game editor for goals and assists",
+  },
   // ── 2026-02-16 ────────────────────────────────────────────────
   {
     date: "2026-02-16",

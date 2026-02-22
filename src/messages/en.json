@@ -419,6 +419,7 @@
     "active": "Active",
     "inactive": "Inactive",
     "approved": "Approved",
+    "canPlayGoalie": "Can play goalie",
     "minPasswordChars": "Minimum 6 characters",
     "goToManagePlayers": "Go to \"Manage Players\" to approve",
     "deletePlayerConfirm": "Are you sure you want to delete player",

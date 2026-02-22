@@ -420,7 +420,7 @@ export default function TrainingStatsEntryPage() {
             .select("*")
             .eq("is_active", true)
             .eq("is_approved", true)
-            .order("jersey_number"),
+            .order("first_name"),
           supabase.from("training_stats").select("*").eq("session_id", sessionId),
           supabase.from("seasons").select("*").order("start_date", { ascending: false }),
         ]);
@@ -556,14 +556,14 @@ export default function TrainingStatsEntryPage() {
     () =>
       rows
         .filter((row) => row.attended && row.training_team === "team_a")
-        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+        .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)),
     [rows]
   );
   const attendedTeamB = useMemo(
     () =>
       rows
         .filter((row) => row.attended && row.training_team === "team_b")
-        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+        .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)),
     [rows]
   );
 
@@ -571,14 +571,14 @@ export default function TrainingStatsEntryPage() {
     () =>
       rows
         .filter((row) => row.attended)
-        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+        .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)),
     [rows]
   );
   const notAttendedRows = useMemo(
     () =>
       rows
         .filter((row) => !row.attended)
-        .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999)),
+        .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)),
     [rows]
   );
 
@@ -1145,7 +1145,7 @@ export default function TrainingStatsEntryPage() {
             <div className="md:hidden grid gap-2 sm:grid-cols-2">
               {rows
                 .slice()
-                .sort((a, b) => (a.jersey_number ?? 999) - (b.jersey_number ?? 999))
+                .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`))
                 .map((row) => (
                   <PlayerAttendanceCard
                     key={row.player_id}

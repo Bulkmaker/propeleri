@@ -42,7 +42,7 @@ export default async function RosterPage({
     .select("*")
     .eq("is_active", true)
     .eq("is_approved", true)
-    .order("jersey_number", { ascending: true });
+    .order("first_name", { ascending: true });
 
   const allPlayers = (players ?? []) as Profile[];
 

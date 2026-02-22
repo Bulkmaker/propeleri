@@ -69,13 +69,10 @@ function toDateTimeLocalInput(value: string | null): string {
   return utcToBelgradeDateTimeLocalInput(value);
 }
 
-function sortPlayersByNumberAndName(list: Profile[]) {
-  return [...list].sort((a, b) => {
-    const aNumber = a.jersey_number ?? 999;
-    const bNumber = b.jersey_number ?? 999;
-    if (aNumber !== bNumber) return aNumber - bNumber;
-    return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
-  });
+function sortPlayersByName(list: Profile[]) {
+  return [...list].sort((a, b) =>
+    `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+  );
 }
 
 export default function TournamentMatchEditorPage() {
@@ -171,7 +168,7 @@ export default function TournamentMatchEditorPage() {
         .eq("is_active", true)
         .eq("is_approved", true)
         .eq("is_guest", false)
-        .order("jersey_number", { ascending: true }),
+        .order("first_name", { ascending: true }),
       supabase
         .from("tournament_player_registrations")
         .select("player_id")
@@ -801,7 +798,7 @@ export default function TournamentMatchEditorPage() {
                   <p className="text-sm text-muted-foreground">{tt("noAvailablePlayers")}</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {sortPlayersByNumberAndName(players).map((player) => {
+                    {sortPlayersByName(players).map((player) => {
                       const isSelected = registeredSet.has(player.id);
                       return (
                         <button

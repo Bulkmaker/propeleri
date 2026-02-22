@@ -54,7 +54,7 @@ export default function AdminGamesPage() {
         supabase.from("seasons").select("*").order("start_date", { ascending: false }),
         supabase.from("tournaments").select("*").order("start_date", { ascending: false }),
         supabase.from("teams").select("*"),
-        supabase.from("profiles").select("*").eq("is_active", true).eq("is_approved", true).order("jersey_number", { ascending: true }),
+        supabase.from("profiles").select("*").eq("is_active", true).eq("is_approved", true).order("first_name", { ascending: true }),
       ]);
 
       if (gamesRes.error) throw gamesRes.error;

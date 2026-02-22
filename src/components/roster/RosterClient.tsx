@@ -10,22 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { Profile, PlayerPosition } from "@/types/database";
-import { POSITION_COLORS } from "@/lib/utils/constants";
+import type { Profile } from "@/types/database";
 import { formatPlayerName } from "@/lib/utils/player-name";
 import { LayoutGrid, List } from "lucide-react";
 import { PlayerEditButton } from "@/components/players/PlayerEditButton";
 import { PlayerTable } from "./PlayerTable";
 
-type RosterSort = "name" | "number";
-type SortDirection = "asc" | "desc";
 type ViewMode = "grid" | "table";
 
 function normalizeSearchValue(value: string) {
@@ -40,8 +30,6 @@ export default function RosterClient({ players }: { players: Profile[] }) {
   const tp = useTranslations("positions");
   const tc = useTranslations("common");
 
-  const [sortBy, setSortBy] = useState<RosterSort>("number");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
@@ -71,31 +59,10 @@ export default function RosterClient({ players }: { players: Profile[] }) {
   }, [players, normalizedSearchQuery]);
 
   const sortedPlayers = useMemo(() => {
-    const sorted = [...filteredPlayers];
-
-    const byName = (a: Profile, b: Profile) =>
-      `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
-
-    sorted.sort((a, b) => {
-      if (sortBy === "number") {
-        if (a.jersey_number === null && b.jersey_number === null) {
-          return byName(a, b);
-        }
-        if (a.jersey_number === null) return 1;
-        if (b.jersey_number === null) return -1;
-        const numberDiff = a.jersey_number - b.jersey_number;
-        return numberDiff || byName(a, b);
-      }
-
-      return byName(a, b);
-    });
-
-    if (sortDirection === "desc") {
-      sorted.reverse();
-    }
-
-    return sorted;
-  }, [filteredPlayers, sortBy, sortDirection]);
+    return [...filteredPlayers].sort((a, b) =>
+      `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+    );
+  }, [filteredPlayers]);
 
   const coaches = sortedPlayers.filter((player) => player.team_role === "coach");
   const nonCoachPlayers = sortedPlayers.filter((player) => player.team_role !== "coach");
@@ -117,38 +84,8 @@ export default function RosterClient({ players }: { players: Profile[] }) {
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 sm:items-end justify-between">
-          <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
-            <div className="space-y-2">
-              <Label id="sort-by-label">{t("sortBy")}</Label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as RosterSort)}>
-                <SelectTrigger aria-labelledby="sort-by-label">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="number">{t("sortByNumber")}</SelectItem>
-                  <SelectItem value="name">{t("sortByName")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label id="sort-direction-label">{t("sortDirection")}</Label>
-              <Select
-                value={sortDirection}
-                onValueChange={(value) => setSortDirection(value as SortDirection)}
-              >
-                <SelectTrigger aria-labelledby="sort-direction-label">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="asc">{t("sortAsc")}</SelectItem>
-                  <SelectItem value="desc">{t("sortDesc")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg self-start sm:self-end">
+        <div className="flex items-end">
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="sm"
@@ -224,7 +161,6 @@ function PositionSection({
 }
 
 function PlayerCard({ player }: { player: Profile }) {
-  const tp = useTranslations("positions");
   const tr = useTranslations("roles");
   const initials = `${player.first_name?.[0] ?? ""}${player.last_name?.[0] ?? ""}`;
 
@@ -249,16 +185,8 @@ function PlayerCard({ player }: { player: Profile }) {
             <p className="font-semibold text-sm">
               {formatPlayerName(player)}
             </p>
-            {player.position && (
-              <Badge
-                variant="secondary"
-                className={`mt-2 text-xs ${POSITION_COLORS[player.position as PlayerPosition]}`}
-              >
-                {tp(player.position)}
-              </Badge>
-            )}
             {player.team_role !== "player" && (
-              <Badge variant="outline" className={cn("mt-1 text-xs",
+              <Badge variant="outline" className={cn("mt-2 text-xs",
                 player.team_role === "coach"
                   ? "border-green-500/30 text-green-400"
                   : "border-primary/30 text-primary"

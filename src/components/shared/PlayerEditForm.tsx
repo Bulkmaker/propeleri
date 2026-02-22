@@ -41,6 +41,7 @@ export interface AdminFields {
   password: string;
   team_role: PlayerRole;
   app_role: AppRole;
+  can_play_goalie: boolean;
   is_guest: boolean;
   is_active: boolean;
   is_approved: boolean;
@@ -400,6 +401,15 @@ export function PlayerEditForm({
 
           {/* Switches */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+            {form.position && form.position !== "goalie" && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Switch
+                  checked={adminFields.can_play_goalie}
+                  onCheckedChange={(checked) => updateAdmin({ can_play_goalie: checked === true })}
+                />
+                <span className="text-sm">{tAdmin("canPlayGoalie")}</span>
+              </label>
+            )}
             <label className="flex items-center gap-2 cursor-pointer">
               <Switch
                 checked={adminFields.is_guest}

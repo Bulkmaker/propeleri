@@ -419,6 +419,7 @@
     "active": "Активен",
     "inactive": "Неактивен",
     "approved": "Подтверждён",
+    "canPlayGoalie": "Может в ворота",
     "minPasswordChars": "Минимум 6 символов",
     "goToManagePlayers": "Перейдите в \"Управление игроками\" для одобрения",
     "deletePlayerConfirm": "Вы уверены, что хотите удалить игрока",

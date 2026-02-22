@@ -225,7 +225,7 @@ export default function AdminTournamentDetailPage() {
         .eq("is_active", true)
         .eq("is_approved", true)
         .eq("is_guest", false)
-        .order("jersey_number", { ascending: true }),
+        .order("first_name", { ascending: true }),
       supabase
         .from("tournament_player_registrations")
         .select("player_id")
