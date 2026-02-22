@@ -21,6 +21,20 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
     date: "2026-02-22",
     category: "feature",
+    description: "Trening admin: nova kartica Timovi sa drag-and-drop raspodelom u 2 kolone, slotom golmana i slotovima po ulogama (napadač/odbrana/bez pozicije); ista grupacija prikazana i na javnoj stranici treninga",
+    description_ru: "Админка тренировок: новая вкладка Команды с drag-and-drop распределением в 2 колонки, слотом вратаря и слотами по ролям (нападающий/защитник/без позиции); такая же группировка добавлена на публичной странице тренировки",
+    description_en: "Training admin: new Teams tab with two-column drag-and-drop assignment, goalie slot, and role slots (forward/defense/no position); the same grouping is shown on the public training page",
+  },
+  {
+    date: "2026-02-22",
+    category: "fix",
+    description: "Ispravljeno poravnanje kartica igrača kada je prisutan bedž Gosta (ujednačena visina reda)",
+    description_ru: "Исправлено выравнивание карточек игроков при бейдже Гость (единая высота строки)",
+    description_en: "Fixed player card alignment when Guest badge is shown (uniform row height)",
+  },
+  {
+    date: "2026-02-22",
+    category: "feature",
     description: "Opcija \"Može u gol\" za igrače koji igraju i u polju i u golu — pojavljuju se i u GK slotu i u linijama",
     description_ru: "Опция «Может в ворота» для полевых игроков, которые также играют в воротах — появляются и в слоте GK, и в полевых линиях",
     description_en: "\"Can play goalie\" option for field players who also play in goal — they appear in both GK slot and field lines",
