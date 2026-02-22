@@ -57,7 +57,7 @@ export function GoalScorersFooter({ items, videoLabel }: GoalScorersFooterProps)
       </div>
 
       <Dialog open={Boolean(activeVideo)} onOpenChange={(open) => !open && setActiveVideo(null)}>
-        <DialogContent className="w-[96vw] max-w-[1600px] border-0 bg-black p-2 sm:p-3">
+        <DialogContent className="w-[96vw] md:min-w-[1000px] max-w-[1600px] border-0 bg-black p-2 sm:p-3">
           <DialogHeader className="mb-0.5">
             <DialogTitle className="text-sm font-medium text-white/90">
               {videoLabel}

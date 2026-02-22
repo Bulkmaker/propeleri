@@ -231,7 +231,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
           .select("*")
           .eq("is_active", true)
           .eq("is_approved", true)
-          .eq("is_guest", false)
           .order("jersey_number", { ascending: true }),
         supabase.from("teams").select("*").order("name"),
       ]);
@@ -270,7 +269,6 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
         .select("*")
         .eq("is_active", true)
         .eq("is_approved", true)
-        .eq("is_guest", false)
         .order("jersey_number", { ascending: true }),
       supabase
         .from("tournament_player_registrations")
@@ -368,11 +366,21 @@ export function UnifiedGameEditor({ gameId, onRefresh }: UnifiedGameEditorProps)
     setError("");
     setSuccess("");
 
+    const opponent = teams.find((t) => t.id === game.opponent_team_id);
+    const safeSlug =
+      (game.slug ?? "").trim() ||
+      buildGameSlug({
+        gameDate: game.game_date,
+        opponentName: opponent?.name ?? "",
+        isHome: game.is_home,
+        tournamentName: tournament?.name,
+      });
+
     const { error: updateError } = await supabase
       .from("games")
       .update({
         opponent_team_id: game.opponent_team_id,
-        slug: game.slug,
+        slug: safeSlug,
         location: game.location,
         game_date: game.game_date,
         home_score: game.home_score,
